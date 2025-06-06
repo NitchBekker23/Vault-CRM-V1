@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { insertInventoryItemSchema, type InsertInventoryItem } from "@shared/schema";
+import { z } from "zod";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import {
   Dialog,
@@ -37,9 +38,7 @@ interface AddItemModalProps {
   onClose: () => void;
 }
 
-const formSchema = insertInventoryItemSchema.extend({
-  price: insertInventoryItemSchema.shape.price.optional(),
-});
+const formSchema = insertInventoryItemSchema;
 
 export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
   const { toast } = useToast();
@@ -165,7 +164,7 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
                   <FormItem>
                     <FormLabel>SKU</FormLabel>
                     <FormControl>
-                      <Input placeholder="Internal SKU" {...field} value={field.value || ""} />
+                      <Input placeholder="Internal SKU" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -149,6 +149,7 @@ export default function AddWishlistModal({ isOpen, onClose }: AddWishlistModalPr
                       placeholder="Detailed description of what the customer is looking for..."
                       className="h-24"
                       {...field}
+                      value={field.value || ""}
                     />
                   </FormControl>
                   <FormMessage />
@@ -191,6 +192,7 @@ export default function AddWishlistModal({ isOpen, onClose }: AddWishlistModalPr
                         placeholder="0.00"
                         step="0.01"
                         {...field}
+                        value={field.value || ""}
                       />
                     </FormControl>
                     <FormMessage />

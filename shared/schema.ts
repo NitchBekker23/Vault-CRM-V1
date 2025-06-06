@@ -154,9 +154,9 @@ export const insertInventoryItemSchema = createInsertSchema(inventoryItems).omit
   createdAt: true,
   updatedAt: true,
 }).extend({
-  sku: z.string().optional().nullable(),
-  description: z.string().optional().nullable(),
-  price: z.string().optional().nullable(),
+  sku: z.string().optional(),
+  description: z.string().optional(),
+  price: z.string().optional(),
 });
 export type InsertInventoryItem = z.infer<typeof insertInventoryItemSchema>;
 export type InventoryItem = typeof inventoryItems.$inferSelect;
@@ -166,8 +166,8 @@ export const insertWishlistItemSchema = createInsertSchema(wishlistItems).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  description: z.string().optional().nullable(),
-  maxPrice: z.string().optional().nullable(),
+  description: z.string().optional(),
+  maxPrice: z.string().optional(),
 });
 export type InsertWishlistItem = z.infer<typeof insertWishlistItemSchema>;
 export type WishlistItem = typeof wishlistItems.$inferSelect;
