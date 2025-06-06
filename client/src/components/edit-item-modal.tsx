@@ -183,7 +183,7 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
                   <FormItem>
                     <FormLabel>SKU</FormLabel>
                     <FormControl>
-                      <Input placeholder="Internal SKU" {...field} value={field.value || ""} />
+                      <Input placeholder="Internal SKU" {...field} value={field.value ?? ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -202,7 +202,7 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
                       placeholder="Detailed description of the item..."
                       className="h-24"
                       {...field}
-                      value={field.value || ""}
+                      value={field.value ?? ""}
                     />
                   </FormControl>
                   <FormMessage />
@@ -268,7 +268,7 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
                         placeholder="0.00"
                         step="0.01"
                         {...field}
-                        value={field.value || ""}
+                        value={field.value ?? ""}
                       />
                     </FormControl>
                     <FormMessage />
