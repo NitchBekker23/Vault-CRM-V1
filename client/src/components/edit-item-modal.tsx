@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { insertInventoryItemSchema, type InsertInventoryItem } from "@shared/schema";
+import { insertInventoryItemSchema, type InsertInventoryItem, type InventoryItem } from "@shared/schema";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import {
   Dialog,
@@ -32,19 +32,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface AddItemModalProps {
+interface EditItemModalProps {
   isOpen: boolean;
   onClose: () => void;
+  item: InventoryItem | null;
 }
 
 const formSchema = insertInventoryItemSchema.extend({
   price: insertInventoryItemSchema.shape.price.optional(),
 });
 
-export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
+export default function EditItemModal({ isOpen, onClose, item }: EditItemModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isUploading, setIsUploading] = useState(false);
 
   const form = useForm<InsertInventoryItem>({
     resolver: zodResolver(formSchema),
@@ -61,20 +61,36 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
     },
   });
 
-  const createItemMutation = useMutation({
+  useEffect(() => {
+    if (item) {
+      form.reset({
+        name: item.name,
+        description: item.description || "",
+        brand: item.brand,
+        serialNumber: item.serialNumber,
+        sku: item.sku || "",
+        category: item.category,
+        price: item.price || "",
+        status: item.status,
+        imageUrls: item.imageUrls || [],
+      });
+    }
+  }, [item, form]);
+
+  const updateItemMutation = useMutation({
     mutationFn: async (data: InsertInventoryItem) => {
-      const response = await apiRequest("POST", "/api/inventory", data);
+      if (!item) throw new Error("No item to update");
+      const response = await apiRequest("PUT", `/api/inventory/${item.id}`, data);
       return response;
     },
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Item added successfully",
+        description: "Item updated successfully",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       queryClient.invalidateQueries({ queryKey: ["/api/activities/recent"] });
-      form.reset();
       onClose();
     },
     onError: (error) => {
@@ -91,23 +107,25 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
       }
       toast({
         title: "Error",
-        description: "Failed to add item. Please try again.",
+        description: "Failed to update item. Please try again.",
         variant: "destructive",
       });
     },
   });
 
   const onSubmit = (data: InsertInventoryItem) => {
-    createItemMutation.mutate(data);
+    updateItemMutation.mutate(data);
   };
+
+  if (!item) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Item</DialogTitle>
+          <DialogTitle>Edit Item</DialogTitle>
           <DialogDescription>
-            Add a new inventory item to your collection
+            Update inventory item information
           </DialogDescription>
         </DialogHeader>
         
@@ -191,14 +209,14 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
               )}
             />
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <FormField
                 control={form.control}
                 name="category"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select Category" />
@@ -207,6 +225,29 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
                       <SelectContent>
                         <SelectItem value="watches">Watches</SelectItem>
                         <SelectItem value="leather-goods">Leather Goods</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="in_stock">In Stock</SelectItem>
+                        <SelectItem value="sold">Sold</SelectItem>
+                        <SelectItem value="out_of_stock">Out of Stock</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -234,31 +275,21 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
               />
             </div>
             
-            <div>
-              <FormLabel>Product Images</FormLabel>
-              <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-blue-600 transition-colors cursor-pointer mt-2">
-                <i className="fas fa-cloud-upload-alt text-3xl text-slate-400 mb-3"></i>
-                <p className="text-slate-600">Drag and drop images here, or click to browse</p>
-                <p className="text-xs text-slate-500 mt-1">Supports: JPG, PNG, WebP (Max 5MB each)</p>
-                <input type="file" className="hidden" multiple accept="image/*" />
-              </div>
-            </div>
-            
             <div className="flex items-center justify-end space-x-4 pt-4 border-t border-slate-200">
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
               <Button 
                 type="submit" 
-                disabled={createItemMutation.isPending}
+                disabled={updateItemMutation.isPending}
               >
-                {createItemMutation.isPending ? (
+                {updateItemMutation.isPending ? (
                   <>
                     <i className="fas fa-spinner fa-spin mr-2"></i>
-                    Adding...
+                    Updating...
                   </>
                 ) : (
-                  "Add Item"
+                  "Update Item"
                 )}
               </Button>
             </div>

@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { isUnauthorizedError } from "@/lib/authUtils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,8 +17,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { InventoryItem } from "@shared/schema";
 import AddItemModal from "./add-item-modal";
+import EditItemModal from "./edit-item-modal";
 
 interface InventoryTableProps {
   showHeader?: boolean;
@@ -28,6 +42,12 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: inventoryData, isLoading } = useQuery<{
     items: InventoryItem[];
@@ -35,6 +55,57 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
   }>({
     queryKey: ["/api/inventory", { page, search, category, status, limit }],
   });
+
+  const deleteItemMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/inventory/${id}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Item deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/activities/recent"] });
+      setShowDeleteDialog(false);
+      setSelectedItem(null);
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error as Error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to delete item. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEdit = (item: InventoryItem) => {
+    setSelectedItem(item);
+    setShowEditModal(true);
+  };
+
+  const handleDelete = (item: InventoryItem) => {
+    setSelectedItem(item);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = () => {
+    if (selectedItem) {
+      deleteItemMutation.mutate(selectedItem.id);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -181,13 +252,10 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
                         </TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
-                            <Button size="sm" variant="outline">
-                              <i className="fas fa-eye"></i>
-                            </Button>
-                            <Button size="sm" variant="outline">
+                            <Button size="sm" variant="outline" onClick={() => handleEdit(item)}>
                               <i className="fas fa-edit"></i>
                             </Button>
-                            <Button size="sm" variant="outline">
+                            <Button size="sm" variant="outline" onClick={() => handleDelete(item)}>
                               <i className="fas fa-trash text-red-500"></i>
                             </Button>
                           </div>
@@ -261,6 +329,38 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
         isOpen={showAddModal} 
         onClose={() => setShowAddModal(false)} 
       />
+
+      <EditItemModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedItem(null);
+        }}
+        item={selectedItem}
+      />
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Item</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{selectedItem?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSelectedItem(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              disabled={deleteItemMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleteItemMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

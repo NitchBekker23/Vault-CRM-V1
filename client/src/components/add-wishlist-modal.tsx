@@ -1,10 +1,9 @@
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { insertInventoryItemSchema, type InsertInventoryItem } from "@shared/schema";
+import { insertWishlistItemSchema, type InsertWishlistItem } from "@shared/schema";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import {
   Dialog,
@@ -32,46 +31,42 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface AddItemModalProps {
+interface AddWishlistModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const formSchema = insertInventoryItemSchema.extend({
-  price: insertInventoryItemSchema.shape.price.optional(),
+const formSchema = insertWishlistItemSchema.extend({
+  maxPrice: insertWishlistItemSchema.shape.maxPrice.optional(),
 });
 
-export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
+export default function AddWishlistModal({ isOpen, onClose }: AddWishlistModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isUploading, setIsUploading] = useState(false);
 
-  const form = useForm<InsertInventoryItem>({
+  const form = useForm<InsertWishlistItem>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      description: "",
+      itemName: "",
       brand: "",
-      serialNumber: "",
-      sku: "",
+      description: "",
       category: "",
-      price: "",
-      status: "in_stock",
-      imageUrls: [],
+      maxPrice: "",
+      status: "active",
     },
   });
 
-  const createItemMutation = useMutation({
-    mutationFn: async (data: InsertInventoryItem) => {
-      const response = await apiRequest("POST", "/api/inventory", data);
+  const createWishlistMutation = useMutation({
+    mutationFn: async (data: InsertWishlistItem) => {
+      const response = await apiRequest("POST", "/api/wishlist", data);
       return response;
     },
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Item added successfully",
+        description: "Wishlist request added successfully",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       queryClient.invalidateQueries({ queryKey: ["/api/activities/recent"] });
       form.reset();
@@ -91,23 +86,23 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
       }
       toast({
         title: "Error",
-        description: "Failed to add item. Please try again.",
+        description: "Failed to add wishlist request. Please try again.",
         variant: "destructive",
       });
     },
   });
 
-  const onSubmit = (data: InsertInventoryItem) => {
-    createItemMutation.mutate(data);
+  const onSubmit = (data: InsertWishlistItem) => {
+    createWishlistMutation.mutate(data);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Item</DialogTitle>
+          <DialogTitle>Add Wishlist Request</DialogTitle>
           <DialogDescription>
-            Add a new inventory item to your collection
+            Create a new customer demand request for tracking
           </DialogDescription>
         </DialogHeader>
         
@@ -116,7 +111,7 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
-                name="name"
+                name="itemName"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Item Name *</FormLabel>
@@ -143,36 +138,6 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="serialNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Serial Number *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., 126610LN" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="sku"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>SKU</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Internal SKU" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
             <FormField
               control={form.control}
               name="description"
@@ -181,7 +146,7 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
                   <FormLabel>Description</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Detailed description of the item..."
+                      placeholder="Detailed description of what the customer is looking for..."
                       className="h-24"
                       {...field}
                     />
@@ -216,10 +181,10 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
               
               <FormField
                 control={form.control}
-                name="price"
+                name="maxPrice"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Price ($)</FormLabel>
+                    <FormLabel>Maximum Budget ($)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -234,31 +199,21 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
               />
             </div>
             
-            <div>
-              <FormLabel>Product Images</FormLabel>
-              <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-blue-600 transition-colors cursor-pointer mt-2">
-                <i className="fas fa-cloud-upload-alt text-3xl text-slate-400 mb-3"></i>
-                <p className="text-slate-600">Drag and drop images here, or click to browse</p>
-                <p className="text-xs text-slate-500 mt-1">Supports: JPG, PNG, WebP (Max 5MB each)</p>
-                <input type="file" className="hidden" multiple accept="image/*" />
-              </div>
-            </div>
-            
             <div className="flex items-center justify-end space-x-4 pt-4 border-t border-slate-200">
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
               <Button 
                 type="submit" 
-                disabled={createItemMutation.isPending}
+                disabled={createWishlistMutation.isPending}
               >
-                {createItemMutation.isPending ? (
+                {createWishlistMutation.isPending ? (
                   <>
                     <i className="fas fa-spinner fa-spin mr-2"></i>
                     Adding...
                   </>
                 ) : (
-                  "Add Item"
+                  "Add Request"
                 )}
               </Button>
             </div>
