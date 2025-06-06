@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Plus, Loader2, X } from "lucide-react";
 
 interface ImageUploadProps {
   images: string[];
@@ -82,12 +83,12 @@ export default function ImageUpload({ images, onImagesChange, maxImages = 5 }: I
         >
           {uploading ? (
             <>
-              <i className="fas fa-spinner fa-spin mr-2"></i>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               Uploading...
             </>
           ) : (
             <>
-              <i className="fas fa-plus mr-2"></i>
+              <Plus className="h-4 w-4 mr-2" />
               Add Images
             </>
           )}
@@ -120,7 +121,7 @@ export default function ImageUpload({ images, onImagesChange, maxImages = 5 }: I
                   className="absolute top-1 right-1 h-6 w-6 p-0"
                   onClick={() => removeImage(index)}
                 >
-                  <i className="fas fa-times text-xs"></i>
+                  <X className="h-3 w-3" />
                 </Button>
               </CardContent>
             </Card>

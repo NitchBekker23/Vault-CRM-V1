@@ -278,6 +278,12 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
               />
             </div>
             
+            <ImageUpload
+              images={form.watch("imageUrls") || []}
+              onImagesChange={(images) => form.setValue("imageUrls", images)}
+              maxImages={5}
+            />
+            
             <div className="flex items-center justify-end space-x-4 pt-4 border-t border-slate-200">
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel

@@ -53,7 +53,13 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
     items: InventoryItem[];
     total: number;
   }>({
-    queryKey: ["/api/inventory", { page, search, category, status, limit }],
+    queryKey: ["/api/inventory", { 
+      page, 
+      search: search.trim() || undefined, 
+      category: category || undefined, 
+      status: status || undefined, 
+      limit 
+    }],
   });
 
   const deleteItemMutation = useMutation({
