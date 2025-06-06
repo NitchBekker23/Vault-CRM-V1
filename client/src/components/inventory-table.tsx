@@ -255,7 +255,12 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
                             <Button size="sm" variant="outline" onClick={() => handleEdit(item)}>
                               <i className="fas fa-edit"></i>
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => handleDelete(item)}>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => handleDelete(item)}
+                              className="border-red-200 hover:border-red-300 hover:bg-red-50"
+                            >
                               <i className="fas fa-trash text-red-500"></i>
                             </Button>
                           </div>
