@@ -153,6 +153,10 @@ export const insertInventoryItemSchema = createInsertSchema(inventoryItems).omit
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  sku: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
+  price: z.string().optional().nullable(),
 });
 export type InsertInventoryItem = z.infer<typeof insertInventoryItemSchema>;
 export type InventoryItem = typeof inventoryItems.$inferSelect;

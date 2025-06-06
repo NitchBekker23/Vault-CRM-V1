@@ -1,17 +1,53 @@
-import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { apiRequest } from "@/lib/queryClient";
 import Header from "@/components/header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import AddWishlistModal from "@/components/add-wishlist-modal";
 import { WishlistItem } from "@shared/schema";
 
 export default function Wishlist() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
+  const [showAddModal, setShowAddModal] = useState(false);
+  const queryClient = useQueryClient();
+
+  const fulfillWishlistMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("PUT", `/api/wishlist/${id}`, { status: "fulfilled" });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Wishlist request marked as fulfilled",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error as Error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to update wishlist item. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -62,7 +98,13 @@ export default function Wishlist() {
       <Header title="Wishlist & Demand Tracking" />
       <div className="p-6">
         <div className="mb-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">Customer Requests</h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-slate-900">Customer Requests</h3>
+            <Button onClick={() => setShowAddModal(true)}>
+              <i className="fas fa-plus mr-2"></i>
+              Add Wishlist Request
+            </Button>
+          </div>
           {wishlistData?.items && wishlistData.items.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {wishlistData.items.map((item) => (
@@ -87,14 +129,16 @@ export default function Wishlist() {
                       </p>
                     )}
                     <div className="flex space-x-2">
-                      <Button size="sm" variant="outline">
-                        <i className="fas fa-eye mr-2"></i>
-                        View Details
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        <i className="fas fa-check mr-2"></i>
-                        Mark Fulfilled
-                      </Button>
+                      {item.status === "active" && (
+                        <Button 
+                          size="sm" 
+                          onClick={() => fulfillWishlistMutation.mutate(item.id)}
+                          disabled={fulfillWishlistMutation.isPending}
+                        >
+                          <i className="fas fa-check mr-2"></i>
+                          {fulfillWishlistMutation.isPending ? "Updating..." : "Mark Fulfilled"}
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -113,6 +157,11 @@ export default function Wishlist() {
           )}
         </div>
       </div>
+
+      <AddWishlistModal 
+        isOpen={showAddModal} 
+        onClose={() => setShowAddModal(false)} 
+      />
     </>
   );
 }
