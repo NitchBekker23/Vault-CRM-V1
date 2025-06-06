@@ -84,22 +84,22 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
                     onChange={(e) => setSearch(e.target.value)}
                   />
                 </div>
-                <Select value={category} onValueChange={setCategory}>
+                <Select value={category || "all"} onValueChange={(value) => setCategory(value === "all" ? "" : value)}>
                   <SelectTrigger className="w-40">
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Categories</SelectItem>
+                    <SelectItem value="all">All Categories</SelectItem>
                     <SelectItem value="watches">Watches</SelectItem>
                     <SelectItem value="leather-goods">Leather Goods</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={status} onValueChange={setStatus}>
+                <Select value={status || "all"} onValueChange={(value) => setStatus(value === "all" ? "" : value)}>
                   <SelectTrigger className="w-32">
                     <SelectValue placeholder="All Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Status</SelectItem>
+                    <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="in_stock">In Stock</SelectItem>
                     <SelectItem value="sold">Sold</SelectItem>
                     <SelectItem value="out_of_stock">Out of Stock</SelectItem>

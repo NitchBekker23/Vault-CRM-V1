@@ -38,16 +38,14 @@ export default function Sidebar() {
         <ul className="space-y-1">
           {navigation.map((item) => (
             <li key={item.name}>
-              <Link href={item.href}>
-                <a className={cn(
-                  "flex items-center space-x-3 p-3 rounded-lg transition-colors",
-                  location === item.href
-                    ? "text-slate-700 bg-primary/10 border-r-2 border-primary"
-                    : "text-slate-600 hover:bg-slate-100"
-                )}>
-                  <i className={`${item.icon} w-5`}></i>
-                  <span className={location === item.href ? "font-medium" : ""}>{item.name}</span>
-                </a>
+              <Link href={item.href} className={cn(
+                "flex items-center space-x-3 p-3 rounded-lg transition-colors",
+                location === item.href
+                  ? "text-slate-700 bg-primary/10 border-r-2 border-primary"
+                  : "text-slate-600 hover:bg-slate-100"
+              )}>
+                <i className={`${item.icon} w-5`}></i>
+                <span className={location === item.href ? "font-medium" : ""}>{item.name}</span>
               </Link>
             </li>
           ))}
@@ -61,16 +59,14 @@ export default function Sidebar() {
             <ul className="space-y-1">
               {adminNavigation.map((item) => (
                 <li key={item.name}>
-                  <Link href={item.href}>
-                    <a className={cn(
-                      "flex items-center space-x-3 p-3 rounded-lg transition-colors",
-                      location === item.href
-                        ? "text-slate-700 bg-primary/10 border-r-2 border-primary"
-                        : "text-slate-600 hover:bg-slate-100"
-                    )}>
-                      <i className={`${item.icon} w-5`}></i>
-                      <span className={location === item.href ? "font-medium" : ""}>{item.name}</span>
-                    </a>
+                  <Link href={item.href} className={cn(
+                    "flex items-center space-x-3 p-3 rounded-lg transition-colors",
+                    location === item.href
+                      ? "text-slate-700 bg-primary/10 border-r-2 border-primary"
+                      : "text-slate-600 hover:bg-slate-100"
+                  )}>
+                    <i className={`${item.icon} w-5`}></i>
+                    <span className={location === item.href ? "font-medium" : ""}>{item.name}</span>
                   </Link>
                 </li>
               ))}
