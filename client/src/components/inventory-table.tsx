@@ -248,7 +248,7 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
                           </Badge>
                         </TableCell>
                         <TableCell className="text-slate-900">
-                          {item.price ? `$${parseFloat(item.price).toLocaleString()}` : "-"}
+                          {item.price ? `R${parseFloat(item.price).toLocaleString()}` : "-"}
                         </TableCell>
                         <TableCell>
                           <div className="flex space-x-2">

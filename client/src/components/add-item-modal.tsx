@@ -32,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import ImageUpload from "./image-upload";
 
 interface AddItemModalProps {
   isOpen: boolean;
@@ -219,7 +220,7 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
                 name="price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Price ($)</FormLabel>
+                    <FormLabel>Price (ZAR)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -244,6 +245,12 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
                 <input type="file" className="hidden" multiple accept="image/*" />
               </div>
             </div>
+            
+            <ImageUpload
+              images={form.watch("imageUrls") || []}
+              onImagesChange={(images) => form.setValue("imageUrls", images)}
+              maxImages={5}
+            />
             
             <div className="flex items-center justify-end space-x-4 pt-4 border-t border-slate-200">
               <Button type="button" variant="outline" onClick={onClose}>

@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import ImageUpload from "./image-upload";
 
 interface EditItemModalProps {
   isOpen: boolean;
@@ -261,7 +262,7 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
                 name="price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Price ($)</FormLabel>
+                    <FormLabel>Price (ZAR)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
