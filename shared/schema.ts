@@ -165,6 +165,9 @@ export const insertWishlistItemSchema = createInsertSchema(wishlistItems).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  description: z.string().optional().nullable(),
+  maxPrice: z.string().optional().nullable(),
 });
 export type InsertWishlistItem = z.infer<typeof insertWishlistItemSchema>;
 export type WishlistItem = typeof wishlistItems.$inferSelect;

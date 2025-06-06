@@ -165,7 +165,7 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
                   <FormItem>
                     <FormLabel>SKU</FormLabel>
                     <FormControl>
-                      <Input placeholder="Internal SKU" {...field} />
+                      <Input placeholder="Internal SKU" {...field} value={field.value || ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -184,6 +184,7 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
                       placeholder="Detailed description of the item..."
                       className="h-24"
                       {...field}
+                      value={field.value || ""}
                     />
                   </FormControl>
                   <FormMessage />
@@ -226,6 +227,7 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
                         placeholder="0.00"
                         step="0.01"
                         {...field}
+                        value={field.value || ""}
                       />
                     </FormControl>
                     <FormMessage />
