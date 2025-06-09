@@ -27,6 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { InventoryItem } from "@shared/schema";
 import AddItemModal from "./add-item-modal";
 import EditItemModal from "./edit-item-modal";
@@ -49,6 +50,8 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -101,6 +104,41 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
     },
   });
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      await apiRequest("/api/inventory/bulk-delete", "POST", { ids });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/activities/recent"] });
+      setShowBulkDeleteDialog(false);
+      setSelectedItems(new Set());
+      toast({
+        title: "Success",
+        description: `${selectedItems.size} items deleted successfully`,
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error as Error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to delete items. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleViewDetails = (item: InventoryItem) => {
     setSelectedItem(item);
     setShowDetailsModal(true);
@@ -116,9 +154,37 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
     setShowDeleteDialog(true);
   };
 
+  const handleSelectItem = (id: number, checked: boolean) => {
+    const newSelectedItems = new Set(selectedItems);
+    if (checked) {
+      newSelectedItems.add(id);
+    } else {
+      newSelectedItems.delete(id);
+    }
+    setSelectedItems(newSelectedItems);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked && inventoryData) {
+      setSelectedItems(new Set(inventoryData.items.map(item => item.id)));
+    } else {
+      setSelectedItems(new Set());
+    }
+  };
+
+  const handleBulkDelete = () => {
+    setShowBulkDeleteDialog(true);
+  };
+
   const confirmDelete = () => {
     if (selectedItem) {
       deleteItemMutation.mutate(selectedItem.id);
+    }
+  };
+
+  const confirmBulkDelete = () => {
+    if (selectedItems.size > 0) {
+      bulkDeleteMutation.mutate(Array.from(selectedItems));
     }
   };
 
@@ -195,6 +261,16 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
                   <i className="fas fa-upload mr-2"></i>
                   Bulk Import
                 </Button>
+                {selectedItems.size > 0 && (
+                  <Button 
+                    onClick={handleBulkDelete} 
+                    variant="outline"
+                    className="border-red-200 hover:border-red-300 hover:bg-red-50"
+                  >
+                    <i className="fas fa-trash text-red-500 mr-2"></i>
+                    Delete Selected ({selectedItems.size})
+                  </Button>
+                )}
                 <Button onClick={() => setShowAddModal(true)}>
                   <i className="fas fa-plus mr-2"></i>
                   Add Item
