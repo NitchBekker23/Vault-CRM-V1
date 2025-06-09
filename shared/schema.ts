@@ -80,6 +80,25 @@ export const clients = pgTable("clients", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Sales tables
+export const sales = pgTable("sales", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  saleDate: timestamp("sale_date").notNull(),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  notes: text("notes"),
+  createdBy: varchar("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const saleItems = pgTable("sale_items", {
+  id: serial("id").primaryKey(),
+  saleId: integer("sale_id").references(() => sales.id).notNull(),
+  inventoryItemId: integer("inventory_item_id").references(() => inventoryItems.id).notNull(),
+  salePrice: decimal("sale_price", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Purchase history table
 export const purchases = pgTable("purchases", {
   id: serial("id").primaryKey(),
@@ -138,6 +157,29 @@ export const purchasesRelations = relations(purchases, ({ one }) => ({
   }),
 }));
 
+export const salesRelations = relations(sales, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [sales.clientId],
+    references: [clients.id],
+  }),
+  creator: one(users, {
+    fields: [sales.createdBy],
+    references: [users.id],
+  }),
+  saleItems: many(saleItems),
+}));
+
+export const saleItemsRelations = relations(saleItems, ({ one }) => ({
+  sale: one(sales, {
+    fields: [saleItems.saleId],
+    references: [sales.id],
+  }),
+  inventoryItem: one(inventoryItems, {
+    fields: [saleItems.inventoryItemId],
+    references: [inventoryItems.id],
+  }),
+}));
+
 export const activityLogRelations = relations(activityLog, ({ one }) => ({
   user: one(users, {
     fields: [activityLog.userId],
@@ -186,6 +228,20 @@ export const insertPurchaseSchema = createInsertSchema(purchases).omit({
 });
 export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
 export type Purchase = typeof purchases.$inferSelect;
+
+export const insertSaleSchema = createInsertSchema(sales).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertSale = z.infer<typeof insertSaleSchema>;
+export type Sale = typeof sales.$inferSelect;
+
+export const insertSaleItemSchema = createInsertSchema(saleItems).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertSaleItem = z.infer<typeof insertSaleItemSchema>;
+export type SaleItem = typeof saleItems.$inferSelect;
 
 export const insertActivityLogSchema = createInsertSchema(activityLog).omit({
   id: true,
