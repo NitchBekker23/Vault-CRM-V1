@@ -108,7 +108,22 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
 
   const bulkDeleteMutation = useMutation({
     mutationFn: async (ids: number[]) => {
-      await apiRequest("/api/inventory/bulk-delete", "POST", { ids });
+      console.log("Bulk deleting IDs:", ids);
+      const response = await fetch("/api/inventory/bulk-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ ids }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Delete failed" }));
+        throw new Error(`${response.status}: ${errorData.message || response.statusText}`);
+      }
+      
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });

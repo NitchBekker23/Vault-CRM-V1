@@ -34,7 +34,7 @@ export default function Inventory() {
     <>
       <Header title="Inventory Management" />
       <div className="p-6">
-        <InventoryTable showHeader={false} />
+        <InventoryTable showHeader={true} allowBulkActions={true} />
       </div>
     </>
   );
