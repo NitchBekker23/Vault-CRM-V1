@@ -4,6 +4,8 @@ import {
   wishlistItems,
   clients,
   purchases,
+  sales,
+  saleItems,
   activityLog,
   type User,
   type UpsertUser,
@@ -15,6 +17,10 @@ import {
   type InsertClient,
   type Purchase,
   type InsertPurchase,
+  type Sale,
+  type InsertSale,
+  type SaleItem,
+  type InsertSaleItem,
   type ActivityLog,
   type InsertActivityLog,
 } from "@shared/schema";
@@ -58,6 +64,11 @@ export interface IStorage {
   // Purchase operations
   getPurchases(clientId?: number): Promise<Purchase[]>;
   createPurchase(purchase: InsertPurchase): Promise<Purchase>;
+
+  // Sales operations
+  getSales(search?: string): Promise<{ sales: Sale[]; total: number }>;
+  createSale(sale: InsertSale, items: InsertSaleItem[]): Promise<Sale>;
+  getSalesByClient(clientId: number): Promise<Sale[]>;
 
   // Activity log operations
   getRecentActivities(limit?: number): Promise<ActivityLog[]>;

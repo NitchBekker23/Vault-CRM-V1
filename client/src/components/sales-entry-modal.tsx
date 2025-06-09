@@ -203,7 +203,7 @@ export default function SalesEntryModal({ isOpen, onClose }: SalesEntryModalProp
                     <SelectContent>
                       {clientsData?.clients.map((client) => (
                         <SelectItem key={client.id} value={client.id.toString()}>
-                          {client.name} - {client.email}
+                          {client.firstName} {client.lastName} - {client.email}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -288,7 +288,7 @@ export default function SalesEntryModal({ isOpen, onClose }: SalesEntryModalProp
                         <div className="flex-1">
                           <div className="font-medium text-slate-900">{item.name}</div>
                           <div className="text-sm text-slate-500">
-                            {item.brand} - {item.serialNumber} - R{item.price.toFixed(2)}
+                            {item.brand} - {item.serialNumber} - R{item.price ? parseFloat(item.price).toFixed(2) : '0.00'}
                           </div>
                         </div>
                         <Button size="sm" variant="outline">
