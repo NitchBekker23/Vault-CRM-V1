@@ -62,13 +62,26 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
     items: InventoryItem[];
     total: number;
   }>({
-    queryKey: ["/api/inventory", { 
-      page, 
-      search: search.trim() || undefined, 
-      category: category || undefined, 
-      status: status || undefined, 
-      limit: pageSize 
-    }],
+    queryKey: ["/api/inventory", page, pageSize, search, category, status],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: pageSize.toString(),
+        ...(search.trim() && { search: search.trim() }),
+        ...(category && { category }),
+        ...(status && { status }),
+      });
+      
+      const response = await fetch(`/api/inventory?${params}`, {
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+      
+      return response.json();
+    },
   });
 
   const deleteItemMutation = useMutation({
@@ -253,7 +266,12 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                     onChange={(e) => setSearch(e.target.value)}
                   />
                 </div>
-                <Select value={category || "all"} onValueChange={(value) => setCategory(value === "all" ? "" : value)}>
+                <Select value={category || "all"} onValueChange={(value) => {
+                  const newCategory = value === "all" ? "" : value;
+                  setCategory(newCategory);
+                  setPage(1);
+                  console.log("Category changed to:", newCategory);
+                }}>
                   <SelectTrigger className="w-40">
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
@@ -263,7 +281,12 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                     <SelectItem value="leather-goods">Leather Goods</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={status || "all"} onValueChange={(value) => setStatus(value === "all" ? "" : value)}>
+                <Select value={status || "all"} onValueChange={(value) => {
+                  const newStatus = value === "all" ? "" : value;
+                  setStatus(newStatus);
+                  setPage(1);
+                  console.log("Status changed to:", newStatus);
+                }}>
                   <SelectTrigger className="w-32">
                     <SelectValue placeholder="All Status" />
                   </SelectTrigger>
@@ -276,11 +299,13 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                 </Select>
                 {!limit && (
                   <Select value={pageSize.toString()} onValueChange={(value) => {
-                    setPageSize(parseInt(value));
+                    const newPageSize = parseInt(value);
+                    setPageSize(newPageSize);
                     setPage(1);
+                    console.log("Page size changed to:", newPageSize);
                   }}>
                     <SelectTrigger className="w-24">
-                      <SelectValue />
+                      <SelectValue placeholder={pageSize.toString()} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="10">10</SelectItem>
