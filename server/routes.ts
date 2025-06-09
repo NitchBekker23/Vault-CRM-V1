@@ -210,6 +210,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .on('error', reject);
       });
 
+      // Track serial numbers in this batch to prevent duplicates within the CSV
+      const batchSerialNumbers = new Set<string>();
+
       // Validate and process each row
       for (let i = 0; i < csvData.length; i++) {
         const row = csvData[i];
@@ -285,11 +288,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Validate with Zod schema
           const validatedData = insertInventoryItemSchema.parse(itemData);
 
-          // Check for duplicate serial number
-          const existingItems = await storage.getInventoryItems(1, 1000, validatedData.serialNumber);
-          const duplicateExists = existingItems.items.some(item => item.serialNumber === validatedData.serialNumber);
+          // Check for duplicate serial number within this batch
+          if (batchSerialNumbers.has(validatedData.serialNumber)) {
+            errors.push({
+              row: rowNumber,
+              field: 'serialNumber',
+              message: 'Serial number appears multiple times in this import',
+              value: validatedData.serialNumber
+            });
+            continue;
+          }
+
+          // Check for duplicate serial number in database
+          const existingItem = await storage.getInventoryItemBySerialNumber(validatedData.serialNumber);
           
-          if (duplicateExists) {
+          if (existingItem) {
             errors.push({
               row: rowNumber,
               field: 'serialNumber',
@@ -298,6 +311,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
             continue;
           }
+
+          // Add to batch tracking
+          batchSerialNumbers.add(validatedData.serialNumber);
 
           // Create the item
           await storage.createInventoryItem(validatedData);
