@@ -181,6 +181,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk delete route
+  app.post("/api/inventory/bulk-delete", isAuthenticated, async (req: any, res) => {
+    try {
+      const { ids } = req.body;
+      
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: "Invalid or empty IDs array" });
+      }
+
+      // Validate all IDs are numbers
+      const validIds = ids.filter(id => Number.isInteger(id) && id > 0);
+      if (validIds.length !== ids.length) {
+        return res.status(400).json({ message: "All IDs must be positive integers" });
+      }
+
+      await storage.bulkDeleteInventoryItems(validIds);
+
+      // Log activity for bulk delete
+      await storage.createActivity({
+        userId: req.user.claims.sub,
+        action: "bulk_delete",
+        description: `Bulk deleted ${validIds.length} inventory items`,
+        metadata: { deletedIds: validIds },
+      });
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error bulk deleting inventory items:", error);
+      res.status(500).json({ message: "Failed to delete items" });
+    }
+  });
+
   // Bulk import route
   app.post("/api/inventory/bulk-import", isAuthenticated, upload.single('file'), async (req: any, res) => {
     try {
