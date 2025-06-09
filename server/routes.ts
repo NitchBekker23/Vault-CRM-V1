@@ -330,7 +330,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: req.user.claims.sub,
         action: "bulk_import",
         entityType: "inventory_item",
-        entityId: null,
+        entityId: 0,
         description: `Bulk imported ${imported} items (${errors.length} errors)`,
       });
 

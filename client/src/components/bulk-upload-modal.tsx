@@ -47,10 +47,16 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
       const formData = new FormData();
       formData.append('file', file);
       
-      const response = await apiRequest("POST", "/api/inventory/bulk-import", {
+      const response = await fetch("/api/inventory/bulk-import", {
+        method: "POST",
         body: formData,
-        headers: {}, // Let browser set content-type for FormData
+        credentials: "include",
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Upload failed" }));
+        throw new Error(errorData.message || "Upload failed");
+      }
       
       return response.json();
     },

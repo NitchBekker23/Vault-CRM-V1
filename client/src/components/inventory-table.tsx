@@ -30,6 +30,7 @@ import {
 import { InventoryItem } from "@shared/schema";
 import AddItemModal from "./add-item-modal";
 import EditItemModal from "./edit-item-modal";
+import BulkUploadModal from "./bulk-upload-modal";
 
 interface InventoryTableProps {
   showHeader?: boolean;
@@ -44,6 +45,7 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   
   const { toast } = useToast();
@@ -182,6 +184,10 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
                     <SelectItem value="out_of_stock">Out of Stock</SelectItem>
                   </SelectContent>
                 </Select>
+                <Button variant="outline" onClick={() => setShowBulkUploadModal(true)}>
+                  <i className="fas fa-upload mr-2"></i>
+                  Bulk Import
+                </Button>
                 <Button onClick={() => setShowAddModal(true)}>
                   <i className="fas fa-plus mr-2"></i>
                   Add Item
@@ -350,6 +356,11 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
           setSelectedItem(null);
         }}
         item={selectedItem}
+      />
+
+      <BulkUploadModal
+        isOpen={showBulkUploadModal}
+        onClose={() => setShowBulkUploadModal(false)}
       />
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
