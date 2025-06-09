@@ -37,10 +37,12 @@ import ItemDetailsModal from "./item-details-modal";
 interface InventoryTableProps {
   showHeader?: boolean;
   limit?: number;
+  allowBulkActions?: boolean;
 }
 
-export default function InventoryTable({ showHeader = true, limit }: InventoryTableProps) {
+export default function InventoryTable({ showHeader = true, limit, allowBulkActions = true }: InventoryTableProps) {
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(limit || 10);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("");
@@ -65,13 +67,13 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
       search: search.trim() || undefined, 
       category: category || undefined, 
       status: status || undefined, 
-      limit 
+      limit: pageSize 
     }],
   });
 
   const deleteItemMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/inventory/${id}`);
+      await apiRequest(`/api/inventory/${id}`, "DELETE");
     },
     onSuccess: () => {
       toast({
@@ -214,7 +216,7 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
     }
   };
 
-  const totalPages = inventoryData ? Math.ceil(inventoryData.total / (limit || 10)) : 0;
+  const totalPages = inventoryData ? Math.ceil(inventoryData.total / pageSize) : 0;
 
   return (
     <>
