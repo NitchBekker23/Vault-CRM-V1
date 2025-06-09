@@ -259,11 +259,27 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                     <SelectItem value="out_of_stock">Out of Stock</SelectItem>
                   </SelectContent>
                 </Select>
+                {!limit && (
+                  <Select value={pageSize.toString()} onValueChange={(value) => {
+                    setPageSize(parseInt(value));
+                    setPage(1);
+                  }}>
+                    <SelectTrigger className="w-24">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
                 <Button variant="outline" onClick={() => setShowBulkUploadModal(true)}>
                   <i className="fas fa-upload mr-2"></i>
                   Bulk Import
                 </Button>
-                {selectedItems.size > 0 && (
+                {allowBulkActions && selectedItems.size > 0 && (
                   <Button 
                     onClick={handleBulkDelete} 
                     variant="outline"
@@ -306,12 +322,14 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-12">
-                        <Checkbox
-                          checked={inventoryData?.items.length > 0 && selectedItems.size === inventoryData.items.length}
-                          onCheckedChange={handleSelectAll}
-                        />
-                      </TableHead>
+                      {allowBulkActions && (
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={inventoryData?.items.length > 0 && selectedItems.size === inventoryData.items.length}
+                            onCheckedChange={handleSelectAll}
+                          />
+                        </TableHead>
+                      )}
                       <TableHead>Item</TableHead>
                       <TableHead>Serial/SKU</TableHead>
                       <TableHead>Brand</TableHead>
@@ -324,12 +342,14 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                   <TableBody>
                     {inventoryData.items.map((item) => (
                       <TableRow key={item.id} className="hover:bg-slate-50">
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedItems.has(item.id)}
-                            onCheckedChange={(checked) => handleSelectItem(item.id, !!checked)}
-                          />
-                        </TableCell>
+                        {allowBulkActions && (
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedItems.has(item.id)}
+                              onCheckedChange={(checked) => handleSelectItem(item.id, !!checked)}
+                            />
+                          </TableCell>
+                        )}
                         <TableCell>
                           <div className="flex items-center space-x-3">
                             <div 

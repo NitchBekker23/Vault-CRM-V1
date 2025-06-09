@@ -202,8 +202,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.createActivity({
         userId: req.user.claims.sub,
         action: "bulk_delete",
+        entityType: "inventory_item",
+        entityId: validIds[0], // Use first deleted item ID as reference
         description: `Bulk deleted ${validIds.length} inventory items`,
-        metadata: { deletedIds: validIds },
       });
 
       res.status(204).send();

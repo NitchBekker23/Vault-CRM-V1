@@ -45,7 +45,7 @@ export default function Dashboard() {
           <RecentActivity />
         </div>
 
-        <InventoryTable showHeader={true} limit={10} />
+        <InventoryTable showHeader={true} limit={10} allowBulkActions={false} />
       </div>
     </>
   );
