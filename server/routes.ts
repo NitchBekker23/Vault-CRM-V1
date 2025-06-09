@@ -2,6 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import multer from "multer";
+import csv from "csv-parser";
+import { Readable } from "stream";
 import {
   insertInventoryItemSchema,
   insertWishlistItemSchema,
@@ -9,6 +12,21 @@ import {
   insertPurchaseSchema,
 } from "@shared/schema";
 import { z } from "zod";
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'text/csv' || file.originalname.toLowerCase().endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only CSV files are allowed'));
+    }
+  },
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -160,6 +178,185 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting inventory item:", error);
       res.status(500).json({ message: "Failed to delete inventory item" });
+    }
+  });
+
+  // Bulk import route
+  app.post("/api/inventory/bulk-import", isAuthenticated, upload.single('file'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const csvData: any[] = [];
+      const errors: Array<{
+        row: number;
+        field: string;
+        message: string;
+        value: any;
+      }> = [];
+      
+      let processed = 0;
+      let imported = 0;
+
+      // Parse CSV data
+      const stream = Readable.from(req.file.buffer);
+      
+      await new Promise((resolve, reject) => {
+        stream
+          .pipe(csv())
+          .on('data', (data) => csvData.push(data))
+          .on('end', resolve)
+          .on('error', reject);
+      });
+
+      // Validate and process each row
+      for (let i = 0; i < csvData.length; i++) {
+        const row = csvData[i];
+        const rowNumber = i + 2; // +2 because CSV row 1 is headers, and we want 1-based indexing
+        processed++;
+
+        try {
+          // Validate required fields
+          const requiredFields = ['name', 'brand', 'serialNumber', 'category', 'status', 'price'];
+          for (const field of requiredFields) {
+            if (!row[field] || row[field].trim() === '') {
+              errors.push({
+                row: rowNumber,
+                field,
+                message: `${field} is required`,
+                value: row[field]
+              });
+            }
+          }
+
+          // Validate category
+          const validCategories = ['watches', 'leather-goods', 'accessories'];
+          if (row.category && !validCategories.includes(row.category)) {
+            errors.push({
+              row: rowNumber,
+              field: 'category',
+              message: `Category must be one of: ${validCategories.join(', ')}`,
+              value: row.category
+            });
+          }
+
+          // Validate status
+          const validStatuses = ['in_stock', 'sold', 'out_of_stock'];
+          if (row.status && !validStatuses.includes(row.status)) {
+            errors.push({
+              row: rowNumber,
+              field: 'status',
+              message: `Status must be one of: ${validStatuses.join(', ')}`,
+              value: row.status
+            });
+          }
+
+          // Validate price
+          const price = parseFloat(row.price);
+          if (isNaN(price) || price < 0) {
+            errors.push({
+              row: rowNumber,
+              field: 'price',
+              message: 'Price must be a valid positive number',
+              value: row.price
+            });
+          }
+
+          // Skip this row if there are validation errors
+          const rowErrors = errors.filter(e => e.row === rowNumber);
+          if (rowErrors.length > 0) {
+            continue;
+          }
+
+          // Prepare data for insertion
+          const itemData = {
+            name: row.name.trim(),
+            brand: row.brand.trim(),
+            serialNumber: row.serialNumber.trim(),
+            category: row.category,
+            status: row.status,
+            price: price,
+            description: row.description?.trim() || null,
+            imageUrls: row.imageUrls ? row.imageUrls.split(',').map((url: string) => url.trim()).filter(Boolean) : [],
+            createdBy: req.user.claims.sub,
+          };
+
+          // Validate with Zod schema
+          const validatedData = insertInventoryItemSchema.parse(itemData);
+
+          // Check for duplicate serial number
+          const existingItems = await storage.getInventoryItems(1, 1000, validatedData.serialNumber);
+          const duplicateExists = existingItems.items.some(item => item.serialNumber === validatedData.serialNumber);
+          
+          if (duplicateExists) {
+            errors.push({
+              row: rowNumber,
+              field: 'serialNumber',
+              message: 'Serial number already exists in database',
+              value: validatedData.serialNumber
+            });
+            continue;
+          }
+
+          // Create the item
+          await storage.createInventoryItem(validatedData);
+          imported++;
+
+        } catch (error: any) {
+          if (error.issues) {
+            // Zod validation errors
+            for (const issue of error.issues) {
+              errors.push({
+                row: rowNumber,
+                field: issue.path.join('.'),
+                message: issue.message,
+                value: issue.received
+              });
+            }
+          } else {
+            errors.push({
+              row: rowNumber,
+              field: 'general',
+              message: error.message || 'Unknown error occurred',
+              value: null
+            });
+          }
+        }
+      }
+
+      // Log bulk import activity
+      await storage.createActivity({
+        userId: req.user.claims.sub,
+        action: "bulk_import",
+        entityType: "inventory_item",
+        entityId: null,
+        description: `Bulk imported ${imported} items (${errors.length} errors)`,
+      });
+
+      const result = {
+        success: errors.length === 0,
+        processed,
+        imported,
+        errors
+      };
+
+      res.json(result);
+
+    } catch (error) {
+      console.error("Error processing bulk import:", error);
+      res.status(500).json({ 
+        message: "Failed to process bulk import",
+        success: false,
+        processed: 0,
+        imported: 0,
+        errors: [{
+          row: 0,
+          field: 'file',
+          message: 'Failed to process CSV file. Please check file format.',
+          value: null
+        }]
+      });
     }
   });
 
