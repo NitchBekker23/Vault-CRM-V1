@@ -31,6 +31,7 @@ import { InventoryItem } from "@shared/schema";
 import AddItemModal from "./add-item-modal";
 import EditItemModal from "./edit-item-modal";
 import BulkUploadModal from "./bulk-upload-modal";
+import ItemDetailsModal from "./item-details-modal";
 
 interface InventoryTableProps {
   showHeader?: boolean;
@@ -46,6 +47,7 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   
   const { toast } = useToast();
@@ -98,6 +100,11 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
       });
     },
   });
+
+  const handleViewDetails = (item: InventoryItem) => {
+    setSelectedItem(item);
+    setShowDetailsModal(true);
+  };
 
   const handleEdit = (item: InventoryItem) => {
     setSelectedItem(item);
@@ -235,11 +242,26 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
                       <TableRow key={item.id} className="hover:bg-slate-50">
                         <TableCell>
                           <div className="flex items-center space-x-3">
-                            <div className="h-12 w-12 bg-slate-100 rounded-lg flex items-center justify-center">
-                              <i className="fas fa-image text-slate-400"></i>
+                            <div 
+                              className="h-12 w-12 bg-slate-100 rounded-lg flex items-center justify-center overflow-hidden cursor-pointer hover:bg-slate-200 transition-colors"
+                              onClick={() => handleViewDetails(item)}
+                            >
+                              {item.imageUrls && item.imageUrls.length > 0 ? (
+                                <img
+                                  src={item.imageUrls[0]}
+                                  alt={item.name}
+                                  className="h-full w-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    e.currentTarget.parentElement!.innerHTML = '<i class="fas fa-image text-slate-400"></i>';
+                                  }}
+                                />
+                              ) : (
+                                <i className="fas fa-image text-slate-400"></i>
+                              )}
                             </div>
-                            <div>
-                              <div className="font-medium text-slate-900">{item.name}</div>
+                            <div className="cursor-pointer flex-1" onClick={() => handleViewDetails(item)}>
+                              <div className="font-medium text-slate-900 hover:text-blue-600 transition-colors">{item.name}</div>
                               <div className="text-sm text-slate-500">
                                 {item.description?.substring(0, 50)}
                                 {item.description && item.description.length > 50 ? "..." : ""}
@@ -361,6 +383,23 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
       <BulkUploadModal
         isOpen={showBulkUploadModal}
         onClose={() => setShowBulkUploadModal(false)}
+      />
+
+      <ItemDetailsModal
+        isOpen={showDetailsModal}
+        onClose={() => {
+          setShowDetailsModal(false);
+          setSelectedItem(null);
+        }}
+        item={selectedItem}
+        onEdit={(item) => {
+          setShowDetailsModal(false);
+          handleEdit(item);
+        }}
+        onDelete={(item) => {
+          setShowDetailsModal(false);
+          handleDelete(item);
+        }}
       />
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
