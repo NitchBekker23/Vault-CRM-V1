@@ -276,7 +276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             serialNumber: row.serialNumber.trim(),
             category: row.category,
             status: row.status,
-            price: price,
+            price: price.toString(),
             description: row.description?.trim() || null,
             imageUrls: row.imageUrls ? row.imageUrls.split(',').map((url: string) => url.trim()).filter(Boolean) : [],
             createdBy: req.user.claims.sub,
