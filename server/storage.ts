@@ -26,6 +26,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, ilike, or } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -45,6 +46,7 @@ export interface IStorage {
   createInventoryItem(item: InsertInventoryItem): Promise<InventoryItem>;
   updateInventoryItem(id: number, item: Partial<InsertInventoryItem>): Promise<InventoryItem>;
   deleteInventoryItem(id: number): Promise<void>;
+  bulkDeleteInventoryItems(ids: number[]): Promise<void>;
 
   // Wishlist operations
   getWishlistItems(
@@ -191,6 +193,11 @@ export class DatabaseStorage implements IStorage {
 
   async deleteInventoryItem(id: number): Promise<void> {
     await db.delete(inventoryItems).where(eq(inventoryItems.id, id));
+  }
+
+  async bulkDeleteInventoryItems(ids: number[]): Promise<void> {
+    if (ids.length === 0) return;
+    await db.delete(inventoryItems).where(inArray(inventoryItems.id, ids));
   }
 
   async getWishlistItems(

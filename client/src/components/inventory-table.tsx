@@ -304,6 +304,12 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={inventoryData?.items.length > 0 && selectedItems.size === inventoryData.items.length}
+                          onCheckedChange={handleSelectAll}
+                        />
+                      </TableHead>
                       <TableHead>Item</TableHead>
                       <TableHead>Serial/SKU</TableHead>
                       <TableHead>Brand</TableHead>
@@ -316,6 +322,12 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
                   <TableBody>
                     {inventoryData.items.map((item) => (
                       <TableRow key={item.id} className="hover:bg-slate-50">
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedItems.has(item.id)}
+                            onCheckedChange={(checked) => handleSelectItem(item.id, !!checked)}
+                          />
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-3">
                             <div 
@@ -496,6 +508,29 @@ export default function InventoryTable({ showHeader = true, limit }: InventoryTa
               className="bg-red-600 hover:bg-red-700"
             >
               {deleteItemMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Selected Items</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedItems.size} selected items? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSelectedItems(new Set())}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmBulkDelete}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={bulkDeleteMutation.isPending}
+            >
+              {bulkDeleteMutation.isPending ? "Deleting..." : "Delete All"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
