@@ -1,0 +1,6 @@
+name,brand,serialNumber,sku,category,status,price,description
+Rolex Submariner Original,Rolex,SUB-001,ROLEX-SUB-116610,watches,in_stock,8500,First item - will add image manually
+Rolex Submariner Variant 1,Rolex,SUB-002,ROLEX-SUB-116610,watches,in_stock,8600,Should inherit image from SUB-001
+Rolex Submariner Variant 2,Rolex,SUB-003,ROLEX-SUB-116610,watches,in_stock,8700,Should inherit image from SUB-001
+Omega Speedmaster Original,Omega,SPEED-001,OMEGA-SPEED-311,watches,in_stock,4500,Different SKU group
+Omega Speedmaster Variant,Omega,SPEED-002,OMEGA-SPEED-311,watches,in_stock,4600,Should inherit from SPEED-001

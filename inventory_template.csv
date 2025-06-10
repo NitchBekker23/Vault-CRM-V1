@@ -1,0 +1,4 @@
+name,brand,serialNumber,sku,category,status,price,description
+Sample Watch 1,Rolex,ABC001,ROLEX-001,watches,in_stock,5000,High-end luxury watch
+Sample Watch 2,Omega,DEF002,OMEGA-001,watches,in_stock,3000,Professional timepiece
+Sample Bag 1,Hermès,GHI003,HERMES-001,leather-goods,in_stock,2500,Premium leather handbag

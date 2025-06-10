@@ -405,7 +405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             continue;
           }
 
-          // Prepare data for insertion
+          // Prepare data for insertion with proper null handling
           const itemData = {
             name: row.name.trim(),
             brand: row.brand.trim(),
@@ -415,10 +415,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: row.status,
             price: price.toString(),
             description: row.description?.trim() || null,
-            imageUrls: row.imageUrls ? 
-              (typeof row.imageUrls === 'string' ? 
-                row.imageUrls.split(',').map((url: string) => url.trim()).filter(Boolean) : 
-                []) : 
+            imageUrls: row.imageUrls && row.imageUrls.toString().trim() ? 
+              row.imageUrls.toString().split(',').map((url: string) => url.trim()).filter(Boolean) : 
               [],
             createdBy: req.user.claims.sub,
           };
