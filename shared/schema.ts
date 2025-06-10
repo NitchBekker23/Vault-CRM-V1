@@ -37,6 +37,17 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Images table for efficient storage and referencing
+export const images = pgTable("images", {
+  id: serial("id").primaryKey(),
+  url: text("url").notNull(), // base64 data or external URL
+  filename: varchar("filename"),
+  mimeType: varchar("mime_type"),
+  size: integer("size"), // in bytes
+  uploadedBy: varchar("uploaded_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Inventory items table
 export const inventoryItems = pgTable("inventory_items", {
   id: serial("id").primaryKey(),
@@ -48,10 +59,20 @@ export const inventoryItems = pgTable("inventory_items", {
   category: varchar("category").notNull(), // 'watches' or 'leather-goods'
   price: decimal("price", { precision: 10, scale: 2 }),
   status: varchar("status").default("in_stock").notNull(), // 'in_stock', 'sold', 'out_of_stock'
-  imageUrls: text("image_urls").array(),
+  imageUrls: text("image_urls").array(), // Keep for backward compatibility
+  imageIds: integer("image_ids").array(), // New: reference to images table
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   createdBy: varchar("created_by").references(() => users.id),
+});
+
+// Junction table for many-to-many relationship between items and images
+export const inventoryItemImages = pgTable("inventory_item_images", {
+  id: serial("id").primaryKey(),
+  inventoryItemId: integer("inventory_item_id").references(() => inventoryItems.id).notNull(),
+  imageId: integer("image_id").references(() => images.id).notNull(),
+  displayOrder: integer("display_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Wishlist/demand tracking table
@@ -133,6 +154,26 @@ export const inventoryItemsRelations = relations(inventoryItems, ({ one, many })
     references: [users.id],
   }),
   purchases: many(purchases),
+  images: many(inventoryItemImages),
+}));
+
+export const imagesRelations = relations(images, ({ one, many }) => ({
+  uploader: one(users, {
+    fields: [images.uploadedBy],
+    references: [users.id],
+  }),
+  inventoryItems: many(inventoryItemImages),
+}));
+
+export const inventoryItemImagesRelations = relations(inventoryItemImages, ({ one }) => ({
+  inventoryItem: one(inventoryItems, {
+    fields: [inventoryItemImages.inventoryItemId],
+    references: [inventoryItems.id],
+  }),
+  image: one(images, {
+    fields: [inventoryItemImages.imageId],
+    references: [images.id],
+  }),
 }));
 
 export const wishlistItemsRelations = relations(wishlistItems, ({ one }) => ({
