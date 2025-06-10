@@ -518,17 +518,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(result);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error processing bulk import:", error);
+      const errorMessage = error?.message || 'Unknown error';
       res.status(500).json({ 
-        message: `Failed to process bulk import: ${error.message}`,
+        message: `Failed to process bulk import: ${errorMessage}`,
         success: false,
         processed: 0,
         imported: 0,
         errors: [{
           row: 0,
           field: 'file',
-          message: `Failed to process CSV file: ${error.message}`,
+          message: `Failed to process CSV file: ${errorMessage}`,
           value: null
         }]
       });
