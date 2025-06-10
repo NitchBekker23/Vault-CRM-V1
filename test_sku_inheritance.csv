@@ -1,0 +1,4 @@
+name,brand,serialNumber,sku,category,status,price,description,imageUrls
+Test Watch A,Rolex,TEST-A001,ROL-SUB-TEST,watches,in_stock,5000.00,First watch with images,"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+Test Watch B,Rolex,TEST-B002,ROL-SUB-TEST,watches,in_stock,5100.00,Second watch should inherit images,
+Test Watch C,Rolex,TEST-C003,ROL-SUB-TEST,watches,in_stock,5200.00,Third watch should inherit images,

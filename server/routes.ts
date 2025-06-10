@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { db } from "./db";
 import multer from "multer";
 import csv from "csv-parser";
 import { Readable } from "stream";
@@ -10,7 +11,9 @@ import {
   insertWishlistItemSchema,
   insertClientSchema,
   insertPurchaseSchema,
+  inventoryItems,
 } from "@shared/schema";
+import { eq, desc, sql, and, ilike, or } from "drizzle-orm";
 import { z } from "zod";
 
 // Configure multer for file uploads
