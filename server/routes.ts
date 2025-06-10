@@ -115,6 +115,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: req.user.claims.sub,
       });
 
+      // Auto-inherit images from existing SKUs if no images provided
+      if (validatedData.sku && validatedData.sku.trim()) {
+        const existingSkuItems = await storage.getInventoryItemsBySku(validatedData.sku.trim());
+        
+        if (existingSkuItems.length > 0) {
+          // Find the first item with images
+          const itemWithImages = existingSkuItems.find(item => 
+            item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0
+          );
+          
+          if (itemWithImages && itemWithImages.imageUrls && Array.isArray(itemWithImages.imageUrls)) {
+            // Only inherit if no images were provided
+            if (!validatedData.imageUrls || validatedData.imageUrls.length === 0) {
+              validatedData.imageUrls = itemWithImages.imageUrls;
+              console.log(`Inherited ${itemWithImages.imageUrls.length} images from existing SKU: ${validatedData.sku}`);
+            }
+          }
+        }
+      }
+
       const item = await storage.createInventoryItem(validatedData);
       
       // Log activity
@@ -318,6 +338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             name: row.name.trim(),
             brand: row.brand.trim(),
             serialNumber: row.serialNumber.trim(),
+            sku: row.sku?.trim() || null,
             category: row.category,
             status: row.status,
             price: price.toString(),
@@ -358,13 +379,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Auto-reuse images for existing SKUs
           if (validatedData.sku && validatedData.sku.trim()) {
-            const existingSkuItems = await storage.getInventoryItemsBySku(validatedData.sku);
+            const existingSkuItems = await storage.getInventoryItemsBySku(validatedData.sku.trim());
             
             // If we have existing items with this SKU and they have images, reuse them
-            if (existingSkuItems.length > 0 && existingSkuItems[0].imageUrls && existingSkuItems[0].imageUrls.length > 0) {
-              // Only reuse if no images were provided in the CSV
-              if (!validatedData.imageUrls || validatedData.imageUrls.length === 0) {
-                validatedData.imageUrls = existingSkuItems[0].imageUrls;
+            if (existingSkuItems.length > 0) {
+              // Find the first item with images
+              const itemWithImages = existingSkuItems.find(item => 
+                item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0
+              );
+              
+              if (itemWithImages && itemWithImages.imageUrls && Array.isArray(itemWithImages.imageUrls)) {
+                // Only reuse if no images were provided in the CSV
+                if (!validatedData.imageUrls || validatedData.imageUrls.length === 0) {
+                  validatedData.imageUrls = itemWithImages.imageUrls;
+                  console.log(`Inherited ${itemWithImages.imageUrls.length} images from existing SKU: ${validatedData.sku}`);
+                }
               }
             }
           }
