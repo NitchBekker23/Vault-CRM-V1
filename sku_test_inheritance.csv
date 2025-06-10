@@ -1,0 +1,6 @@
+name,brand,serialNumber,sku,category,status,price,description
+Rolex Sub Original,Rolex,ROLEX-001,ROLEX-SUB-001,watches,in_stock,8500,Original with image
+Rolex Sub Variant 1,Rolex,ROLEX-002,ROLEX-SUB-001,watches,in_stock,8600,Should inherit from original
+Rolex Sub Variant 2,Rolex,ROLEX-003,ROLEX-SUB-001,watches,in_stock,8700,Should inherit from original
+Omega Speed Original,Omega,OMEGA-001,OMEGA-SPEED-001,watches,in_stock,4500,Different SKU - no inheritance
+Omega Speed Variant,Omega,OMEGA-002,OMEGA-SPEED-001,watches,in_stock,4600,Should inherit from Omega original

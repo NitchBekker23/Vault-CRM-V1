@@ -455,7 +455,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Auto-inherit images from existing SKUs if no images provided
           if (validatedData.sku && validatedData.sku.trim() && (!validatedData.imageUrls || validatedData.imageUrls.length === 0)) {
+            console.log(`Checking SKU inheritance for: ${validatedData.sku.trim()}`);
             const existingSkuItems = await storage.getInventoryItemsBySku(validatedData.sku.trim());
+            console.log(`Found ${existingSkuItems.length} existing items with SKU: ${validatedData.sku.trim()}`);
             
             if (existingSkuItems.length > 0) {
               // Find the first item with images
@@ -466,9 +468,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               if (itemWithImages && itemWithImages.imageUrls && Array.isArray(itemWithImages.imageUrls)) {
                 // For bulk imports, use reference-style inheritance to save storage
                 validatedData.imageUrls = itemWithImages.imageUrls;
-                console.log(`Bulk import: Inherited ${itemWithImages.imageUrls.length} images from existing SKU: ${validatedData.sku} (storage optimized)`);
+                console.log(`✅ SKU Inheritance Success: Inherited ${itemWithImages.imageUrls.length} images from existing SKU: ${validatedData.sku} for item: ${validatedData.name}`);
+              } else {
+                console.log(`No existing items with images found for SKU: ${validatedData.sku}`);
               }
             }
+          } else {
+            console.log(`Skipping SKU inheritance for ${validatedData.name}: SKU=${validatedData.sku}, hasImages=${validatedData.imageUrls && validatedData.imageUrls.length > 0}`);
           }
 
           // Create the item
