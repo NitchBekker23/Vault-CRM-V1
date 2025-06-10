@@ -116,7 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Auto-inherit images from existing SKUs if no images provided
-      if (validatedData.sku && validatedData.sku.trim()) {
+      if (validatedData.sku && validatedData.sku.trim() && (!validatedData.imageUrls || validatedData.imageUrls.length === 0)) {
         const existingSkuItems = await storage.getInventoryItemsBySku(validatedData.sku.trim());
         
         if (existingSkuItems.length > 0) {
@@ -126,11 +126,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
           
           if (itemWithImages && itemWithImages.imageUrls && Array.isArray(itemWithImages.imageUrls)) {
-            // Only inherit if no images were provided
-            if (!validatedData.imageUrls || validatedData.imageUrls.length === 0) {
-              validatedData.imageUrls = itemWithImages.imageUrls;
-              console.log(`Inherited ${itemWithImages.imageUrls.length} images from existing SKU: ${validatedData.sku}`);
-            }
+            validatedData.imageUrls = itemWithImages.imageUrls;
+            console.log(`Individual creation: Inherited ${itemWithImages.imageUrls.length} images from existing SKU: ${validatedData.sku}`);
           }
         }
       }
@@ -206,6 +203,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting inventory item:", error);
       res.status(500).json({ message: "Failed to delete inventory item" });
+    }
+  });
+
+  // Utility route to inherit images for existing SKUs
+  app.post("/api/inventory/inherit-sku-images", isAuthenticated, async (req: any, res) => {
+    try {
+      let updatedCount = 0;
+      const errors: string[] = [];
+
+      // Get all items with SKUs but no images
+      const itemsWithoutImages = await db
+        .select()
+        .from(inventoryItems)
+        .where(and(
+          sql`${inventoryItems.sku} IS NOT NULL AND ${inventoryItems.sku} != ''`,
+          or(
+            sql`${inventoryItems.imageUrls} IS NULL`,
+            sql`array_length(${inventoryItems.imageUrls}, 1) = 0`,
+            sql`array_length(${inventoryItems.imageUrls}, 1) IS NULL`
+          )
+        ));
+
+      for (const item of itemsWithoutImages) {
+        try {
+          if (item.sku) {
+            // Find items with the same SKU that have images
+            const skuItemsWithImages = await storage.getInventoryItemsBySku(item.sku);
+            const sourceItem = skuItemsWithImages.find(skuItem => 
+              skuItem.id !== item.id && 
+              skuItem.imageUrls && 
+              Array.isArray(skuItem.imageUrls) && 
+              skuItem.imageUrls.length > 0
+            );
+
+            if (sourceItem && sourceItem.imageUrls) {
+              await storage.updateInventoryItem(item.id, {
+                imageUrls: sourceItem.imageUrls
+              });
+              updatedCount++;
+              console.log(`Updated item ${item.id} (${item.name}) with images from SKU: ${item.sku}`);
+            }
+          }
+        } catch (error) {
+          console.error(`Error updating item ${item.id}:`, error);
+          errors.push(`Failed to update item ${item.id}: ${item.name}`);
+        }
+      }
+
+      res.json({
+        success: true,
+        updatedCount,
+        totalProcessed: itemsWithoutImages.length,
+        errors
+      });
+
+    } catch (error) {
+      console.error("Error inheriting SKU images:", error);
+      res.status(500).json({ 
+        message: "Failed to inherit SKU images",
+        success: false
+      });
     }
   });
 
@@ -377,11 +435,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Add to batch tracking
           batchSerialNumbers.add(validatedData.serialNumber);
 
-          // Auto-reuse images for existing SKUs
-          if (validatedData.sku && validatedData.sku.trim()) {
+          // Auto-inherit images from existing SKUs if no images provided
+          if (validatedData.sku && validatedData.sku.trim() && (!validatedData.imageUrls || validatedData.imageUrls.length === 0)) {
             const existingSkuItems = await storage.getInventoryItemsBySku(validatedData.sku.trim());
             
-            // If we have existing items with this SKU and they have images, reuse them
             if (existingSkuItems.length > 0) {
               // Find the first item with images
               const itemWithImages = existingSkuItems.find(item => 
@@ -389,11 +446,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               );
               
               if (itemWithImages && itemWithImages.imageUrls && Array.isArray(itemWithImages.imageUrls)) {
-                // Only reuse if no images were provided in the CSV
-                if (!validatedData.imageUrls || validatedData.imageUrls.length === 0) {
-                  validatedData.imageUrls = itemWithImages.imageUrls;
-                  console.log(`Inherited ${itemWithImages.imageUrls.length} images from existing SKU: ${validatedData.sku}`);
-                }
+                validatedData.imageUrls = itemWithImages.imageUrls;
+                console.log(`Bulk import: Inherited ${itemWithImages.imageUrls.length} images from existing SKU: ${validatedData.sku}`);
               }
             }
           }
