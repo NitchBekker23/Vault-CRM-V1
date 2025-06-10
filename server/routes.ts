@@ -348,6 +348,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Add to batch tracking
           batchSerialNumbers.add(validatedData.serialNumber);
 
+          // Auto-reuse images for existing SKUs
+          if (validatedData.sku && validatedData.sku.trim()) {
+            const existingSkuItems = await storage.getInventoryItemsBySku(validatedData.sku);
+            
+            // If we have existing items with this SKU and they have images, reuse them
+            if (existingSkuItems.length > 0 && existingSkuItems[0].imageUrls && existingSkuItems[0].imageUrls.length > 0) {
+              // Only reuse if no images were provided in the CSV
+              if (!validatedData.imageUrls || validatedData.imageUrls.length === 0) {
+                validatedData.imageUrls = existingSkuItems[0].imageUrls;
+              }
+            }
+          }
+
           // Create the item
           await storage.createInventoryItem(validatedData);
           imported++;

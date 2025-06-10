@@ -106,6 +106,7 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
       "name",
       "brand", 
       "serialNumber",
+      "sku",
       "category",
       "status",
       "price",
@@ -114,14 +115,27 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
     ];
     
     const sampleData = [
-      "Product Name",
-      "Brand Name",
-      "SN12345",
+      "Rolex Submariner",
+      "Rolex",
+      "RS12345",
+      "ROLEX-SUB-001",
       "watches", // watches, leather-goods, accessories
       "in_stock", // in_stock, sold, out_of_stock
-      "1500.00",
-      "Product description",
-      "https://example.com/image1.jpg,https://example.com/image2.jpg"
+      "8500.00",
+      "Classic diving watch",
+      ""
+    ];
+    
+    const sampleData2 = [
+      "Rolex Submariner",
+      "Rolex", 
+      "RS12346",
+      "ROLEX-SUB-001",
+      "watches",
+      "in_stock",
+      "8500.00",
+      "Classic diving watch - same SKU will reuse images",
+      ""
     ];
     
     const csvContent = [
