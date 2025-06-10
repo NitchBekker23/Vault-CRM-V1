@@ -338,6 +338,102 @@ export class DatabaseStorage implements IStorage {
     return newActivity;
   }
 
+  async getSales(search?: string): Promise<{ sales: Sale[]; total: number }> {
+    let query = db
+      .select({
+        id: sales.id,
+        clientId: sales.clientId,
+        saleDate: sales.saleDate,
+        totalAmount: sales.totalAmount,
+        notes: sales.notes,
+        createdAt: sales.createdAt,
+        client: {
+          firstName: clients.firstName,
+          lastName: clients.lastName,
+          email: clients.email,
+        },
+      })
+      .from(sales)
+      .leftJoin(clients, eq(sales.clientId, clients.id));
+
+    if (search && search.trim()) {
+      const searchTerm = `%${search.trim()}%`;
+      query = query.where(
+        or(
+          ilike(clients.firstName, searchTerm),
+          ilike(clients.lastName, searchTerm),
+          ilike(clients.email, searchTerm)
+        )
+      );
+    }
+
+    const salesResults = await query.orderBy(desc(sales.createdAt));
+    
+    // Get sale items for each sale
+    const salesWithItems = await Promise.all(
+      salesResults.map(async (sale) => {
+        const items = await db
+          .select({
+            id: saleItems.id,
+            salePrice: saleItems.salePrice,
+            inventoryItem: {
+              name: inventoryItems.name,
+              brand: inventoryItems.brand,
+              serialNumber: inventoryItems.serialNumber,
+            },
+          })
+          .from(saleItems)
+          .leftJoin(inventoryItems, eq(saleItems.inventoryItemId, inventoryItems.id))
+          .where(eq(saleItems.saleId, sale.id));
+
+        return {
+          ...sale,
+          saleItems: items,
+        };
+      })
+    );
+
+    return {
+      sales: salesWithItems,
+      total: salesWithItems.length,
+    };
+  }
+
+  async createSale(sale: InsertSale, items: InsertSaleItem[]): Promise<Sale> {
+    return await db.transaction(async (tx) => {
+      // Create the sale
+      const [newSale] = await tx.insert(sales).values(sale).returning();
+
+      // Create sale items
+      const saleItemsWithSaleId = items.map(item => ({
+        ...item,
+        saleId: newSale.id,
+      }));
+      
+      await tx.insert(saleItems).values(saleItemsWithSaleId);
+
+      // Update inventory status to sold
+      for (const item of items) {
+        await tx
+          .update(inventoryItems)
+          .set({ status: "sold" })
+          .where(eq(inventoryItems.id, item.inventoryItemId));
+      }
+
+      return newSale;
+    });
+  }
+
+  async getSalesByClient(clientId: number): Promise<Sale[]> {
+    const salesResults = await db
+      .select()
+      .from(sales)
+      .where(eq(sales.clientId, clientId))
+      .orderBy(desc(sales.createdAt));
+
+    return salesResults;
+  }
+
   async getDashboardMetrics(): Promise<{
     totalInventory: number;
     inStock: number;

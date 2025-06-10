@@ -140,7 +140,8 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
     
     const csvContent = [
       headers.join(","),
-      sampleData.join(",")
+      sampleData.join(","),
+      sampleData2.join(",")
     ].join("\n");
     
     const blob = new Blob([csvContent], { type: "text/csv" });
@@ -210,13 +211,34 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
                 <div>
                   <h3 className="font-medium text-slate-900">Download Template</h3>
                   <p className="text-sm text-slate-500">
-                    Get the CSV template with required fields and sample data
+                    CSV template with SKU field for automatic image reuse
                   </p>
                 </div>
                 <Button variant="outline" onClick={downloadTemplate}>
                   <Download className="h-4 w-4 mr-2" />
                   Download Template
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Instructions */}
+          <Card>
+            <CardContent className="pt-6">
+              <h3 className="font-medium text-slate-900 mb-3">Important Notes</h3>
+              <div className="space-y-2 text-sm text-slate-600">
+                <div className="flex items-start space-x-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                  <p><strong>Serial Numbers:</strong> Must be unique for each item. No duplicates allowed across your entire inventory.</p>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                  <p><strong>SKU Image Reuse:</strong> Items with the same SKU will automatically reuse existing images from previous uploads.</p>
+                </div>
+                <div className="flex items-start space-x-2">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
+                  <p><strong>Multiple SKUs:</strong> Upload multiple items with the same SKU but different serial numbers to save time on image uploads.</p>
+                </div>
               </div>
             </CardContent>
           </Card>
