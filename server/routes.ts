@@ -29,6 +29,14 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Test database connection before setting up routes
+  try {
+    await storage.testConnection();
+  } catch (error) {
+    console.error('Failed to connect to database during startup:', error);
+    throw error;
+  }
+
   // Auth middleware
   await setupAuth(app);
 
