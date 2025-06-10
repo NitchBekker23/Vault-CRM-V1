@@ -119,28 +119,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: req.user.claims.sub,
       });
 
-      // Auto-inherit images from existing SKUs if no images provided (optimized for storage)
+      // Auto-inherit images from existing SKUs if no images provided
       if (validatedData.sku && validatedData.sku.trim() && (!validatedData.imageUrls || validatedData.imageUrls.length === 0)) {
-        // Use optimized image inheritance to prevent storage duplication
-        const inherited = await imageOptimizer.inheritSkuImages(
-          0, // Will be updated after item creation
-          validatedData.sku.trim(),
-          req.user.claims.sub
-        );
+        const existingSkuItems = await storage.getInventoryItemsBySku(validatedData.sku.trim());
         
-        if (!inherited) {
-          // Fallback to legacy method for backward compatibility
-          const existingSkuItems = await storage.getInventoryItemsBySku(validatedData.sku.trim());
+        if (existingSkuItems.length > 0) {
+          const itemWithImages = existingSkuItems.find(item => 
+            item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0
+          );
           
-          if (existingSkuItems.length > 0) {
-            const itemWithImages = existingSkuItems.find(item => 
-              item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0
-            );
-            
-            if (itemWithImages && itemWithImages.imageUrls && Array.isArray(itemWithImages.imageUrls)) {
-              validatedData.imageUrls = itemWithImages.imageUrls;
-              console.log(`Individual creation: Inherited ${itemWithImages.imageUrls.length} images from existing SKU: ${validatedData.sku}`);
-            }
+          if (itemWithImages && itemWithImages.imageUrls && Array.isArray(itemWithImages.imageUrls)) {
+            validatedData.imageUrls = itemWithImages.imageUrls;
+            console.log(`Individual creation: Inherited ${itemWithImages.imageUrls.length} images from existing SKU: ${validatedData.sku}`);
           }
         }
       }
@@ -425,9 +415,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: row.status,
             price: price.toString(),
             description: row.description?.trim() || null,
-            imageUrls: row.imageUrls ? row.imageUrls.split(',').map((url: string) => url.trim()).filter(Boolean) : [],
+            imageUrls: row.imageUrls ? 
+              (typeof row.imageUrls === 'string' ? 
+                row.imageUrls.split(',').map((url: string) => url.trim()).filter(Boolean) : 
+                []) : 
+              [],
             createdBy: req.user.claims.sub,
           };
+          
+          console.log(`Processing row ${rowNumber}: ${itemData.name} - ${itemData.serialNumber}`);
 
           // Validate with Zod schema
           const validatedData = insertInventoryItemSchema.parse(itemData);
@@ -482,6 +478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           imported++;
 
         } catch (error: any) {
+          console.error(`Error processing row ${rowNumber}:`, error);
           if (error.issues) {
             // Zod validation errors
             for (const issue of error.issues) {
@@ -524,14 +521,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error processing bulk import:", error);
       res.status(500).json({ 
-        message: "Failed to process bulk import",
+        message: `Failed to process bulk import: ${error.message}`,
         success: false,
         processed: 0,
         imported: 0,
         errors: [{
           row: 0,
           field: 'file',
-          message: 'Failed to process CSV file. Please check file format.',
+          message: `Failed to process CSV file: ${error.message}`,
           value: null
         }]
       });

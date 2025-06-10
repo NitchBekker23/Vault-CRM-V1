@@ -1,0 +1,4 @@
+name,brand,serialNumber,sku,category,status,price,description
+Test Watch Alpha,Rolex,TEST-ALPHA-001,ROL-ALPHA,watches,in_stock,5000,First watch with no images
+Test Watch Beta,Rolex,TEST-BETA-002,ROL-ALPHA,watches,in_stock,5100,Second watch should inherit images
+Test Watch Gamma,Rolex,TEST-GAMMA-003,ROL-ALPHA,watches,in_stock,5200,Third watch should inherit images
