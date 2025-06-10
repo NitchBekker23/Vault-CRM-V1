@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { db } from "./db";
+import { imageOptimizer } from "./imageOptimizer";
 import multer from "multer";
 import csv from "csv-parser";
 import { Readable } from "stream";
@@ -118,19 +119,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: req.user.claims.sub,
       });
 
-      // Auto-inherit images from existing SKUs if no images provided
+      // Auto-inherit images from existing SKUs if no images provided (optimized for storage)
       if (validatedData.sku && validatedData.sku.trim() && (!validatedData.imageUrls || validatedData.imageUrls.length === 0)) {
-        const existingSkuItems = await storage.getInventoryItemsBySku(validatedData.sku.trim());
+        // Use optimized image inheritance to prevent storage duplication
+        const inherited = await imageOptimizer.inheritSkuImages(
+          0, // Will be updated after item creation
+          validatedData.sku.trim(),
+          req.user.claims.sub
+        );
         
-        if (existingSkuItems.length > 0) {
-          // Find the first item with images
-          const itemWithImages = existingSkuItems.find(item => 
-            item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0
-          );
+        if (!inherited) {
+          // Fallback to legacy method for backward compatibility
+          const existingSkuItems = await storage.getInventoryItemsBySku(validatedData.sku.trim());
           
-          if (itemWithImages && itemWithImages.imageUrls && Array.isArray(itemWithImages.imageUrls)) {
-            validatedData.imageUrls = itemWithImages.imageUrls;
-            console.log(`Individual creation: Inherited ${itemWithImages.imageUrls.length} images from existing SKU: ${validatedData.sku}`);
+          if (existingSkuItems.length > 0) {
+            const itemWithImages = existingSkuItems.find(item => 
+              item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0
+            );
+            
+            if (itemWithImages && itemWithImages.imageUrls && Array.isArray(itemWithImages.imageUrls)) {
+              validatedData.imageUrls = itemWithImages.imageUrls;
+              console.log(`Individual creation: Inherited ${itemWithImages.imageUrls.length} images from existing SKU: ${validatedData.sku}`);
+            }
           }
         }
       }
@@ -206,6 +216,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting inventory item:", error);
       res.status(500).json({ message: "Failed to delete inventory item" });
+    }
+  });
+
+  // Storage analytics endpoint
+  app.get("/api/inventory/storage-analytics", isAuthenticated, async (req: any, res) => {
+    try {
+      const stats = await imageOptimizer.getStorageStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error getting storage analytics:", error);
+      res.status(500).json({ message: "Failed to get storage analytics" });
     }
   });
 
@@ -449,8 +470,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               );
               
               if (itemWithImages && itemWithImages.imageUrls && Array.isArray(itemWithImages.imageUrls)) {
+                // For bulk imports, use reference-style inheritance to save storage
                 validatedData.imageUrls = itemWithImages.imageUrls;
-                console.log(`Bulk import: Inherited ${itemWithImages.imageUrls.length} images from existing SKU: ${validatedData.sku}`);
+                console.log(`Bulk import: Inherited ${itemWithImages.imageUrls.length} images from existing SKU: ${validatedData.sku} (storage optimized)`);
               }
             }
           }
