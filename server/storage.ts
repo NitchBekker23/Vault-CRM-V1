@@ -339,26 +339,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSales(search?: string): Promise<{ sales: Sale[]; total: number }> {
-    let query = db
-      .select({
-        id: sales.id,
-        clientId: sales.clientId,
-        saleDate: sales.saleDate,
-        totalAmount: sales.totalAmount,
-        notes: sales.notes,
-        createdAt: sales.createdAt,
-        client: {
-          firstName: clients.firstName,
-          lastName: clients.lastName,
-          email: clients.email,
-        },
-      })
+    // Build the base query
+    const baseQuery = db
+      .select()
       .from(sales)
       .leftJoin(clients, eq(sales.clientId, clients.id));
 
+    // Apply search filter if provided
+    const whereConditions = [];
     if (search && search.trim()) {
       const searchTerm = `%${search.trim()}%`;
-      query = query.where(
+      whereConditions.push(
         or(
           ilike(clients.firstName, searchTerm),
           ilike(clients.lastName, searchTerm),
@@ -367,11 +358,17 @@ export class DatabaseStorage implements IStorage {
       );
     }
 
-    const salesResults = await query.orderBy(desc(sales.createdAt));
+    // Execute query with optional where clause
+    const salesResults = whereConditions.length > 0 
+      ? await baseQuery.where(and(...whereConditions)).orderBy(desc(sales.createdAt))
+      : await baseQuery.orderBy(desc(sales.createdAt));
     
-    // Get sale items for each sale
+    // Transform results and get sale items
     const salesWithItems = await Promise.all(
-      salesResults.map(async (sale) => {
+      salesResults.map(async (result) => {
+        const sale = result.sales;
+        const client = result.clients;
+        
         const items = await db
           .select({
             id: saleItems.id,
@@ -387,14 +384,25 @@ export class DatabaseStorage implements IStorage {
           .where(eq(saleItems.saleId, sale.id));
 
         return {
-          ...sale,
+          id: sale.id,
+          clientId: sale.clientId,
+          saleDate: sale.saleDate,
+          totalAmount: sale.totalAmount,
+          notes: sale.notes,
+          createdBy: sale.createdBy,
+          createdAt: sale.createdAt,
+          client: client ? {
+            firstName: client.firstName,
+            lastName: client.lastName,
+            email: client.email,
+          } : null,
           saleItems: items,
         };
       })
     );
 
     return {
-      sales: salesWithItems,
+      sales: salesWithItems as Sale[],
       total: salesWithItems.length,
     };
   }
