@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -161,16 +161,22 @@ export default function UserProfile() {
     );
   }
 
+  // Auto-populate form when user data is loaded
+  React.useEffect(() => {
+    if (user && !isEditing) {
+      setFormData({
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        email: user.email || "",
+        company: user.company || "",
+        phoneNumber: user.phoneNumber || "",
+        role: user.role || "",
+        status: user.status || "",
+      });
+    }
+  }, [user, isEditing]);
+
   const handleEdit = () => {
-    setFormData({
-      firstName: user.firstName || "",
-      lastName: user.lastName || "",
-      email: user.email || "",
-      company: user.company || "",
-      phoneNumber: user.phoneNumber || "",
-      role: user.role || "",
-      status: user.status || "",
-    });
     setIsEditing(true);
   };
 

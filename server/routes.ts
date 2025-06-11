@@ -412,16 +412,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.params.id;
       const updates = req.body;
       
-      // Update user with provided fields
-      if (updates.status) {
-        await storage.updateUserStatus(userId, updates.status);
-      }
-      if (updates.role) {
-        await storage.updateUserRole(userId, updates.role);
-      }
-      
-      // Get updated user
-      const updatedUser = await storage.getUser(userId);
+      // Use the comprehensive updateUser method
+      const updatedUser = await storage.updateUser(userId, updates);
       res.json(updatedUser);
     } catch (error) {
       console.error("Error updating user:", error);
