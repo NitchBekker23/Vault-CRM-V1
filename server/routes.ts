@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import crypto from "crypto";
+import bcrypt from "bcrypt";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { db } from "./db";
@@ -127,7 +128,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Account not approved" });
       }
       
-      res.json(user);
+      // Return user data without password hash
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -413,6 +416,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User with this email already exists" });
       }
       
+      // Hash password securely
+      const saltRounds = 12;
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+      
       // Create user directly (no approval needed)
       const userId = `user-${Date.now()}`;
       const user = await storage.upsertUser({
@@ -423,7 +430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         company,
         role: 'user',
         status: 'approved',
-        password: password, // In production, hash this password
+        password: hashedPassword,
       });
       
       res.status(201).json({ 
@@ -451,8 +458,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid email or password" });
       }
       
-      // Check password (in production, compare hashed passwords)
-      if (user.password !== password) {
+      // Verify password against stored hash
+      const isValidPassword = await bcrypt.compare(password, user.password || '');
+      if (!isValidPassword) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
       
@@ -473,6 +481,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
+          company: user.company,
           role: user.role,
           status: user.status
         }
