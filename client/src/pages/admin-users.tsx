@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { Users, UserCheck, UserX, Shield, Crown, Trash2 } from "lucide-react";
 import Header from "@/components/header";
@@ -40,6 +41,7 @@ interface AccountRequest {
 
 export default function AdminUsers() {
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
   const [selectedRequest, setSelectedRequest] = useState<AccountRequest | null>(null);
   const [denialReason, setDenialReason] = useState("");
   const [showDenialDialog, setShowDenialDialog] = useState(false);

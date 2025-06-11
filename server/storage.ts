@@ -52,6 +52,7 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   updateUserStatus(id: string, status: string): Promise<User>;
   updateUserRole(id: string, role: string): Promise<User>;
+  deleteUser(id: string): Promise<void>;
   
   // Two-factor authentication operations
   createTwoFactorCode(code: InsertTwoFactorCode): Promise<TwoFactorCode>;

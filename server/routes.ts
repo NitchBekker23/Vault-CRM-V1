@@ -239,6 +239,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/admin/users/:id', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      const currentUserId = req.currentUser.id;
+      
+      // Prevent users from deleting themselves
+      if (userId === currentUserId) {
+        return res.status(400).json({ message: "Cannot delete your own account" });
+      }
+      
+      // Get user to delete
+      const userToDelete = await storage.getUser(userId);
+      if (!userToDelete) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Only owners can delete other owners
+      if (userToDelete.role === 'owner' && req.currentUser.role !== 'owner') {
+        return res.status(403).json({ message: "Only owners can delete other owners" });
+      }
+      
+      await storage.deleteUser(userId);
+      
+      // Log the deletion activity
+      await storage.createActivity({
+        userId: currentUserId,
+        action: "deleted_user",
+        entityType: "user",
+        entityId: userId,
+        description: `Deleted user: ${userToDelete.firstName} ${userToDelete.lastName} (${userToDelete.email})`,
+      });
+      
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
   // Account setup routes
   app.get('/api/auth/verify-setup-token', async (req, res) => {
     try {
