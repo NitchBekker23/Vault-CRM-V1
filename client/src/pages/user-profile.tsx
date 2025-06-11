@@ -39,11 +39,20 @@ export default function UserProfile() {
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: async (data: Partial<User>) => {
-      return await apiRequest(`/api/admin/users/${userId}`, {
+    mutationFn: async (data: any) => {
+      const response = await fetch(`/api/admin/users/${userId}`, {
         method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
+      
+      if (!response.ok) {
+        throw new Error("Failed to update user");
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -65,9 +74,15 @@ export default function UserProfile() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest(`/api/admin/users/${userId}`, {
+      const response = await fetch(`/api/admin/users/${userId}`, {
         method: "DELETE",
       });
+      
+      if (!response.ok) {
+        throw new Error("Failed to delete user");
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       toast({

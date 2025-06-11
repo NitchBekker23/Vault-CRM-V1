@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
-import { Users, UserCheck, UserX, Shield, Crown, Trash2 } from "lucide-react";
+import { Users, UserCheck, UserX, Shield, Crown, Trash2, Eye } from "lucide-react";
 import Header from "@/components/header";
 
 interface User {
@@ -42,6 +43,7 @@ interface AccountRequest {
 export default function AdminUsers() {
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
+  const [, setLocation] = useLocation();
   const [selectedRequest, setSelectedRequest] = useState<AccountRequest | null>(null);
   const [denialReason, setDenialReason] = useState("");
   const [showDenialDialog, setShowDenialDialog] = useState(false);
