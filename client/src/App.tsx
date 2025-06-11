@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
@@ -18,6 +19,7 @@ import Sidebar from "@/components/sidebar";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
+  const isMobile = useIsMobile();
 
   if (isLoading || !isAuthenticated) {
     return (
@@ -31,7 +33,7 @@ function Router() {
   return (
     <div className="min-h-screen flex bg-slate-50">
       <Sidebar />
-      <main className="flex-1 ml-64">
+      <main className={`flex-1 ${isMobile ? 'ml-0' : 'ml-64'} transition-all duration-300`}>
         <Switch>
           <Route path="/" component={Dashboard} />
           <Route path="/inventory" component={Inventory} />

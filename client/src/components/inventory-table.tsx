@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +29,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MoreVertical, Plus, Upload, Eye, Edit, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { InventoryItem } from "@shared/schema";
 import AddItemModal from "./add-item-modal";
 import EditItemModal from "./edit-item-modal";
@@ -57,6 +65,7 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
 
   const { data: inventoryData, isLoading } = useQuery<{
     items: InventoryItem[];
@@ -250,13 +259,16 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
     <>
       <Card>
         {showHeader && (
-          <div className="px-6 py-4 border-b border-slate-200">
-            <div className="flex items-center justify-between">
+          <div className="p-4 lg:px-6 lg:py-4 border-b border-slate-200">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <h3 className="text-lg font-semibold text-slate-900">
                 {limit ? "Recent Inventory" : "Inventory Management"}
               </h3>
-              <div className="flex items-center space-x-3">
-                <div className="relative">
+              
+              {/* Mobile-first responsive controls */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                {/* Search bar - full width on mobile */}
+                <div className="relative flex-1 sm:flex-none sm:w-64">
                   <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
                   <Input
                     type="text"
@@ -266,73 +278,109 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                     onChange={(e) => setSearch(e.target.value)}
                   />
                 </div>
-                <Select value={category || "all"} onValueChange={(value) => {
-                  const newCategory = value === "all" ? "" : value;
-                  setCategory(newCategory);
-                  setPage(1);
-                  console.log("Category changed to:", newCategory);
-                }}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="All Categories" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
-                    <SelectItem value="watches">Watches</SelectItem>
-                    <SelectItem value="leather-goods">Leather Goods</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={status || "all"} onValueChange={(value) => {
-                  const newStatus = value === "all" ? "" : value;
-                  setStatus(newStatus);
-                  setPage(1);
-                  console.log("Status changed to:", newStatus);
-                }}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="in_stock">In Stock</SelectItem>
-                    <SelectItem value="sold">Sold</SelectItem>
-                    <SelectItem value="out_of_stock">Out of Stock</SelectItem>
-                  </SelectContent>
-                </Select>
-                {!limit && (
-                  <Select value={pageSize.toString()} onValueChange={(value) => {
-                    const newPageSize = parseInt(value);
-                    setPageSize(newPageSize);
+                
+                {/* Filters - stacked on mobile, inline on tablet+ */}
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                  <Select value={category || "all"} onValueChange={(value) => {
+                    const newCategory = value === "all" ? "" : value;
+                    setCategory(newCategory);
                     setPage(1);
-                    console.log("Page size changed to:", newPageSize);
                   }}>
-                    <SelectTrigger className="w-24">
-                      <SelectValue placeholder={pageSize.toString()} />
+                    <SelectTrigger className="w-full sm:w-40">
+                      <SelectValue placeholder="All Categories" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="10">10</SelectItem>
-                      <SelectItem value="25">25</SelectItem>
-                      <SelectItem value="50">50</SelectItem>
-                      <SelectItem value="100">100</SelectItem>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      <SelectItem value="watches">Watches</SelectItem>
+                      <SelectItem value="leather-goods">Leather Goods</SelectItem>
                     </SelectContent>
                   </Select>
-                )}
-                <Button variant="outline" onClick={() => setShowBulkUploadModal(true)}>
-                  <i className="fas fa-upload mr-2"></i>
-                  Bulk Import
-                </Button>
-                {allowBulkActions && selectedItems.size > 0 && (
-                  <Button 
-                    onClick={handleBulkDelete} 
-                    variant="outline"
-                    className="border-red-200 hover:border-red-300 hover:bg-red-50"
-                  >
-                    <i className="fas fa-trash text-red-500 mr-2"></i>
-                    Delete Selected ({selectedItems.size})
-                  </Button>
-                )}
-                <Button onClick={() => setShowAddModal(true)}>
-                  <i className="fas fa-plus mr-2"></i>
-                  Add Item
-                </Button>
+                  
+                  <Select value={status || "all"} onValueChange={(value) => {
+                    const newStatus = value === "all" ? "" : value;
+                    setStatus(newStatus);
+                    setPage(1);
+                  }}>
+                    <SelectTrigger className="w-full sm:w-32">
+                      <SelectValue placeholder="All Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="in_stock">In Stock</SelectItem>
+                      <SelectItem value="sold">Sold</SelectItem>
+                      <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  {!limit && (
+                    <Select value={pageSize.toString()} onValueChange={(value) => {
+                      const newPageSize = parseInt(value);
+                      setPageSize(newPageSize);
+                      setPage(1);
+                    }}>
+                      <SelectTrigger className="w-full sm:w-24">
+                        <SelectValue placeholder={pageSize.toString()} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="25">25</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+                
+                {/* Action buttons - responsive sizing */}
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                  {isMobile ? (
+                    <>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setShowBulkUploadModal(true)}
+                        className="w-full sm:w-auto"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Import
+                      </Button>
+                      {allowBulkActions && selectedItems.size > 0 && (
+                        <Button 
+                          onClick={handleBulkDelete} 
+                          variant="outline"
+                          className="w-full sm:w-auto border-red-200 hover:border-red-300 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2 text-red-500" />
+                          Delete ({selectedItems.size})
+                        </Button>
+                      )}
+                      <Button onClick={() => setShowAddModal(true)} className="w-full sm:w-auto">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Item
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button variant="outline" onClick={() => setShowBulkUploadModal(true)}>
+                        <i className="fas fa-upload mr-2"></i>
+                        Bulk Import
+                      </Button>
+                      {allowBulkActions && selectedItems.size > 0 && (
+                        <Button 
+                          onClick={handleBulkDelete} 
+                          variant="outline"
+                          className="border-red-200 hover:border-red-300 hover:bg-red-50"
+                        >
+                          <i className="fas fa-trash text-red-500 mr-2"></i>
+                          Delete Selected ({selectedItems.size})
+                        </Button>
+                      )}
+                      <Button onClick={() => setShowAddModal(true)}>
+                        <i className="fas fa-plus mr-2"></i>
+                        Add Item
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
