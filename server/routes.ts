@@ -478,6 +478,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual email sending endpoint for testing
+  app.post('/api/admin/send-setup-email', isAuthenticated, async (req: any, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      
+      // Find the approved account request
+      const accountRequests = await storage.getAccountRequests('approved');
+      const accountRequest = accountRequests.find(req => req.email === email);
+      
+      if (!accountRequest) {
+        return res.status(404).json({ message: "No approved account request found for this email" });
+      }
+      
+      // Check if setup token already exists
+      const existingToken = await storage.getAccountSetupToken(email);
+      let setupToken;
+      
+      if (existingToken && !existingToken.usedAt) {
+        setupToken = existingToken.token;
+      } else {
+        // Generate new setup token
+        setupToken = crypto.getRandomValues(new Uint8Array(32)).reduce((acc, byte) => acc + byte.toString(16).padStart(2, '0'), '');
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+        
+        await storage.createAccountSetupToken({
+          token: setupToken,
+          email: email,
+          accountRequestId: accountRequest.id,
+          expiresAt
+        });
+      }
+      
+      // Send the setup email
+      await sendAccountApprovalEmail(
+        email,
+        `${accountRequest.firstName} ${accountRequest.lastName}`,
+        setupToken
+      );
+      
+      console.log(`Password setup email sent to ${email} with token: ${setupToken}`);
+      
+      res.json({ 
+        message: "Setup email sent successfully",
+        setupUrl: `/setup-account?token=${setupToken}`
+      });
+    } catch (error) {
+      console.error("Error sending setup email:", error);
+      res.status(500).json({ message: "Failed to send setup email" });
+    }
+  });
+
   // Legacy endpoint for compatibility
   app.post('/api/auth/2fa/request-code-auth', isAuthenticated, async (req: any, res) => {
     try {
