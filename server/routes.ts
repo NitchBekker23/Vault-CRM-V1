@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import crypto from "crypto";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { 
@@ -154,7 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (approved) {
         // Generate setup token
-        const setupToken = require('crypto').randomBytes(32).toString('hex');
+        const setupToken = crypto.getRandomValues(new Uint8Array(32)).reduce((acc, byte) => acc + byte.toString(16).padStart(2, '0'), '');
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
         
         await storage.createAccountSetupToken({
