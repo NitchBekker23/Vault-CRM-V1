@@ -1,5 +1,9 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
 
 interface HeaderProps {
   title: string;
@@ -8,6 +12,27 @@ interface HeaderProps {
 export default function Header({ title }: HeaderProps) {
   const { user } = useAuth();
   const isMobile = useIsMobile();
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("/api/auth/logout", {
+        method: "POST",
+      });
+    },
+    onSuccess: () => {
+      // Redirect to login page after successful logout
+      window.location.href = "/login";
+    },
+    onError: (error) => {
+      console.error("Logout failed:", error);
+      // Even if logout fails on server, redirect to login
+      window.location.href = "/login";
+    },
+  });
+
+  const handleLogout = () => {
+    logoutMutation.mutate();
+  };
 
   const getDisplayName = () => {
     if (user?.firstName && user?.lastName) {
@@ -56,6 +81,16 @@ export default function Header({ title }: HeaderProps) {
               </div>
             )}
           </div>
+          <Button
+            variant="outline"
+            size={isMobile ? "sm" : "default"}
+            onClick={handleLogout}
+            disabled={logoutMutation.isPending}
+            className="flex items-center gap-2"
+          >
+            <LogOut className="w-4 h-4" />
+            {!isMobile && "Logout"}
+          </Button>
         </div>
       </div>
     </header>
