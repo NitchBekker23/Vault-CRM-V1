@@ -16,6 +16,26 @@ interface EmailParams {
 
 export async function sendEmail(params: EmailParams): Promise<boolean> {
   try {
+    console.log(`Sending email to: ${params.to}`);
+    console.log(`Subject: ${params.subject}`);
+    console.log(`Using API key: ${process.env.BREVO_API_KEY?.substring(0, 10)}...`);
+    
+    const emailPayload = {
+      sender: {
+        name: "The Vault Inventory",
+        email: "nitchbekker@gmail.com"
+      },
+      to: [{
+        email: params.to,
+        name: params.toName || params.to
+      }],
+      subject: params.subject,
+      htmlContent: params.htmlContent,
+      textContent: params.textContent || params.htmlContent.replace(/<[^>]*>/g, '')
+    };
+    
+    console.log('Email payload:', JSON.stringify(emailPayload, null, 2));
+    
     const response = await fetch(BREVO_API_URL, {
       method: 'POST',
       headers: {
@@ -23,27 +43,21 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
         'Content-Type': 'application/json',
         'api-key': process.env.BREVO_API_KEY!,
       },
-      body: JSON.stringify({
-        sender: {
-          name: "The Vault Inventory",
-          email: "noreply@thevault.co.za"
-        },
-        to: [{
-          email: params.to,
-          name: params.toName || params.to
-        }],
-        subject: params.subject,
-        htmlContent: params.htmlContent,
-        textContent: params.textContent || params.htmlContent.replace(/<[^>]*>/g, '')
-      })
+      body: JSON.stringify(emailPayload)
     });
 
+    console.log(`Response status: ${response.status}`);
+    
     if (!response.ok) {
       const error = await response.text();
-      console.error('Brevo email error:', error);
+      console.error('Brevo API error response:', error);
+      console.error('Response status:', response.status);
+      console.error('Response headers:', response.headers);
       return false;
     }
 
+    const result = await response.json();
+    console.log('Brevo success response:', result);
     return true;
   } catch (error) {
     console.error('Email service error:', error);
