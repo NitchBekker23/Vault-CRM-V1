@@ -51,6 +51,7 @@ function Router() {
         <Route path="/register" component={Register} />
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/reset-password" component={ResetPassword} />
+        <Route path="/admin-access" component={AdminLogin} />
         <Route path="/request-account" component={RequestAccount} />
         <Route path="/setup-account" component={SetupAccount} />
         <Route path="/2fa-login" component={TwoFactorLogin} />
