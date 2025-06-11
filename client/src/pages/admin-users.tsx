@@ -83,10 +83,13 @@ export default function AdminUsers() {
 
   const updateUserRole = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
-      return apiRequest(`/api/admin/users/${userId}/role`, {
+      const response = await fetch(`/api/admin/users/${userId}/role`, {
         method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role }),
       });
+      if (!response.ok) throw new Error("Failed to update role");
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -107,10 +110,16 @@ export default function AdminUsers() {
 
   const reviewRequest = useMutation({
     mutationFn: async ({ requestId, approved, denialReason }: { requestId: number; approved: boolean; denialReason?: string }) => {
-      return apiRequest(`/api/admin/account-requests/${requestId}/review`, {
+      const response = await fetch(`/api/admin/account-requests/${requestId}/review`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ approved, denialReason }),
       });
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Failed to review request: ${error}`);
+      }
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/account-requests"] });

@@ -62,7 +62,14 @@ async function upsertUser(
     email: claims["email"],
     firstName: claims["first_name"],
     lastName: claims["last_name"],
+    company: claims["company"] || null,
+    phoneNumber: claims["phone_number"] || null,
     profileImageUrl: claims["profile_image_url"],
+    role: "user",
+    status: "approved",
+    twoFactorEnabled: false,
+    twoFactorMethod: "email",
+    lastLoginAt: new Date(),
   });
 }
 
