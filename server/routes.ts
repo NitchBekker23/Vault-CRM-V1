@@ -328,8 +328,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // For demo purposes, accept any email/password and initiate 2FA
-      req.session.pendingEmail = email;
-      req.session.testLogin = true;
+      (req.session as any).pendingEmail = email;
+      (req.session as any).testLogin = true;
       
       res.json({ 
         message: "Login successful, 2FA required",
@@ -345,8 +345,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/2fa/request-code', async (req, res) => {
     try {
       // Check if this is a test login session
-      const email = req.session?.pendingEmail;
-      const isTestLogin = req.session?.testLogin;
+      const email = (req.session as any)?.pendingEmail;
+      const isTestLogin = (req.session as any)?.testLogin;
       
       if (isTestLogin && email) {
         // Generate 6-digit code
@@ -354,7 +354,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
         
         // Store code in session for testing
-        req.session.twoFactorCode = {
+        (req.session as any).twoFactorCode = {
           code: code,
           expiresAt: expiresAt,
           email: email,
