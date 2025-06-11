@@ -18,6 +18,8 @@ import UserManagement from "@/pages/user-management";
 import RequestAccount from "@/pages/request-account";
 import AdminUsers from "@/pages/admin-users";
 import SetupAccount from "@/pages/setup-account";
+import TwoFactorLogin from "@/pages/two-factor-login";
+import TestLogin from "@/pages/test-login";
 import Sidebar from "@/components/sidebar";
 
 function Router() {
@@ -36,12 +38,14 @@ function Router() {
     );
   }
 
-  // Not authenticated - show landing, request account, or setup
+  // Not authenticated - show landing, request account, setup, or 2FA
   if (!isAuthenticated) {
     return (
       <Switch>
         <Route path="/request-account" component={RequestAccount} />
         <Route path="/setup-account" component={SetupAccount} />
+        <Route path="/2fa-login" component={TwoFactorLogin} />
+        <Route path="/test-login" component={TestLogin} />
         <Route path="/" component={Landing} />
         <Route component={NotFound} />
       </Switch>
