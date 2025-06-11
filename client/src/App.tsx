@@ -15,21 +15,67 @@ import Analytics from "@/pages/analytics";
 import Settings from "@/pages/settings";
 import BulkUpload from "@/pages/bulk-upload";
 import UserManagement from "@/pages/user-management";
+import RequestAccount from "@/pages/request-account";
+import AdminUsers from "@/pages/admin-users";
 import Sidebar from "@/components/sidebar";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const isMobile = useIsMobile();
 
-  if (isLoading || !isAuthenticated) {
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Not authenticated - show landing or request account
+  if (!isAuthenticated) {
     return (
       <Switch>
+        <Route path="/request-account" component={RequestAccount} />
         <Route path="/" component={Landing} />
         <Route component={NotFound} />
       </Switch>
     );
   }
 
+  // Authenticated but account not approved
+  if (user && user.status !== 'approved') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full bg-white rounded-lg shadow p-6 text-center">
+          <h2 className="text-xl font-semibold mb-4">Account Pending</h2>
+          {user.status === 'pending' && (
+            <p className="text-gray-600 mb-4">
+              Your account request is being reviewed. You'll receive an email when it's approved.
+            </p>
+          )}
+          {user.status === 'denied' && (
+            <p className="text-gray-600 mb-4">
+              Your account request has been denied. Please contact an administrator for more information.
+            </p>
+          )}
+          {user.status === 'suspended' && (
+            <p className="text-gray-600 mb-4">
+              Your account has been suspended. Please contact an administrator.
+            </p>
+          )}
+          <a href="/api/logout" className="text-blue-600 hover:underline">
+            Sign out
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // Authenticated and approved - show full application
   return (
     <div className="min-h-screen flex bg-slate-50">
       <Sidebar />
@@ -43,6 +89,9 @@ function Router() {
           <Route path="/settings" component={Settings} />
           <Route path="/bulk-upload" component={BulkUpload} />
           <Route path="/user-management" component={UserManagement} />
+          {(user?.role === 'admin' || user?.role === 'owner') && (
+            <Route path="/admin/users" component={AdminUsers} />
+          )}
           <Route component={NotFound} />
         </Switch>
       </main>

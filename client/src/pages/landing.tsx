@@ -96,17 +96,28 @@ export default function Landing() {
           </Card>
         </div>
 
-        <div className="text-center">
-          <Button 
-            size="lg" 
-            className="px-8 py-3 text-lg"
-            onClick={() => window.location.href = "/api/login"}
-          >
-            <i className="fas fa-sign-in-alt mr-2"></i>
-            Sign In to Get Started
-          </Button>
-          <p className="text-sm text-slate-500 mt-4">
-            Secure authentication powered by Replit
+        <div className="text-center space-y-4">
+          <div className="flex justify-center gap-4">
+            <Button 
+              size="lg" 
+              className="px-8 py-3 text-lg"
+              onClick={() => window.location.href = "/api/login"}
+            >
+              <i className="fas fa-sign-in-alt mr-2"></i>
+              Sign In
+            </Button>
+            <Button 
+              size="lg" 
+              variant="outline"
+              className="px-8 py-3 text-lg"
+              onClick={() => window.location.href = "/request-account"}
+            >
+              <i className="fas fa-user-plus mr-2"></i>
+              Request Access
+            </Button>
+          </div>
+          <p className="text-sm text-slate-500">
+            New to the system? Request access to get started
           </p>
         </div>
       </div>
