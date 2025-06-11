@@ -37,9 +37,9 @@ export default function Dashboard() {
   }
 
   return (
-    <>
+    <div className={isMobile ? 'mobile-container' : ''}>
       <Header title="Dashboard" />
-      <div className={`${isMobile ? 'p-4' : 'p-6'} space-y-6`}>
+      <div className={`${isMobile ? 'p-4' : 'p-6'} space-y-6 ${isMobile ? 'max-w-full overflow-x-hidden' : ''}`}>
         <DashboardMetrics />
         
         <div className={`grid ${isMobile ? 'grid-cols-1 gap-4' : 'grid-cols-1 lg:grid-cols-2 gap-6'}`}>
@@ -49,6 +49,6 @@ export default function Dashboard() {
 
         <InventoryTable showHeader={true} limit={10} allowBulkActions={false} />
       </div>
-    </>
+    </div>
   );
 }

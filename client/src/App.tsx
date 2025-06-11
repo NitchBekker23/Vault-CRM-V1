@@ -33,7 +33,7 @@ function Router() {
   return (
     <div className="min-h-screen flex bg-slate-50">
       <Sidebar />
-      <main className={`flex-1 ${isMobile ? 'ml-0' : 'ml-64'} transition-all duration-300`}>
+      <main className={`flex-1 ${isMobile ? 'ml-0 w-full' : 'ml-64'} transition-all duration-300 ${isMobile ? 'min-w-0' : ''}`}>
         <Switch>
           <Route path="/" component={Dashboard} />
           <Route path="/inventory" component={Inventory} />
