@@ -56,10 +56,13 @@ export default function AdminUsers() {
 
   const updateUserStatus = useMutation({
     mutationFn: async ({ userId, status }: { userId: string; status: string }) => {
-      return apiRequest(`/api/admin/users/${userId}/status`, {
+      const response = await fetch(`/api/admin/users/${userId}/status`, {
         method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
+      if (!response.ok) throw new Error("Failed to update status");
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });

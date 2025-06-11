@@ -143,12 +143,23 @@ export default function Sidebar() {
           ))}
         </ul>
         
-        {user?.role === "admin" && (
+        {(user?.role === "admin" || user?.role === "owner") && (
           <div className="mt-8 pt-6 border-t border-slate-200">
             <p className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
               Admin Tools
             </p>
             <ul className="space-y-1">
+              <li>
+                <Link href="/admin/users" className={cn(
+                  "flex items-center space-x-3 p-3 rounded-lg transition-colors",
+                  location === "/admin/users"
+                    ? "text-slate-700 bg-primary/10 border-r-2 border-primary"
+                    : "text-slate-600 hover:bg-slate-100"
+                )}>
+                  <i className="fas fa-user-shield w-5"></i>
+                  <span className={location === "/admin/users" ? "font-medium" : ""}>User Management</span>
+                </Link>
+              </li>
               {adminNavigation.map((item) => (
                 <li key={item.name}>
                   <Link href={item.href} className={cn(
