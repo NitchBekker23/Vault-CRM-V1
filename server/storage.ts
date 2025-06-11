@@ -564,6 +564,10 @@ export class DatabaseStorage implements IStorage {
     return updatedUser;
   }
 
+  async deleteUser(id: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
+  }
+
   // Two-factor authentication operations
   async createTwoFactorCode(code: InsertTwoFactorCode): Promise<TwoFactorCode> {
     const [newCode] = await db
