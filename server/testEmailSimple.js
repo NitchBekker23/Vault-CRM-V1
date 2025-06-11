@@ -1,4 +1,4 @@
-const fetch = require('node-fetch');
+import fetch from 'node-fetch';
 
 async function testBrevoEmail() {
   const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';

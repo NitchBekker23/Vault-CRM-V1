@@ -152,6 +152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/forgot-password", async (req, res) => {
     try {
       const { email } = req.body;
+      console.log(`Password reset requested for email: ${email}`);
       
       if (!email) {
         return res.status(400).json({ message: "Email is required" });
@@ -160,13 +161,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if user exists
       const user = await storage.getUserByEmail(email);
       if (!user) {
+        console.log(`No user found for email: ${email}`);
         // For security, don't reveal if email exists
         return res.json({ message: "If an account with that email exists, a password reset link has been sent." });
       }
 
+      console.log(`User found: ${user.firstName} ${user.lastName} (${user.email})`);
+
       // Generate reset token
       const resetToken = crypto.randomBytes(32).toString('hex');
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      console.log(`Generated reset token: ${resetToken}`);
 
       // Store reset token
       await storage.createPasswordResetToken({
@@ -176,8 +182,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expiresAt: expiresAt,
       });
 
+      console.log(`Token stored in database for email: ${email}`);
+
       // Send reset email
-      await sendPasswordResetEmail(email, user.firstName || 'User', resetToken);
+      console.log(`Attempting to send password reset email to: ${email}`);
+      const emailSent = await sendPasswordResetEmail(email, user.firstName || 'User', resetToken);
+      
+      if (emailSent) {
+        console.log(`Password reset email sent successfully to: ${email}`);
+      } else {
+        console.log(`Failed to send password reset email to: ${email}`);
+      }
 
       res.json({ message: "If an account with that email exists, a password reset link has been sent." });
     } catch (error) {

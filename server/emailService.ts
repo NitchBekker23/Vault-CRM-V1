@@ -25,8 +25,8 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
       },
       body: JSON.stringify({
         sender: {
-          name: "Inventory Management System",
-          email: "noreply@inventory.com"
+          name: "The Vault Inventory",
+          email: "noreply@thevault.co.za"
         },
         to: [{
           email: params.to,
