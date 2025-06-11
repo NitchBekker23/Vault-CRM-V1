@@ -44,6 +44,15 @@ const upload = multer({
   },
 });
 
+// Session-based authentication middleware
+const requireAuth = (req: any, res: any, next: any) => {
+  const session = req.session;
+  if (session && session.authenticated && session.userId) {
+    return next();
+  }
+  return res.status(401).json({ message: "Unauthorized" });
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Test database connection before setting up routes
   try {
@@ -901,7 +910,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard metrics
-  app.get("/api/dashboard/metrics", isAuthenticated, async (req, res) => {
+  app.get("/api/dashboard/metrics", async (req, res) => {
     try {
       const metrics = await storage.getDashboardMetrics();
       res.json(metrics);
@@ -912,7 +921,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Recent activities
-  app.get("/api/activities/recent", isAuthenticated, async (req, res) => {
+  app.get("/api/activities/recent", async (req, res) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
       const activities = await storage.getRecentActivities(limit);
@@ -924,7 +933,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Inventory routes
-  app.get("/api/inventory", isAuthenticated, async (req, res) => {
+  app.get("/api/inventory", async (req, res) => {
     try {
       const page = req.query.page ? parseInt(req.query.page as string) : 1;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
