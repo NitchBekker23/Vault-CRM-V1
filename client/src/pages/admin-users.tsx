@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
-import { Users, UserCheck, UserX, Shield, Crown } from "lucide-react";
+import { Users, UserCheck, UserX, Shield, Crown, Trash2 } from "lucide-react";
 import Header from "@/components/header";
 
 interface User {
@@ -160,6 +160,33 @@ export default function AdminUsers() {
       });
     }
   };
+
+  const deleteUser = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to delete user: ${response.statusText}`);
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "User Deleted",
+        description: "User has been permanently deleted from the system.",
+      });
+    },
+    onError: (error) => {
+      console.error("Error deleting user:", error);
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete user.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -339,7 +366,17 @@ export default function AdminUsers() {
                       }
                     </TableCell>
                     <TableCell>
-                      {getStatusBadge(user.status)}
+                      {(currentUser?.role === "owner" || currentUser?.role === "admin") && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => deleteUser.mutate(user.id)}
+                          disabled={deleteUser.isPending || user.id === currentUser?.id}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
