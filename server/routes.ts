@@ -201,6 +201,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Temporary admin login for testing
+  app.post("/api/auth/admin-login", async (req, res) => {
+    try {
+      const { adminKey } = req.body;
+      
+      // Simple admin bypass for testing
+      if (adminKey === "admin123temp") {
+        const user = await storage.getUserByEmail("nitchbekker@gmail.com");
+        if (!user) {
+          return res.status(404).json({ message: "Admin user not found" });
+        }
+        
+        // Store user session
+        (req.session as any).userId = user.id;
+        (req.session as any).authenticated = true;
+        (req.session as any).userEmail = user.email;
+        
+        res.json({ 
+          message: "Admin login successful",
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            company: user.company,
+            role: user.role,
+            status: user.status
+          }
+        });
+      } else {
+        res.status(401).json({ message: "Invalid admin key" });
+      }
+    } catch (error) {
+      console.error("Error in admin login:", error);
+      res.status(500).json({ message: "Admin login failed" });
+    }
+  });
+
   // Reset password endpoint
   app.post("/api/auth/reset-password", async (req, res) => {
     try {
