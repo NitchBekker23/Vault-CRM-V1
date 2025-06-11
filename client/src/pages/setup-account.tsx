@@ -10,10 +10,15 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, XCircle, Check, X } from "lucide-react";
 
 const setupAccountSchema = z.object({
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
   confirmPassword: z.string(),
   twoFactorMethod: z.enum(["email", "sms"]),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -31,6 +36,17 @@ export default function SetupAccount() {
   const [accountData, setAccountData] = useState<any>(null);
 
   const token = new URLSearchParams(window.location.search).get("token");
+
+  // Password strength checker
+  const checkPasswordStrength = (password: string) => {
+    return {
+      hasMinLength: password.length >= 8,
+      hasUppercase: /[A-Z]/.test(password),
+      hasLowercase: /[a-z]/.test(password),
+      hasNumber: /[0-9]/.test(password),
+      hasSpecialChar: /[^A-Za-z0-9]/.test(password),
+    };
+  };
 
   const form = useForm<SetupAccountForm>({
     resolver: zodResolver(setupAccountSchema),
@@ -173,15 +189,47 @@ export default function SetupAccount() {
               <FormField
                 control={form.control}
                 name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="Enter your password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const passwordStrength = checkPasswordStrength(field.value || "");
+                  return (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="Enter your password" {...field} />
+                      </FormControl>
+                      
+                      {field.value && (
+                        <div className="mt-2 space-y-1">
+                          <div className="text-sm font-medium text-gray-700">Password Requirements:</div>
+                          <div className="grid grid-cols-1 gap-1 text-xs">
+                            <div className={`flex items-center space-x-2 ${passwordStrength.hasMinLength ? 'text-green-600' : 'text-gray-500'}`}>
+                              {passwordStrength.hasMinLength ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                              <span>At least 8 characters</span>
+                            </div>
+                            <div className={`flex items-center space-x-2 ${passwordStrength.hasUppercase ? 'text-green-600' : 'text-gray-500'}`}>
+                              {passwordStrength.hasUppercase ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                              <span>One uppercase letter (A-Z)</span>
+                            </div>
+                            <div className={`flex items-center space-x-2 ${passwordStrength.hasLowercase ? 'text-green-600' : 'text-gray-500'}`}>
+                              {passwordStrength.hasLowercase ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                              <span>One lowercase letter (a-z)</span>
+                            </div>
+                            <div className={`flex items-center space-x-2 ${passwordStrength.hasNumber ? 'text-green-600' : 'text-gray-500'}`}>
+                              {passwordStrength.hasNumber ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                              <span>One number (0-9)</span>
+                            </div>
+                            <div className={`flex items-center space-x-2 ${passwordStrength.hasSpecialChar ? 'text-green-600' : 'text-gray-500'}`}>
+                              {passwordStrength.hasSpecialChar ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                              <span>One special character (!@#$%^&*)</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
 
               <FormField

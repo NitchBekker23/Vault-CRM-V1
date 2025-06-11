@@ -3,6 +3,9 @@ import { createServer, type Server } from "http";
 import crypto from "crypto";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { db } from "./db";
+import { users } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { 
   sendAccountRequestNotification, 
   sendAccountApprovalEmail, 
@@ -10,7 +13,6 @@ import {
   sendTwoFactorCode 
 } from "./emailService";
 import { insertAccountRequestSchema, insertTwoFactorCodeSchema } from "@shared/schema";
-import { db } from "./db";
 import { imageOptimizer } from "./imageOptimizer";
 import multer from "multer";
 import csv from "csv-parser";
@@ -292,7 +294,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Account request not found" });
       }
       
-      // Create user account (for now, we'll integrate with Replit Auth later)
+      // Check if user already exists and delete if so (to handle duplicates)
+      const existingUser = await storage.getUser(accountRequest.email);
+      if (existingUser) {
+        // Delete existing user to avoid constraint violation
+        await db.delete(users).where(eq(users.email, accountRequest.email));
+      }
+      
+      // Create user account
       const userId = `user-${Date.now()}`;
       
       await storage.upsertUser({
