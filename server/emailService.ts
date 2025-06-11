@@ -86,25 +86,42 @@ export async function sendAccountRequestNotification(
 
 export async function sendAccountApprovalEmail(
   userEmail: string,
-  userName: string
+  userName: string,
+  setupToken: string
 ): Promise<boolean> {
+  const setupUrl = `${process.env.REPLIT_DOMAINS?.split(',')[0] || 'http://localhost:5000'}/setup-account?token=${setupToken}`;
+  
   const htmlContent = `
-    <h2>Account Approved</h2>
+    <h2>Account Approved - Complete Your Setup</h2>
     <p>Hello ${userName},</p>
     
-    <p>Great news! Your account request has been approved. You can now access the inventory management system.</p>
+    <p>Great news! Your account request has been approved. To complete your account setup and access the inventory management system, please click the link below:</p>
     
-    <p><a href="${process.env.REPLIT_DOMAINS?.split(',')[0] || 'your-app-url'}" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login to Dashboard</a></p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${setupUrl}" style="background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">Complete Account Setup</a>
+    </div>
+    
+    <p>This link will allow you to:</p>
+    <ul>
+      <li>Set up your login credentials</li>
+      <li>Configure security preferences</li>
+      <li>Access the inventory management dashboard</li>
+    </ul>
+    
+    <p><strong>Important:</strong> This setup link will expire in 24 hours for security reasons.</p>
     
     <p>If you have any questions, please contact your administrator.</p>
     
     <p>Welcome to the team!</p>
+    
+    <hr style="margin: 20px 0;">
+    <p style="font-size: 12px; color: #666;">If the button doesn't work, copy and paste this link: ${setupUrl}</p>
   `;
 
   return sendEmail({
     to: userEmail,
     toName: userName,
-    subject: 'Account Approved - Welcome to Inventory Management',
+    subject: 'Account Approved - Complete Your Setup',
     htmlContent
   });
 }

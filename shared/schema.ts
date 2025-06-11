@@ -70,6 +70,17 @@ export const twoFactorCodes = pgTable("two_factor_codes", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Account setup tokens for approved users
+export const accountSetupTokens = pgTable("account_setup_tokens", {
+  id: serial("id").primaryKey(),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  email: varchar("email").notNull(),
+  accountRequestId: integer("account_request_id").notNull().references(() => accountRequests.id),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Images table for efficient storage and referencing
 export const images = pgTable("images", {
   id: serial("id").primaryKey(),
@@ -275,6 +286,13 @@ export const twoFactorCodesRelations = relations(twoFactorCodes, ({ one }) => ({
   }),
 }));
 
+export const accountSetupTokensRelations = relations(accountSetupTokens, ({ one }) => ({
+  accountRequest: one(accountRequests, {
+    fields: [accountSetupTokens.accountRequestId],
+    references: [accountRequests.id],
+  }),
+}));
+
 // Schema types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -356,3 +374,10 @@ export const insertTwoFactorCodeSchema = createInsertSchema(twoFactorCodes).omit
 });
 export type InsertTwoFactorCode = z.infer<typeof insertTwoFactorCodeSchema>;
 export type TwoFactorCode = typeof twoFactorCodes.$inferSelect;
+
+export const insertAccountSetupTokenSchema = createInsertSchema(accountSetupTokens).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertAccountSetupToken = z.infer<typeof insertAccountSetupTokenSchema>;
+export type AccountSetupToken = typeof accountSetupTokens.$inferSelect;

@@ -9,6 +9,7 @@ import {
   activityLog,
   accountRequests,
   twoFactorCodes,
+  accountSetupTokens,
   type User,
   type UpsertUser,
   type InventoryItem,
@@ -29,6 +30,8 @@ import {
   type InsertAccountRequest,
   type TwoFactorCode,
   type InsertTwoFactorCode,
+  type AccountSetupToken,
+  type InsertAccountSetupToken,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, ilike, or } from "drizzle-orm";
@@ -55,6 +58,11 @@ export interface IStorage {
   getTwoFactorCode(userId: string, code: string): Promise<TwoFactorCode | undefined>;
   markTwoFactorCodeUsed(id: number): Promise<void>;
   cleanupExpiredCodes(): Promise<void>;
+  
+  // Account setup token operations
+  createAccountSetupToken(token: InsertAccountSetupToken): Promise<AccountSetupToken>;
+  getAccountSetupToken(token: string): Promise<AccountSetupToken | undefined>;
+  markAccountSetupTokenUsed(id: number): Promise<void>;
 
   // Inventory operations
   getInventoryItems(
@@ -590,6 +598,36 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(twoFactorCodes)
       .where(sql`${twoFactorCodes.expiresAt} < NOW()`);
+  }
+
+  // Account setup token operations
+  async createAccountSetupToken(token: InsertAccountSetupToken): Promise<AccountSetupToken> {
+    const [newToken] = await db
+      .insert(accountSetupTokens)
+      .values(token)
+      .returning();
+    return newToken;
+  }
+
+  async getAccountSetupToken(token: string): Promise<AccountSetupToken | undefined> {
+    const [result] = await db
+      .select()
+      .from(accountSetupTokens)
+      .where(
+        and(
+          eq(accountSetupTokens.token, token),
+          sql`${accountSetupTokens.expiresAt} > NOW()`,
+          sql`${accountSetupTokens.usedAt} IS NULL`
+        )
+      );
+    return result;
+  }
+
+  async markAccountSetupTokenUsed(id: number): Promise<void> {
+    await db
+      .update(accountSetupTokens)
+      .set({ usedAt: new Date() })
+      .where(eq(accountSetupTokens.id, id));
   }
 
   async getDashboardMetrics(): Promise<{

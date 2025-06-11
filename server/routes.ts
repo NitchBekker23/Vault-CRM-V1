@@ -153,10 +153,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedRequest = await storage.reviewAccountRequest(requestId, reviewerId, approved, denialReason);
       
       if (approved) {
-        // Send approval email
+        // Generate setup token
+        const setupToken = require('crypto').randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+        
+        await storage.createAccountSetupToken({
+          token: setupToken,
+          email: updatedRequest.email,
+          accountRequestId: updatedRequest.id,
+          expiresAt
+        });
+        
+        // Send approval email with setup link
         await sendAccountApprovalEmail(
           updatedRequest.email,
-          `${updatedRequest.firstName} ${updatedRequest.lastName}`
+          `${updatedRequest.firstName} ${updatedRequest.lastName}`,
+          setupToken
         );
       } else {
         // Send denial email
