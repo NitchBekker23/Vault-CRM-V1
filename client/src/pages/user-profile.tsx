@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -162,7 +162,7 @@ export default function UserProfile() {
   }
 
   // Auto-populate form when user data is loaded
-  React.useEffect(() => {
+  useEffect(() => {
     if (user && !isEditing) {
       setFormData({
         firstName: user.firstName || "",
