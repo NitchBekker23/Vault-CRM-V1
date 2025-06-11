@@ -172,6 +172,13 @@ export default function Login() {
                 Create one here
               </Link>
             </p>
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <Link href="/admin-access">
+                <Button variant="outline" className="w-full" type="button">
+                  Admin Access
+                </Button>
+              </Link>
+            </div>
           </div>
         </CardContent>
       </Card>
