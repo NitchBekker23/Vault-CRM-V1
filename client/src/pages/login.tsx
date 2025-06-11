@@ -162,6 +162,11 @@ export default function Login() {
 
           <div className="mt-6 text-center space-y-2">
             <p className="text-sm text-gray-600 dark:text-gray-400">
+              <Link href="/forgot-password" className="text-blue-600 hover:underline">
+                Forgot your password?
+              </Link>
+            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Don't have an account?{" "}
               <Link href="/register" className="text-blue-600 hover:underline">
                 Create one here

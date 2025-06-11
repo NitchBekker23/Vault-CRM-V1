@@ -177,3 +177,36 @@ export async function sendTwoFactorCode(
     htmlContent
   });
 }
+
+export async function sendPasswordResetEmail(
+  email: string,
+  firstName: string,
+  resetToken: string
+): Promise<boolean> {
+  const baseUrl = process.env.NODE_ENV === 'development' 
+    ? 'http://localhost:5000' 
+    : (process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'http://localhost:5000');
+  
+  const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
+  
+  const htmlContent = `
+    <h2>Password Reset Request</h2>
+    <p>Hi ${firstName},</p>
+    <p>You requested to reset your password. Click the link below to set a new password:</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${resetUrl}" style="background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">Reset Password</a>
+    </div>
+    <p>This link will expire in 1 hour for security reasons.</p>
+    <p>If you didn't request this password reset, please ignore this email.</p>
+    <p>For security, this link can only be used once.</p>
+    <hr style="margin: 20px 0;">
+    <p style="font-size: 12px; color: #666;">If the button doesn't work, copy and paste this link: ${resetUrl}</p>
+  `;
+
+  return sendEmail({
+    to: email,
+    toName: firstName,
+    subject: 'Password Reset Request',
+    htmlContent
+  });
+}

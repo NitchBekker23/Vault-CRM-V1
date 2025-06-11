@@ -655,6 +655,47 @@ export class DatabaseStorage implements IStorage {
       .where(eq(accountSetupTokens.id, id));
   }
 
+  async createPasswordResetToken(tokenData: InsertPasswordResetToken): Promise<PasswordResetToken> {
+    const [token] = await db
+      .insert(passwordResetTokens)
+      .values(tokenData)
+      .returning();
+    return token;
+  }
+
+  async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+    const [resetToken] = await db
+      .select()
+      .from(passwordResetTokens)
+      .where(and(
+        eq(passwordResetTokens.token, token),
+        eq(passwordResetTokens.used, false),
+        sql`${passwordResetTokens.expiresAt} > NOW()`
+      ));
+    return resetToken;
+  }
+
+  async markPasswordResetTokenUsed(id: number): Promise<void> {
+    await db.update(passwordResetTokens)
+      .set({ 
+        used: true,
+        usedAt: new Date() 
+      })
+      .where(eq(passwordResetTokens.id, id));
+  }
+
+  async updateUserPassword(email: string, hashedPassword: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ 
+        password: hashedPassword,
+        updatedAt: new Date()
+      })
+      .where(eq(users.email, email))
+      .returning();
+    return user;
+  }
+
   async getDashboardMetrics(): Promise<{
     totalInventory: number;
     inStock: number;
