@@ -370,17 +370,27 @@ export default function AdminUsers() {
                       }
                     </TableCell>
                     <TableCell>
-                      {(currentUser?.role === "owner" || currentUser?.role === "admin") && (
+                      <div className="flex items-center gap-2">
                         <Button
-                          variant="destructive"
+                          variant="outline"
                           size="sm"
-                          onClick={() => deleteUser.mutate(user.id)}
-                          disabled={deleteUser.isPending || user.id === currentUser?.id}
+                          onClick={() => setLocation(`/admin/users/${user.id}`)}
                           className="h-8 w-8 p-0"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Eye className="h-4 w-4" />
                         </Button>
-                      )}
+                        {(currentUser?.role === "owner" || currentUser?.role === "admin") && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteUser.mutate(user.id)}
+                            disabled={deleteUser.isPending || user.id === currentUser?.id}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
