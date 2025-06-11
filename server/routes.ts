@@ -1427,8 +1427,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Simple session-based authentication middleware
+  const requireAuth = (req: any, res: any, next: any) => {
+    if (!(req.session as any)?.authenticated) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    next();
+  };
+
+  const requireAdminRole = async (req: any, res: any, next: any) => {
+    try {
+      const userId = (req.session as any)?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user || user.status !== 'approved' || (user.role !== 'admin' && user.role !== 'owner')) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      next();
+    } catch (error) {
+      console.error("Admin middleware error:", error);
+      res.status(500).json({ message: "Authorization check failed" });
+    }
+  };
+
   // Password migration endpoint (one-time use to hash existing plain text passwords)
-  app.post("/api/admin/migrate-passwords", isAuthenticated, isAdmin, async (req: any, res) => {
+  app.post("/api/admin/migrate-passwords", requireAuth, requireAdminRole, async (req: any, res) => {
     try {
       const allUsers = await db.select().from(users);
       let migratedCount = 0;
@@ -1458,7 +1485,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Get all users (exclude password hashes)
-  app.get("/api/admin/users", isAuthenticated, isAdmin, async (req: any, res) => {
+  app.get("/api/admin/users", requireAuth, requireAdminRole, async (req: any, res) => {
     try {
       const allUsers = await storage.getAllUsers();
       const usersWithoutPasswords = allUsers.map(({ password, ...user }) => user);
@@ -1470,7 +1497,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Update user role
-  app.patch("/api/admin/users/:id/role", isAuthenticated, isAdmin, async (req: any, res) => {
+  app.patch("/api/admin/users/:id/role", requireAuth, requireAdminRole, async (req: any, res) => {
     try {
       const userId = req.params.id;
       const { role } = req.body;
@@ -1489,7 +1516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Update user status
-  app.patch("/api/admin/users/:id/status", requireAuth, requireRole(['admin', 'owner']), async (req: any, res) => {
+  app.patch("/api/admin/users/:id/status", requireAuth, requireAdminRole, async (req: any, res) => {
     try {
       const userId = req.params.id;
       const { status } = req.body;
@@ -1508,7 +1535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Delete user
-  app.delete("/api/admin/users/:id", requireAuth, requireRole(['owner']), async (req: any, res) => {
+  app.delete("/api/admin/users/:id", requireAuth, requireAdminRole, async (req: any, res) => {
     try {
       const userId = req.params.id;
       const currentUserId = (req.session as any).userId;
