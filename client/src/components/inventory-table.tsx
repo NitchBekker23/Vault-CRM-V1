@@ -654,44 +654,52 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
               )}
               
               {!limit && (
-                <div className="px-6 py-4 border-t border-slate-200">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-slate-700">
-                      Showing <span className="font-medium">{(page - 1) * 10 + 1}</span> to{" "}
+                <div className={`${isMobile ? 'p-4' : 'px-6 py-4'} border-t border-slate-200`}>
+                  <div className={`flex ${isMobile ? 'flex-col gap-3' : 'items-center justify-between'}`}>
+                    <p className={`text-sm text-slate-700 ${isMobile ? 'text-center' : ''}`}>
+                      Showing <span className="font-medium">{(page - 1) * pageSize + 1}</span> to{" "}
                       <span className="font-medium">
-                        {Math.min(page * 10, inventoryData.total)}
+                        {Math.min(page * pageSize, inventoryData.total)}
                       </span>{" "}
                       of <span className="font-medium">{inventoryData.total}</span> results
                     </p>
-                    <div className="flex items-center space-x-2">
+                    <div className={`flex items-center ${isMobile ? 'justify-center' : ''} space-x-2`}>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setPage(Math.max(1, page - 1))}
                         disabled={page === 1}
+                        className={isMobile ? 'px-3' : ''}
                       >
-                        Previous
+                        {isMobile ? '‹' : 'Previous'}
                       </Button>
-                      {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                        const pageNum = i + 1;
-                        return (
-                          <Button
-                            key={pageNum}
-                            variant={page === pageNum ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setPage(pageNum)}
-                          >
-                            {pageNum}
-                          </Button>
-                        );
-                      })}
+                      {isMobile ? (
+                        <span className="text-sm text-slate-600 px-4">
+                          {page} of {totalPages}
+                        </span>
+                      ) : (
+                        [...Array(Math.min(5, totalPages))].map((_, i) => {
+                          const pageNum = i + 1;
+                          return (
+                            <Button
+                              key={pageNum}
+                              variant={page === pageNum ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setPage(pageNum)}
+                            >
+                              {pageNum}
+                            </Button>
+                          );
+                        })
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setPage(Math.min(totalPages, page + 1))}
                         disabled={page === totalPages}
+                        className={isMobile ? 'px-3' : ''}
                       >
-                        Next
+                        {isMobile ? '›' : 'Next'}
                       </Button>
                     </div>
                   </div>
