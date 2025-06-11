@@ -31,10 +31,43 @@ export const users = pgTable("users", {
   email: varchar("email").unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
+  company: varchar("company"),
+  phoneNumber: varchar("phone_number"),
   profileImageUrl: varchar("profile_image_url"),
-  role: varchar("role").default("user").notNull(), // 'admin' or 'user'
+  role: varchar("role", { enum: ["owner", "admin", "user"] }).default("user").notNull(),
+  status: varchar("status", { enum: ["pending", "approved", "denied", "suspended"] }).default("pending").notNull(),
+  twoFactorEnabled: boolean("two_factor_enabled").default(false).notNull(),
+  twoFactorMethod: varchar("two_factor_method", { enum: ["email", "sms"] }).default("email"),
+  lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Account requests table
+export const accountRequests = pgTable("account_requests", {
+  id: serial("id").primaryKey(),
+  email: varchar("email").notNull(),
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  company: varchar("company").notNull(),
+  phoneNumber: varchar("phone_number"),
+  message: text("message"),
+  status: varchar("status", { enum: ["pending", "approved", "denied"] }).default("pending").notNull(),
+  requestedAt: timestamp("requested_at").defaultNow(),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  denialReason: text("denial_reason"),
+});
+
+// Two-factor authentication codes
+export const twoFactorCodes = pgTable("two_factor_codes", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  code: varchar("code", { length: 6 }).notNull(),
+  method: varchar("method", { enum: ["email", "sms"] }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Images table for efficient storage and referencing
@@ -228,6 +261,20 @@ export const activityLogRelations = relations(activityLog, ({ one }) => ({
   }),
 }));
 
+export const accountRequestsRelations = relations(accountRequests, ({ one }) => ({
+  reviewer: one(users, {
+    fields: [accountRequests.reviewedBy],
+    references: [users.id],
+  }),
+}));
+
+export const twoFactorCodesRelations = relations(twoFactorCodes, ({ one }) => ({
+  user: one(users, {
+    fields: [twoFactorCodes.userId],
+    references: [users.id],
+  }),
+}));
+
 // Schema types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -291,3 +338,21 @@ export const insertActivityLogSchema = createInsertSchema(activityLog).omit({
 });
 export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
 export type ActivityLog = typeof activityLog.$inferSelect;
+
+export const insertAccountRequestSchema = createInsertSchema(accountRequests).omit({
+  id: true,
+  status: true,
+  requestedAt: true,
+  reviewedAt: true,
+  reviewedBy: true,
+  denialReason: true,
+});
+export type InsertAccountRequest = z.infer<typeof insertAccountRequestSchema>;
+export type AccountRequest = typeof accountRequests.$inferSelect;
+
+export const insertTwoFactorCodeSchema = createInsertSchema(twoFactorCodes).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertTwoFactorCode = z.infer<typeof insertTwoFactorCodeSchema>;
+export type TwoFactorCode = typeof twoFactorCodes.$inferSelect;
