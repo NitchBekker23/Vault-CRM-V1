@@ -425,8 +425,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if this is a test login session
-      const sessionData = req.session?.twoFactorCode;
-      const isTestLogin = req.session?.testLogin;
+      const sessionData = (req.session as any)?.twoFactorCode;
+      const isTestLogin = (req.session as any)?.testLogin;
       
       if (isTestLogin && sessionData) {
         if (sessionData.code !== code) {
@@ -438,13 +438,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Clear the 2FA session data
-        delete req.session.twoFactorCode;
-        delete req.session.pendingEmail;
-        delete req.session.testLogin;
+        delete (req.session as any).twoFactorCode;
+        delete (req.session as any).pendingEmail;
+        delete (req.session as any).testLogin;
         
         // Mark user as fully authenticated in test mode
-        req.session.authenticated = true;
-        req.session.userEmail = sessionData.email;
+        (req.session as any).authenticated = true;
+        (req.session as any).userEmail = sessionData.email;
         
         res.json({ message: "Two-factor authentication verified" });
         return;
