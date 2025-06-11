@@ -95,14 +95,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Session-based authentication check
+  const checkAuth = (req: any, res: any, next: any) => {
+    // Check session-based auth first (standalone)
+    if (req.session?.authenticated && req.session?.userId) {
+      req.currentUserId = req.session.userId;
+      return next();
+    }
+    
+    // Fallback to Replit auth if available
+    if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims?.sub) {
+      req.currentUserId = req.user.claims.sub;
+      return next();
+    }
+    
+    return res.status(401).json({ message: "Unauthorized" });
+  };
+
   // Auth routes
-  app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
+  app.get("/api/auth/user", checkAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUserId;
       const user = await storage.getUser(userId);
       
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
       // Check if user status allows access
-      if (!user || user.status !== 'approved') {
+      if (user.status !== 'approved') {
         return res.status(401).json({ message: "Account not approved" });
       }
       
@@ -111,6 +132,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
     }
+  });
+
+  // Logout endpoint
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err: any) => {
+      if (err) {
+        return res.status(500).json({ message: "Failed to logout" });
+      }
+      res.json({ message: "Logged out successfully" });
+    });
   });
 
   // Admin route middleware

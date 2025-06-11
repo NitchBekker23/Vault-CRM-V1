@@ -33,6 +33,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   company: varchar("company"),
   phoneNumber: varchar("phone_number"),
+  password: varchar("password"),
   profileImageUrl: varchar("profile_image_url"),
   role: varchar("role", { enum: ["owner", "admin", "user"] }).default("user").notNull(),
   status: varchar("status", { enum: ["pending", "approved", "denied", "suspended"] }).default("pending").notNull(),
