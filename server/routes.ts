@@ -51,15 +51,241 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
+  // Public account request route
+  app.post('/api/auth/request-account', async (req, res) => {
+    try {
+      const validatedData = insertAccountRequestSchema.parse(req.body);
+      
+      // Create account request
+      const request = await storage.createAccountRequest(validatedData);
+      
+      // Get all admin users to notify
+      const allUsers = await storage.getAllUsers();
+      const admins = allUsers.filter(user => 
+        (user.role === 'admin' || user.role === 'owner') && 
+        user.status === 'approved' && 
+        user.email
+      );
+      
+      // Send notification emails to admins
+      for (const admin of admins) {
+        await sendAccountRequestNotification(
+          admin.email!,
+          {
+            firstName: validatedData.firstName,
+            lastName: validatedData.lastName,
+            email: validatedData.email,
+            company: validatedData.company,
+            message: validatedData.message || undefined
+          },
+          request.id
+        );
+      }
+      
+      res.status(201).json({ 
+        message: "Account request submitted successfully. You will receive an email when your request is reviewed.",
+        requestId: request.id 
+      });
+    } catch (error) {
+      console.error("Error creating account request:", error);
+      res.status(500).json({ message: "Failed to submit account request" });
+    }
+  });
+
   // Auth routes
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
+      
+      // Check if user status allows access
+      if (!user || user.status !== 'approved') {
+        return res.status(401).json({ message: "Account not approved" });
+      }
+      
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Admin route middleware
+  const isAdmin = async (req: any, res: any, next: any) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user || user.status !== 'approved' || (user.role !== 'admin' && user.role !== 'owner')) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      req.currentUser = user;
+      next();
+    } catch (error) {
+      console.error("Admin middleware error:", error);
+      res.status(500).json({ message: "Authorization check failed" });
+    }
+  };
+
+  // Account request management routes (admin only)
+  app.get('/api/admin/account-requests', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const status = req.query.status as string;
+      const requests = await storage.getAccountRequests(status);
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching account requests:", error);
+      res.status(500).json({ message: "Failed to fetch account requests" });
+    }
+  });
+
+  app.post('/api/admin/account-requests/:id/review', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const requestId = parseInt(req.params.id);
+      const { approved, denialReason } = req.body;
+      const reviewerId = req.currentUser.id;
+
+      // Update request status
+      const updatedRequest = await storage.reviewAccountRequest(requestId, reviewerId, approved, denialReason);
+      
+      if (approved) {
+        // Send approval email
+        await sendAccountApprovalEmail(
+          updatedRequest.email,
+          `${updatedRequest.firstName} ${updatedRequest.lastName}`
+        );
+      } else {
+        // Send denial email
+        await sendAccountDenialEmail(
+          updatedRequest.email,
+          `${updatedRequest.firstName} ${updatedRequest.lastName}`,
+          denialReason
+        );
+      }
+
+      res.json({ message: approved ? "Account request approved" : "Account request denied" });
+    } catch (error) {
+      console.error("Error reviewing account request:", error);
+      res.status(500).json({ message: "Failed to review account request" });
+    }
+  });
+
+  // User management routes (admin only)
+  app.get('/api/admin/users', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.patch('/api/admin/users/:id/status', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      const { status } = req.body;
+      
+      if (!['approved', 'suspended', 'denied'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      const updatedUser = await storage.updateUserStatus(userId, status);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      res.status(500).json({ message: "Failed to update user status" });
+    }
+  });
+
+  app.patch('/api/admin/users/:id/role', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      const { role } = req.body;
+      
+      if (!['user', 'admin', 'owner'].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+      
+      // Only owners can assign owner role
+      if (role === 'owner' && req.currentUser.role !== 'owner') {
+        return res.status(403).json({ message: "Only owners can assign owner role" });
+      }
+      
+      const updatedUser = await storage.updateUserRole(userId, role);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      res.status(500).json({ message: "Failed to update user role" });
+    }
+  });
+
+  // Two-factor authentication routes
+  app.post('/api/auth/2fa/request-code', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.status !== 'approved') {
+        return res.status(401).json({ message: "User not authorized" });
+      }
+      
+      // Generate 6-digit code
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      
+      // Store code
+      await storage.createTwoFactorCode({
+        userId,
+        code,
+        method: user.twoFactorMethod || 'email',
+        expiresAt
+      });
+      
+      // Send code via email
+      if (!user.email) {
+        return res.status(400).json({ message: "User email not available" });
+      }
+      
+      await sendTwoFactorCode(
+        user.email,
+        `${user.firstName} ${user.lastName}`,
+        code
+      );
+      
+      res.json({ message: "Authentication code sent" });
+    } catch (error) {
+      console.error("Error sending 2FA code:", error);
+      res.status(500).json({ message: "Failed to send authentication code" });
+    }
+  });
+
+  app.post('/api/auth/2fa/verify-code', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { code } = req.body;
+      
+      if (!code || code.length !== 6) {
+        return res.status(400).json({ message: "Invalid code format" });
+      }
+      
+      const twoFactorCode = await storage.getTwoFactorCode(userId, code);
+      
+      if (!twoFactorCode) {
+        return res.status(400).json({ message: "Invalid or expired code" });
+      }
+      
+      // Mark code as used
+      await storage.markTwoFactorCodeUsed(twoFactorCode.id);
+      
+      res.json({ message: "Code verified successfully" });
+    } catch (error) {
+      console.error("Error verifying 2FA code:", error);
+      res.status(500).json({ message: "Failed to verify code" });
     }
   });
 
