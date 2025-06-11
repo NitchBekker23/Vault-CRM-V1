@@ -262,12 +262,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await storage.deleteUser(userId);
       
-      // Log the deletion activity
+      // Log the deletion activity (use 0 as entityId since user IDs are strings)
       await storage.createActivity({
         userId: currentUserId,
         action: "deleted_user",
         entityType: "user",
-        entityId: userId,
+        entityId: 0,
         description: `Deleted user: ${userToDelete.firstName} ${userToDelete.lastName} (${userToDelete.email})`,
       });
       
