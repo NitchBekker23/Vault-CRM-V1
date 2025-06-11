@@ -38,6 +38,21 @@ export default function UserProfile() {
     queryKey: ["/api/auth/user"],
   });
 
+  // Auto-populate form when user data is loaded
+  useEffect(() => {
+    if (user && !isEditing) {
+      setFormData({
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        email: user.email || "",
+        company: user.company || "",
+        phoneNumber: user.phoneNumber || "",
+        role: user.role || "",
+        status: user.status || "",
+      });
+    }
+  }, [user, isEditing]);
+
   const updateUserMutation = useMutation({
     mutationFn: async (data: any) => {
       const response = await fetch(`/api/admin/users/${userId}`, {
@@ -160,21 +175,6 @@ export default function UserProfile() {
       </div>
     );
   }
-
-  // Auto-populate form when user data is loaded
-  useEffect(() => {
-    if (user && !isEditing) {
-      setFormData({
-        firstName: user.firstName || "",
-        lastName: user.lastName || "",
-        email: user.email || "",
-        company: user.company || "",
-        phoneNumber: user.phoneNumber || "",
-        role: user.role || "",
-        status: user.status || "",
-      });
-    }
-  }, [user, isEditing]);
 
   const handleEdit = () => {
     setIsEditing(true);
