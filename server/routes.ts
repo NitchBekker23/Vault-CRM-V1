@@ -367,6 +367,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Direct registration endpoint
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      const { firstName, lastName, email, company, password } = req.body;
+      
+      if (!firstName || !lastName || !email || !company || !password) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User with this email already exists" });
+      }
+      
+      // Create user directly (no approval needed)
+      const userId = `user-${Date.now()}`;
+      const user = await storage.upsertUser({
+        id: userId,
+        email,
+        firstName,
+        lastName,
+        company,
+        role: 'user',
+        status: 'approved',
+        password: password, // In production, hash this password
+      });
+      
+      res.status(201).json({ 
+        message: "Account created successfully",
+        userId: user.id 
+      });
+    } catch (error) {
+      console.error("Error in registration:", error);
+      res.status(500).json({ message: "Registration failed" });
+    }
+  });
+
+  // Direct login endpoint
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+      
+      // Find user by email
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
+      // Check password (in production, compare hashed passwords)
+      if (user.password !== password) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
+      // Check if user is approved
+      if (user.status !== 'approved') {
+        return res.status(401).json({ message: "Account not approved" });
+      }
+      
+      // Store user session
+      (req.session as any).userId = user.id;
+      (req.session as any).authenticated = true;
+      (req.session as any).userEmail = user.email;
+      
+      res.json({ 
+        message: "Login successful",
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          status: user.status
+        }
+      });
+    } catch (error) {
+      console.error("Error in login:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
   // Test login endpoint for 2FA demonstration
   app.post('/api/auth/test-login', async (req, res) => {
     try {
