@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import Header from "@/components/header";
 import DashboardMetrics from "@/components/dashboard-metrics";
@@ -11,6 +12,7 @@ import InventoryTable from "@/components/inventory-table";
 export default function Dashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -37,10 +39,10 @@ export default function Dashboard() {
   return (
     <>
       <Header title="Dashboard" />
-      <div className="p-6">
+      <div className={`${isMobile ? 'p-4' : 'p-6'} space-y-6`}>
         <DashboardMetrics />
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className={`grid ${isMobile ? 'grid-cols-1 gap-4' : 'grid-cols-1 lg:grid-cols-2 gap-6'}`}>
           <QuickActions />
           <RecentActivity />
         </div>

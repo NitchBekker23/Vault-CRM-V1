@@ -406,104 +406,252 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
             </div>
           ) : inventoryData?.items && inventoryData.items.length > 0 ? (
             <>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {allowBulkActions && (
-                        <TableHead className="w-12">
-                          <Checkbox
-                            checked={inventoryData?.items.length > 0 && selectedItems.size === inventoryData.items.length}
-                            onCheckedChange={handleSelectAll}
-                          />
-                        </TableHead>
+              {/* Mobile Card View */}
+              {isMobile ? (
+                <div className="p-4 space-y-4">
+                  {allowBulkActions && (
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          checked={inventoryData?.items.length > 0 && selectedItems.size === inventoryData.items.length}
+                          onCheckedChange={handleSelectAll}
+                        />
+                        <span className="text-sm text-slate-600">Select all</span>
+                      </div>
+                      {selectedItems.size > 0 && (
+                        <span className="text-sm text-slate-600">
+                          {selectedItems.size} selected
+                        </span>
                       )}
-                      <TableHead>Item</TableHead>
-                      <TableHead>Serial/SKU</TableHead>
-                      <TableHead>Brand</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {inventoryData.items.map((item) => (
-                      <TableRow key={item.id} className="hover:bg-slate-50">
-                        {allowBulkActions && (
-                          <TableCell>
+                    </div>
+                  )}
+                  {inventoryData.items.map((item) => (
+                    <Card key={item.id} className="overflow-hidden">
+                      <CardContent className="p-4">
+                        <div className="flex items-start space-x-3">
+                          {allowBulkActions && (
                             <Checkbox
                               checked={selectedItems.has(item.id)}
                               onCheckedChange={(checked) => handleSelectItem(item.id, !!checked)}
+                              className="mt-1"
                             />
-                          </TableCell>
-                        )}
-                        <TableCell>
-                          <div className="flex items-center space-x-3">
+                          )}
+                          
+                          {/* Item Image */}
+                          <div 
+                            className="h-16 w-16 bg-slate-100 rounded-lg flex items-center justify-center overflow-hidden cursor-pointer hover:bg-slate-200 transition-colors flex-shrink-0"
+                            onClick={() => handleViewDetails(item)}
+                          >
+                            {item.imageUrls && item.imageUrls.length > 0 ? (
+                              <img
+                                src={item.imageUrls[0]}
+                                alt={item.name}
+                                className="h-full w-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  e.currentTarget.parentElement!.innerHTML = '<i class="fas fa-image text-slate-400"></i>';
+                                }}
+                              />
+                            ) : (
+                              <i className="fas fa-image text-slate-400 text-lg"></i>
+                            )}
+                          </div>
+                          
+                          {/* Item Details */}
+                          <div className="flex-1 min-w-0">
                             <div 
-                              className="h-12 w-12 bg-slate-100 rounded-lg flex items-center justify-center overflow-hidden cursor-pointer hover:bg-slate-200 transition-colors"
+                              className="cursor-pointer" 
                               onClick={() => handleViewDetails(item)}
                             >
-                              {item.imageUrls && item.imageUrls.length > 0 ? (
-                                <img
-                                  src={item.imageUrls[0]}
-                                  alt={item.name}
-                                  className="h-full w-full object-cover"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none';
-                                    e.currentTarget.parentElement!.innerHTML = '<i class="fas fa-image text-slate-400"></i>';
-                                  }}
-                                />
-                              ) : (
-                                <i className="fas fa-image text-slate-400"></i>
-                              )}
+                              <h4 className="font-medium text-slate-900 hover:text-blue-600 transition-colors truncate">
+                                {item.name}
+                              </h4>
+                              <p className="text-sm text-slate-500 mt-1 line-clamp-2">
+                                {item.description}
+                              </p>
                             </div>
-                            <div className="cursor-pointer flex-1" onClick={() => handleViewDetails(item)}>
-                              <div className="font-medium text-slate-900 hover:text-blue-600 transition-colors">{item.name}</div>
-                              <div className="text-sm text-slate-500">
-                                {item.description?.substring(0, 50)}
-                                {item.description && item.description.length > 50 ? "..." : ""}
+                            
+                            <div className="mt-3 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-slate-600">Serial:</span>
+                                <span className="text-sm font-medium text-slate-900">{item.serialNumber}</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-slate-600">Brand:</span>
+                                <span className="text-sm font-medium text-slate-900">{item.brand}</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-slate-600">Category:</span>
+                                <Badge variant="outline" className="capitalize text-xs">
+                                  {item.category.replace("-", " ")}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-slate-600">Status:</span>
+                                <Badge className={`${getStatusColor(item.status)} text-xs`}>
+                                  {formatStatus(item.status)}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-slate-600">Price:</span>
+                                <span className="text-sm font-medium text-slate-900">
+                                  {item.price ? `R${parseFloat(item.price).toLocaleString()}` : "-"}
+                                </span>
                               </div>
                             </div>
+                            
+                            {/* Mobile Actions */}
+                            <div className="mt-4 flex space-x-2">
+                              <Button size="sm" variant="outline" onClick={() => handleViewDetails(item)} className="flex-1">
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => handleEdit(item)} className="flex-1">
+                                <Edit className="h-4 w-4 mr-1" />
+                                Edit
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => handleDelete(item)}
+                                className="border-red-200 hover:border-red-300 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </div>
                           </div>
-                        </TableCell>
-                        <TableCell className="text-slate-900">{item.serialNumber}</TableCell>
-                        <TableCell className="text-slate-900">{item.brand}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="capitalize">
-                            {item.category.replace("-", " ")}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getStatusColor(item.status)}>
-                            {formatStatus(item.status)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-slate-900">
-                          {item.price ? `R${parseFloat(item.price).toLocaleString()}` : "-"}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            <Button size="sm" variant="outline" onClick={() => handleEdit(item)}>
-                              <i className="fas fa-edit mr-1"></i>
-                              Edit
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              onClick={() => handleDelete(item)}
-                              className="border-red-200 hover:border-red-300 hover:bg-red-50"
-                            >
-                              <i className="fas fa-trash text-red-500 mr-1"></i>
-                              Delete
-                            </Button>
-                          </div>
-                        </TableCell>
+                          
+                          {/* Mobile Actions Menu */}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleViewDetails(item)}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEdit(item)}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit Item
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleDelete(item)}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete Item
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                /* Desktop Table View */
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {allowBulkActions && (
+                          <TableHead className="w-12">
+                            <Checkbox
+                              checked={inventoryData?.items.length > 0 && selectedItems.size === inventoryData.items.length}
+                              onCheckedChange={handleSelectAll}
+                            />
+                          </TableHead>
+                        )}
+                        <TableHead>Item</TableHead>
+                        <TableHead>Serial/SKU</TableHead>
+                        <TableHead>Brand</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {inventoryData.items.map((item) => (
+                        <TableRow key={item.id} className="hover:bg-slate-50">
+                          {allowBulkActions && (
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedItems.has(item.id)}
+                                onCheckedChange={(checked) => handleSelectItem(item.id, !!checked)}
+                              />
+                            </TableCell>
+                          )}
+                          <TableCell>
+                            <div className="flex items-center space-x-3">
+                              <div 
+                                className="h-12 w-12 bg-slate-100 rounded-lg flex items-center justify-center overflow-hidden cursor-pointer hover:bg-slate-200 transition-colors"
+                                onClick={() => handleViewDetails(item)}
+                              >
+                                {item.imageUrls && item.imageUrls.length > 0 ? (
+                                  <img
+                                    src={item.imageUrls[0]}
+                                    alt={item.name}
+                                    className="h-full w-full object-cover"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                      e.currentTarget.parentElement!.innerHTML = '<i class="fas fa-image text-slate-400"></i>';
+                                    }}
+                                  />
+                                ) : (
+                                  <i className="fas fa-image text-slate-400"></i>
+                                )}
+                              </div>
+                              <div className="cursor-pointer flex-1" onClick={() => handleViewDetails(item)}>
+                                <div className="font-medium text-slate-900 hover:text-blue-600 transition-colors">{item.name}</div>
+                                <div className="text-sm text-slate-500">
+                                  {item.description?.substring(0, 50)}
+                                  {item.description && item.description.length > 50 ? "..." : ""}
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-slate-900">{item.serialNumber}</TableCell>
+                          <TableCell className="text-slate-900">{item.brand}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">
+                              {item.category.replace("-", " ")}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(item.status)}>
+                              {formatStatus(item.status)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-slate-900">
+                            {item.price ? `R${parseFloat(item.price).toLocaleString()}` : "-"}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              <Button size="sm" variant="outline" onClick={() => handleEdit(item)}>
+                                <i className="fas fa-edit mr-1"></i>
+                                Edit
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => handleDelete(item)}
+                                className="border-red-200 hover:border-red-300 hover:bg-red-50"
+                              >
+                                <i className="fas fa-trash text-red-500 mr-1"></i>
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
               
               {!limit && (
                 <div className="px-6 py-4 border-t border-slate-200">
