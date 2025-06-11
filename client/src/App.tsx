@@ -22,6 +22,8 @@ import TwoFactorLogin from "@/pages/two-factor-login";
 import TestLogin from "@/pages/test-login";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
+import ForgotPassword from "@/pages/forgot-password";
+import ResetPassword from "@/pages/reset-password";
 import Sidebar from "@/components/sidebar";
 
 function Router() {
@@ -46,6 +48,8 @@ function Router() {
       <Switch>
         <Route path="/login" component={Login} />
         <Route path="/register" component={Register} />
+        <Route path="/forgot-password" component={ForgotPassword} />
+        <Route path="/reset-password" component={ResetPassword} />
         <Route path="/request-account" component={RequestAccount} />
         <Route path="/setup-account" component={SetupAccount} />
         <Route path="/2fa-login" component={TwoFactorLogin} />
