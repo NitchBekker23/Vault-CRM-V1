@@ -10,6 +10,7 @@ import {
   accountRequests,
   twoFactorCodes,
   accountSetupTokens,
+  passwordResetTokens,
   type User,
   type UpsertUser,
   type InventoryItem,
@@ -32,6 +33,8 @@ import {
   type InsertTwoFactorCode,
   type AccountSetupToken,
   type InsertAccountSetupToken,
+  type PasswordResetToken,
+  type InsertPasswordResetToken,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, ilike, or } from "drizzle-orm";
@@ -65,6 +68,12 @@ export interface IStorage {
   createAccountSetupToken(token: InsertAccountSetupToken): Promise<AccountSetupToken>;
   getAccountSetupToken(token: string): Promise<AccountSetupToken | undefined>;
   markAccountSetupTokenUsed(id: number): Promise<void>;
+
+  // Password reset operations
+  createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken>;
+  getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
+  markPasswordResetTokenUsed(id: number): Promise<void>;
+  updateUserPassword(email: string, hashedPassword: string): Promise<User>;
 
   // Inventory operations
   getInventoryItems(

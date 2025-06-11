@@ -82,6 +82,17 @@ export const accountSetupTokens = pgTable("account_setup_tokens", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Password reset tokens table
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: serial("id").primaryKey(),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  email: varchar("email").notNull(),
+  used: boolean("used").default(false).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Images table for efficient storage and referencing
 export const images = pgTable("images", {
   id: serial("id").primaryKey(),
@@ -382,3 +393,10 @@ export const insertAccountSetupTokenSchema = createInsertSchema(accountSetupToke
 });
 export type InsertAccountSetupToken = z.infer<typeof insertAccountSetupTokenSchema>;
 export type AccountSetupToken = typeof accountSetupTokens.$inferSelect;
+
+export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
