@@ -1427,6 +1427,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Password migration endpoint (one-time use to hash existing plain text passwords)
+  app.post("/api/admin/migrate-passwords", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const allUsers = await db.select().from(users);
+      let migratedCount = 0;
+
+      for (const user of allUsers) {
+        if (user.password && !user.password.startsWith('$2b$')) {
+          // This is a plain text password, hash it
+          const saltRounds = 12;
+          const hashedPassword = await bcrypt.hash(user.password, saltRounds);
+          
+          await db.update(users)
+            .set({ password: hashedPassword })
+            .where(eq(users.id, user.id));
+          
+          migratedCount++;
+        }
+      }
+
+      res.json({ 
+        message: `Password migration completed. ${migratedCount} passwords were hashed.`,
+        migratedCount 
+      });
+    } catch (error) {
+      console.error("Error migrating passwords:", error);
+      res.status(500).json({ message: "Password migration failed" });
+    }
+  });
+
+  // Admin: Get all users (exclude password hashes)
+  app.get("/api/admin/users", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const usersWithoutPasswords = allUsers.map(({ password, ...user }) => user);
+      res.json({ users: usersWithoutPasswords });
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Admin: Update user role
+  app.patch("/api/admin/users/:id/role", isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      const { role } = req.body;
+      
+      if (!['user', 'admin', 'owner'].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+      
+      const updatedUser = await storage.updateUserRole(userId, role);
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      res.status(500).json({ message: "Failed to update user role" });
+    }
+  });
+
+  // Admin: Update user status
+  app.patch("/api/admin/users/:id/status", requireAuth, requireRole(['admin', 'owner']), async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      const { status } = req.body;
+      
+      if (!['pending', 'approved', 'denied', 'suspended'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      const updatedUser = await storage.updateUserStatus(userId, status);
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      res.status(500).json({ message: "Failed to update user status" });
+    }
+  });
+
+  // Admin: Delete user
+  app.delete("/api/admin/users/:id", requireAuth, requireRole(['owner']), async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      const currentUserId = (req.session as any).userId;
+      
+      // Prevent self-deletion
+      if (userId === currentUserId) {
+        return res.status(400).json({ message: "Cannot delete your own account" });
+      }
+      
+      await storage.deleteUser(userId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
