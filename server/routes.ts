@@ -236,6 +236,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Account setup routes
+  app.get('/api/auth/verify-setup-token', async (req, res) => {
+    try {
+      const { token } = req.query;
+      
+      if (!token || typeof token !== 'string') {
+        return res.status(400).json({ message: "Token is required" });
+      }
+      
+      const setupToken = await storage.getAccountSetupToken(token);
+      
+      if (!setupToken) {
+        return res.status(400).json({ message: "Invalid or expired token" });
+      }
+      
+      // Get account request details
+      const accountRequest = await storage.getAccountRequest(setupToken.accountRequestId);
+      
+      if (!accountRequest) {
+        return res.status(400).json({ message: "Account request not found" });
+      }
+      
+      res.json({
+        firstName: accountRequest.firstName,
+        lastName: accountRequest.lastName,
+        email: accountRequest.email,
+        company: accountRequest.company,
+      });
+    } catch (error) {
+      console.error("Error verifying setup token:", error);
+      res.status(500).json({ message: "Failed to verify setup token" });
+    }
+  });
+
+  app.post('/api/auth/complete-setup', async (req, res) => {
+    try {
+      const { token, password, twoFactorMethod } = req.body;
+      
+      if (!token || !password) {
+        return res.status(400).json({ message: "Token and password are required" });
+      }
+      
+      const setupToken = await storage.getAccountSetupToken(token);
+      
+      if (!setupToken) {
+        return res.status(400).json({ message: "Invalid or expired token" });
+      }
+      
+      // Get account request details
+      const accountRequest = await storage.getAccountRequest(setupToken.accountRequestId);
+      
+      if (!accountRequest) {
+        return res.status(400).json({ message: "Account request not found" });
+      }
+      
+      // Create user account (for now, we'll integrate with Replit Auth later)
+      const userId = `user-${Date.now()}`;
+      
+      await storage.upsertUser({
+        id: userId,
+        email: accountRequest.email,
+        firstName: accountRequest.firstName,
+        lastName: accountRequest.lastName,
+        company: accountRequest.company,
+        phoneNumber: accountRequest.phoneNumber,
+        role: "user",
+        status: "approved",
+        twoFactorEnabled: false,
+        twoFactorMethod: twoFactorMethod || "email",
+        lastLoginAt: new Date(),
+      });
+      
+      // Mark setup token as used
+      await storage.markAccountSetupTokenUsed(setupToken.id);
+      
+      res.json({ message: "Account setup completed successfully" });
+    } catch (error) {
+      console.error("Error completing account setup:", error);
+      res.status(500).json({ message: "Failed to complete account setup" });
+    }
+  });
+
   // Two-factor authentication routes
   app.post('/api/auth/2fa/request-code', isAuthenticated, async (req: any, res) => {
     try {

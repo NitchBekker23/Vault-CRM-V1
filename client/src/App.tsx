@@ -17,6 +17,7 @@ import BulkUpload from "@/pages/bulk-upload";
 import UserManagement from "@/pages/user-management";
 import RequestAccount from "@/pages/request-account";
 import AdminUsers from "@/pages/admin-users";
+import SetupAccount from "@/pages/setup-account";
 import Sidebar from "@/components/sidebar";
 
 function Router() {
@@ -35,11 +36,12 @@ function Router() {
     );
   }
 
-  // Not authenticated - show landing or request account
+  // Not authenticated - show landing, request account, or setup
   if (!isAuthenticated) {
     return (
       <Switch>
         <Route path="/request-account" component={RequestAccount} />
+        <Route path="/setup-account" component={SetupAccount} />
         <Route path="/" component={Landing} />
         <Route component={NotFound} />
       </Switch>
