@@ -62,7 +62,7 @@ export default function Login() {
           title: "Login Successful",
           description: "Welcome back!",
         });
-        window.location.reload(); // Refresh to update auth state
+        window.location.href = "/"; // Redirect to dashboard
       }
     } catch (error) {
       console.error("Login error:", error);

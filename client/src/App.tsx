@@ -17,6 +17,7 @@ import BulkUpload from "@/pages/bulk-upload";
 import UserManagement from "@/pages/user-management";
 import RequestAccount from "@/pages/request-account";
 import AdminUsers from "@/pages/admin-users";
+import UserProfile from "@/pages/user-profile";
 import SetupAccount from "@/pages/setup-account";
 import TwoFactorLogin from "@/pages/two-factor-login";
 import TestLogin from "@/pages/test-login";
@@ -106,7 +107,10 @@ function Router() {
           <Route path="/bulk-upload" component={BulkUpload} />
           <Route path="/user-management" component={UserManagement} />
           {(user?.role === 'admin' || user?.role === 'owner') && (
-            <Route path="/admin/users" component={AdminUsers} />
+            <>
+              <Route path="/admin/users" component={AdminUsers} />
+              <Route path="/admin/users/:userId" component={UserProfile} />
+            </>
           )}
           <Route component={NotFound} />
         </Switch>

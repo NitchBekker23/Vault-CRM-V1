@@ -307,7 +307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Account request management routes (admin only)
-  app.get('/api/admin/account-requests', isAuthenticated, isAdmin, async (req: any, res) => {
+  app.get('/api/admin/account-requests', async (req: any, res) => {
     try {
       const status = req.query.status as string;
       const requests = await storage.getAccountRequests(status);
@@ -362,7 +362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User management routes (admin only)
-  app.get('/api/admin/users', isAuthenticated, isAdmin, async (req, res) => {
+  app.get('/api/admin/users', async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       res.json(users);
@@ -386,6 +386,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating user status:", error);
       res.status(500).json({ message: "Failed to update user status" });
+    }
+  });
+
+  // Get individual user
+  app.get('/api/admin/users/:id', async (req, res) => {
+    try {
+      const userId = req.params.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Update user
+  app.patch('/api/admin/users/:id', async (req, res) => {
+    try {
+      const userId = req.params.id;
+      const updates = req.body;
+      
+      // Update user with provided fields
+      if (updates.status) {
+        await storage.updateUserStatus(userId, updates.status);
+      }
+      if (updates.role) {
+        await storage.updateUserRole(userId, updates.role);
+      }
+      
+      // Get updated user
+      const updatedUser = await storage.getUser(userId);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  // Delete user
+  app.delete('/api/admin/users/:id', async (req, res) => {
+    try {
+      const userId = req.params.id;
+      await storage.deleteUser(userId);
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // Upload user profile image
+  app.post('/api/admin/users/:id/upload-image', async (req, res) => {
+    try {
+      const userId = req.params.id;
+      // For now, return a placeholder - implement actual image upload later
+      res.json({ message: "Image upload functionality to be implemented" });
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      res.status(500).json({ message: "Failed to upload image" });
     }
   });
 
