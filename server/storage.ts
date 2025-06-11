@@ -7,6 +7,8 @@ import {
   sales,
   saleItems,
   activityLog,
+  accountRequests,
+  twoFactorCodes,
   type User,
   type UpsertUser,
   type InventoryItem,
@@ -23,6 +25,10 @@ import {
   type InsertSaleItem,
   type ActivityLog,
   type InsertActivityLog,
+  type AccountRequest,
+  type InsertAccountRequest,
+  type TwoFactorCode,
+  type InsertTwoFactorCode,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, ilike, or } from "drizzle-orm";
@@ -32,6 +38,23 @@ export interface IStorage {
   // User operations (mandatory for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  
+  // Account request operations
+  createAccountRequest(request: InsertAccountRequest): Promise<AccountRequest>;
+  getAccountRequests(status?: string): Promise<AccountRequest[]>;
+  getAccountRequest(id: number): Promise<AccountRequest | undefined>;
+  reviewAccountRequest(id: number, reviewerId: string, approved: boolean, denialReason?: string): Promise<AccountRequest>;
+  
+  // User management operations
+  getAllUsers(): Promise<User[]>;
+  updateUserStatus(id: string, status: string): Promise<User>;
+  updateUserRole(id: string, role: string): Promise<User>;
+  
+  // Two-factor authentication operations
+  createTwoFactorCode(code: InsertTwoFactorCode): Promise<TwoFactorCode>;
+  getTwoFactorCode(userId: string, code: string): Promise<TwoFactorCode | undefined>;
+  markTwoFactorCodeUsed(id: number): Promise<void>;
+  cleanupExpiredCodes(): Promise<void>;
 
   // Inventory operations
   getInventoryItems(
@@ -455,6 +478,118 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(sales.createdAt));
 
     return salesResults;
+  }
+
+  // Account request operations
+  async createAccountRequest(request: InsertAccountRequest): Promise<AccountRequest> {
+    const [newRequest] = await db
+      .insert(accountRequests)
+      .values(request)
+      .returning();
+    return newRequest;
+  }
+
+  async getAccountRequests(status?: string): Promise<AccountRequest[]> {
+    const query = db.select().from(accountRequests);
+    
+    if (status) {
+      return query
+        .where(sql`${accountRequests.status} = ${status}`)
+        .orderBy(desc(accountRequests.requestedAt));
+    }
+    
+    return query.orderBy(desc(accountRequests.requestedAt));
+  }
+
+  async getAccountRequest(id: number): Promise<AccountRequest | undefined> {
+    const [request] = await db
+      .select()
+      .from(accountRequests)
+      .where(eq(accountRequests.id, id));
+    return request;
+  }
+
+  async reviewAccountRequest(id: number, reviewerId: string, approved: boolean, denialReason?: string): Promise<AccountRequest> {
+    const [updatedRequest] = await db
+      .update(accountRequests)
+      .set({
+        status: approved ? "approved" : "denied",
+        reviewedAt: new Date(),
+        reviewedBy: reviewerId,
+        denialReason: approved ? null : denialReason,
+      })
+      .where(eq(accountRequests.id, id))
+      .returning();
+    return updatedRequest;
+  }
+
+  // User management operations
+  async getAllUsers(): Promise<User[]> {
+    return db
+      .select()
+      .from(users)
+      .orderBy(desc(users.createdAt));
+  }
+
+  async updateUserStatus(id: string, status: string): Promise<User> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({ 
+        status: sql`${status}`,
+        updatedAt: new Date() 
+      })
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
+  }
+
+  async updateUserRole(id: string, role: string): Promise<User> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({ 
+        role: sql`${role}`,
+        updatedAt: new Date() 
+      })
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
+  }
+
+  // Two-factor authentication operations
+  async createTwoFactorCode(code: InsertTwoFactorCode): Promise<TwoFactorCode> {
+    const [newCode] = await db
+      .insert(twoFactorCodes)
+      .values(code)
+      .returning();
+    return newCode;
+  }
+
+  async getTwoFactorCode(userId: string, code: string): Promise<TwoFactorCode | undefined> {
+    const [result] = await db
+      .select()
+      .from(twoFactorCodes)
+      .where(
+        and(
+          eq(twoFactorCodes.userId, userId),
+          eq(twoFactorCodes.code, code),
+          sql`${twoFactorCodes.expiresAt} > NOW()`,
+          sql`${twoFactorCodes.usedAt} IS NULL`
+        )
+      );
+    return result;
+  }
+
+  async markTwoFactorCodeUsed(id: number): Promise<void> {
+    await db
+      .update(twoFactorCodes)
+      .set({ usedAt: new Date() })
+      .where(eq(twoFactorCodes.id, id));
+  }
+
+  async cleanupExpiredCodes(): Promise<void> {
+    await db
+      .delete(twoFactorCodes)
+      .where(sql`${twoFactorCodes.expiresAt} < NOW()`);
   }
 
   async getDashboardMetrics(): Promise<{
