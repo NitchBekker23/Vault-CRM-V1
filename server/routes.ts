@@ -1,9 +1,12 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
+import multer from "multer";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { imageOptimizer } from "./imageOptimizer";
 import { db } from "./db";
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
@@ -434,16 +437,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload user profile image
-  app.post('/api/admin/users/:id/upload-image', async (req, res) => {
+  app.post('/api/admin/users/:id/upload-image', multer({ 
+    dest: 'uploads/',
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only image files are allowed'));
+      }
+    }
+  }).single('image'), async (req, res) => {
     try {
       const userId = req.params.id;
-      // For now, return a placeholder - implement actual image upload later
-      res.json({ message: "Image upload functionality to be implemented" });
+      const file = req.file;
+      
+      if (!file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+
+      // Create direct file URL
+      const profileImageUrl = `/uploads/${file.filename}`;
+
+      // Update user profile with new image URL
+      await storage.updateUser(userId, { profileImageUrl });
+
+      res.json({ 
+        message: "Image uploaded successfully",
+        profileImageUrl 
+      });
     } catch (error) {
       console.error("Error uploading image:", error);
       res.status(500).json({ message: "Failed to upload image" });
     }
   });
+
+  // Serve uploaded files statically
+  app.use('/uploads', express.static('uploads'));
 
   app.patch('/api/admin/users/:id/role', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
