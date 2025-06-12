@@ -48,8 +48,8 @@ export default function Sidebar() {
                     <i className="fas fa-gem text-white text-sm"></i>
                   </div>
                   <div>
-                    <h1 className="text-lg font-semibold text-slate-900">StockTracker</h1>
-                    <p className="text-xs text-slate-500">Luxury Inventory</p>
+                    <h1 className="text-lg font-semibold text-slate-900">The Vault</h1>
+                    <p className="text-xs text-slate-500">inventory</p>
                   </div>
                 </div>
                 <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg">
@@ -119,8 +119,8 @@ export default function Sidebar() {
             <i className="fas fa-gem text-white text-sm"></i>
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-slate-900">StockTracker</h1>
-            <p className="text-xs text-slate-500">Luxury Inventory</p>
+            <h1 className="text-lg font-semibold text-slate-900">The Vault</h1>
+            <p className="text-xs text-slate-500">inventory</p>
           </div>
         </div>
       </div>
