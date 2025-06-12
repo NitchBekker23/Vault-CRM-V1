@@ -31,6 +31,13 @@ export default function UserProfile() {
 
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ["/api/admin/users", userId],
+    queryFn: async () => {
+      const response = await fetch(`/api/admin/users/${userId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch user');
+      }
+      return response.json();
+    },
     enabled: !!userId,
   });
 

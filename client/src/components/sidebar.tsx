@@ -16,7 +16,6 @@ const navigation = [
 
 const adminNavigation = [
   { name: "Bulk Upload", href: "/bulk-upload", icon: "fas fa-upload" },
-  { name: "User Management", href: "/user-management", icon: "fas fa-user-shield" },
 ];
 
 export default function Sidebar() {
