@@ -59,6 +59,7 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
       price: "",
       status: "in_stock",
       imageUrls: [],
+      notes: "",
     },
   });
 
@@ -74,6 +75,7 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
         price: item.price || "",
         status: item.status,
         imageUrls: item.imageUrls || [],
+        notes: item.notes || "",
       });
     }
   }, [item, form]);
@@ -201,6 +203,25 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
                   <FormControl>
                     <Textarea
                       placeholder="Detailed description of the item..."
+                      className="h-24"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Internal notes about this item..."
                       className="h-24"
                       {...field}
                       value={field.value ?? ""}

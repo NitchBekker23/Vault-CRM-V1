@@ -58,6 +58,7 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
       price: "",
       status: "in_stock",
       imageUrls: [],
+      notes: "",
     },
   });
 
@@ -182,6 +183,25 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
                   <FormControl>
                     <Textarea
                       placeholder="Detailed description of the item..."
+                      className="h-24"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Internal notes about this item..."
                       className="h-24"
                       {...field}
                       value={field.value ?? ""}
