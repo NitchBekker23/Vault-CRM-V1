@@ -24,6 +24,13 @@ export default function Sidebar() {
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
 
+  // Check if user has admin privileges
+  const isAdmin: boolean = !!(user && (
+    (user as any)?.role === "admin" || 
+    (user as any)?.role === "owner" ||
+    (user as any)?.email === "nitchbekker@gmail.com" // Fallback for Christopher Bekker
+  ));
+
 
 
   if (isMobile) {
@@ -78,7 +85,7 @@ export default function Sidebar() {
                   ))}
                 </ul>
                 
-                {user && ((user as any)?.role === "admin" || (user as any)?.role === "owner") && (
+                {isAdmin ? (
                   <div className="mt-8 pt-6 border-t border-slate-200">
                     <p className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
                       Admin Tools
@@ -101,7 +108,7 @@ export default function Sidebar() {
                       </li>
                     </ul>
                   </div>
-                )}
+                ) : null}
               </nav>
             </aside>
           </div>
@@ -142,7 +149,7 @@ export default function Sidebar() {
           ))}
         </ul>
         
-        {user && ((user as any)?.role === "admin" || (user as any)?.role === "owner") && (
+        {isAdmin ? (
           <div className="mt-8 pt-6 border-t border-slate-200">
             <p className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
               Admin Tools
@@ -161,7 +168,7 @@ export default function Sidebar() {
               </li>
             </ul>
           </div>
-        )}
+        ) : null}
       </nav>
     </aside>
   );
