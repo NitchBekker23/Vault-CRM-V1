@@ -143,7 +143,9 @@ export default function UserProfile() {
         title: "Image Uploaded",
         description: "Profile image has been updated successfully.",
       });
+      // Invalidate both user profile and auth user queries to refresh header
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users", userId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
     onError: (error: Error) => {
       toast({

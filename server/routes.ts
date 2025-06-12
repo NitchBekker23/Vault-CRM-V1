@@ -19,6 +19,7 @@ import {
 } from "./emailService";
 import {
   users,
+  images,
   insertAccountRequestSchema,
   insertTwoFactorCodeSchema,
   insertInventoryItemSchema,
@@ -454,7 +455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No image file provided" });
       }
 
-      // Create direct file URL
+      // Create direct file URL that can be served statically
       const profileImageUrl = `/uploads/${file.filename}`;
 
       // Update user profile with new image URL
@@ -472,6 +473,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Serve uploaded files statically
   app.use('/uploads', express.static('uploads'));
+
+  // Serve optimized images
+  app.get('/api/images/:id', async (req, res) => {
+    try {
+      const imageId = parseInt(req.params.id);
+      const [image] = await db.select().from(images).where(eq(images.id, imageId));
+      
+      if (!image) {
+        return res.status(404).json({ message: "Image not found" });
+      }
+      
+      // If it's a data URL, extract and serve the image data
+      if (image.url.startsWith('data:')) {
+        const [mimeType, base64Data] = image.url.split(',');
+        const imageBuffer = Buffer.from(base64Data, 'base64');
+        const contentType = mimeType.split(':')[1].split(';')[0];
+        
+        res.set('Content-Type', contentType);
+        res.set('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+        res.send(imageBuffer);
+      } else {
+        // Redirect to external URL
+        res.redirect(image.url);
+      }
+    } catch (error) {
+      console.error("Error serving image:", error);
+      res.status(500).json({ message: "Failed to serve image" });
+    }
+  });
 
   app.patch('/api/admin/users/:id/role', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
