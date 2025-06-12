@@ -1164,35 +1164,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PATCH route for partial updates (like notes)
-  app.patch("/api/inventory/:id", isAuthenticated, async (req: any, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const validatedData = insertInventoryItemSchema.partial().parse(req.body);
-
-      const item = await storage.updateInventoryItem(id, validatedData);
-      
-      // Log activity for notes update
-      const userId = req.user?.claims?.sub || req.user?.id;
-      if (validatedData.notes !== undefined) {
-        await storage.createActivity({
-          userId,
-          action: "updated_item_notes",
-          entityType: "inventory_item",
-          entityId: item.id,
-          description: `Updated notes for ${item.name}`,
-        });
-      }
-
-      res.json(item);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      console.error("Error updating inventory item:", error);
-      res.status(500).json({ message: "Failed to update inventory item" });
-    }
-  });
 
   app.delete("/api/inventory/:id", isAuthenticated, async (req: any, res) => {
     try {

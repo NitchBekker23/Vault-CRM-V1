@@ -16,6 +16,7 @@ import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+
 import { Edit2, Save, X } from "lucide-react";
 
 interface ItemDetailsModalProps {
@@ -47,7 +48,8 @@ export default function ItemDetailsModal({
 
   const updateNotesMutation = useMutation({
     mutationFn: async (notes: string) => {
-      return await apiRequest(`/api/inventory/${item?.id}`, "PATCH", {
+      return await apiRequest(`/api/inventory/${item?.id}`, "PUT", {
+        ...item,
         notes
       });
     },
