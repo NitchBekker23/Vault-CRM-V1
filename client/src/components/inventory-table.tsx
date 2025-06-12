@@ -231,9 +231,7 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
     switch (status) {
       case "in_stock":
         return "bg-green-100 text-green-800";
-      case "sold":
-        return "bg-red-100 text-red-800";
-      case "out_of_stock":
+      case "reserved":
         return "bg-yellow-100 text-yellow-800";
       default:
         return "bg-slate-100 text-slate-800";
@@ -244,10 +242,8 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
     switch (status) {
       case "in_stock":
         return "In Stock";
-      case "sold":
-        return "Sold";
-      case "out_of_stock":
-        return "Out of Stock";
+      case "reserved":
+        return "Reserved";
       default:
         return status;
     }
@@ -307,8 +303,7 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
                       <SelectItem value="in_stock">In Stock</SelectItem>
-                      <SelectItem value="sold">Sold</SelectItem>
-                      <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                      <SelectItem value="reserved">Reserved</SelectItem>
                     </SelectContent>
                   </Select>
                   

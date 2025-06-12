@@ -269,8 +269,7 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="in_stock">In Stock</SelectItem>
-                        <SelectItem value="sold">Sold</SelectItem>
-                        <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                        <SelectItem value="reserved">Reserved</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

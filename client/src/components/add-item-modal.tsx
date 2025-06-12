@@ -212,7 +212,7 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
               )}
             />
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <FormField
                 control={form.control}
                 name="category"
@@ -228,6 +228,28 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
                       <SelectContent>
                         <SelectItem value="watches">Watches</SelectItem>
                         <SelectItem value="leather-goods">Leather Goods</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status *</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="in_stock">In Stock</SelectItem>
+                        <SelectItem value="reserved">Reserved</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

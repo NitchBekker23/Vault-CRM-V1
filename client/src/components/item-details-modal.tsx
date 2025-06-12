@@ -33,9 +33,7 @@ export default function ItemDetailsModal({
     switch (status) {
       case "in_stock":
         return "bg-green-100 text-green-800";
-      case "sold":
-        return "bg-red-100 text-red-800";
-      case "out_of_stock":
+      case "reserved":
         return "bg-yellow-100 text-yellow-800";
       default:
         return "bg-slate-100 text-slate-800";
@@ -46,10 +44,8 @@ export default function ItemDetailsModal({
     switch (status) {
       case "in_stock":
         return "In Stock";
-      case "sold":
-        return "Sold";
-      case "out_of_stock":
-        return "Out of Stock";
+      case "reserved":
+        return "Reserved";
       default:
         return status;
     }
