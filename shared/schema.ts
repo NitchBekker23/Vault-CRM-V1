@@ -117,6 +117,7 @@ export const inventoryItems = pgTable("inventory_items", {
   status: varchar("status").default("in_stock").notNull(), // 'in_stock', 'sold', 'out_of_stock'
   imageUrls: text("image_urls").array(), // Keep for backward compatibility
   imageIds: integer("image_ids").array(), // New: reference to images table
+  notes: text("notes"), // Internal notes for the item
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   createdBy: varchar("created_by").references(() => users.id),

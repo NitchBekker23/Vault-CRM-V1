@@ -9,8 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { InventoryItem } from "@shared/schema";
+import { useState, useEffect } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Edit2, Save, X } from "lucide-react";
 
 interface ItemDetailsModalProps {
   isOpen: boolean;
@@ -27,6 +33,51 @@ export default function ItemDetailsModal({
   onEdit, 
   onDelete 
 }: ItemDetailsModalProps) {
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [notesValue, setNotesValue] = useState("");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Update notes value when item changes
+  useEffect(() => {
+    if (item) {
+      setNotesValue(item.notes || "");
+    }
+  }, [item]);
+
+  const updateNotesMutation = useMutation({
+    mutationFn: async (notes: string) => {
+      return await apiRequest(`/api/inventory/${item?.id}`, "PATCH", {
+        notes
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Notes updated",
+        description: "Item notes have been successfully updated.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+      setIsEditingNotes(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update notes. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Error updating notes:", error);
+    },
+  });
+
+  const handleSaveNotes = () => {
+    updateNotesMutation.mutate(notesValue);
+  };
+
+  const handleCancelEdit = () => {
+    setNotesValue(item?.notes || "");
+    setIsEditingNotes(false);
+  };
+
   if (!item) return null;
 
   const getStatusColor = (status: string) => {
@@ -165,6 +216,65 @@ export default function ItemDetailsModal({
                       <p className="text-slate-900 text-sm mt-1 leading-relaxed">{item.description}</p>
                     </div>
                   )}
+
+                  {/* Notes Section */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-slate-600">Notes</span>
+                      {!isEditingNotes && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setIsEditingNotes(true)}
+                          className="h-6 px-2 text-xs"
+                        >
+                          <Edit2 className="w-3 h-3 mr-1" />
+                          Edit
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {isEditingNotes ? (
+                      <div className="space-y-2">
+                        <Textarea
+                          value={notesValue}
+                          onChange={(e) => setNotesValue(e.target.value)}
+                          placeholder="Add notes about this item..."
+                          className="min-h-[100px] text-sm"
+                        />
+                        <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            onClick={handleSaveNotes}
+                            disabled={updateNotesMutation.isPending}
+                            className="h-7 px-3 text-xs"
+                          >
+                            <Save className="w-3 h-3 mr-1" />
+                            {updateNotesMutation.isPending ? "Saving..." : "Save"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleCancelEdit}
+                            disabled={updateNotesMutation.isPending}
+                            className="h-7 px-3 text-xs"
+                          >
+                            <X className="w-3 h-3 mr-1" />
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div 
+                        className="text-slate-900 text-sm mt-1 leading-relaxed min-h-[60px] p-3 bg-slate-50 rounded-md border cursor-pointer hover:bg-slate-100 transition-colors"
+                        onClick={() => setIsEditingNotes(true)}
+                      >
+                        {notesValue || (
+                          <span className="text-slate-400 italic">Click to add notes...</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
                   <div className="pt-4 border-t border-slate-200">
                     <div className="grid grid-cols-1 gap-2 text-xs text-slate-500">
