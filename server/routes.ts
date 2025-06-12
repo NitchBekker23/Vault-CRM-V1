@@ -30,6 +30,7 @@ import {
 } from "@shared/schema";
 import { eq, desc, sql, and, ilike, or } from "drizzle-orm";
 import { z } from "zod";
+import { getUserId } from "./authHelper";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -1105,8 +1106,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const item = await storage.createInventoryItem(validatedData);
       
       // Log activity
+      const userId = req.user?.claims?.sub || req.user?.id;
       await storage.createActivity({
-        userId: req.user.claims.sub,
+        userId,
         action: "added_item",
         entityType: "inventory_item",
         entityId: item.id,
@@ -1131,8 +1133,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const item = await storage.updateInventoryItem(id, validatedData);
       
       // Log activity
+      const userId = req.user?.claims?.sub || req.user?.id;
       await storage.createActivity({
-        userId: req.user.claims.sub,
+        userId,
         action: "updated_item",
         entityType: "inventory_item",
         entityId: item.id,
