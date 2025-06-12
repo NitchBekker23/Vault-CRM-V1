@@ -125,6 +125,7 @@ export interface IStorage {
   getDashboardMetrics(): Promise<{
     totalInventory: number;
     inStock: number;
+    reserved: number;
     wishlistRequests: number;
     salesThisMonth: number;
   }>;
@@ -712,6 +713,7 @@ export class DatabaseStorage implements IStorage {
   async getDashboardMetrics(): Promise<{
     totalInventory: number;
     inStock: number;
+    reserved: number;
     wishlistRequests: number;
     salesThisMonth: number;
   }> {
@@ -719,12 +721,16 @@ export class DatabaseStorage implements IStorage {
     currentMonth.setDate(1);
     currentMonth.setHours(0, 0, 0, 0);
 
-    const [totalInventoryResult, inStockResult, wishlistResult, salesResult] = await Promise.all([
+    const [totalInventoryResult, inStockResult, reservedResult, wishlistResult, salesResult] = await Promise.all([
       db.select({ count: sql<number>`count(*)` }).from(inventoryItems),
       db
         .select({ count: sql<number>`count(*)` })
         .from(inventoryItems)
         .where(eq(inventoryItems.status, "in_stock")),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(inventoryItems)
+        .where(eq(inventoryItems.status, "reserved")),
       db
         .select({ count: sql<number>`count(*)` })
         .from(wishlistItems)
@@ -738,6 +744,7 @@ export class DatabaseStorage implements IStorage {
     return {
       totalInventory: Number(totalInventoryResult[0].count),
       inStock: Number(inStockResult[0].count),
+      reserved: Number(reservedResult[0].count),
       wishlistRequests: Number(wishlistResult[0].count),
       salesThisMonth: Number(salesResult[0].total || 0),
     };

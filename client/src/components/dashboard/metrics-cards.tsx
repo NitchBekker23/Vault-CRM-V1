@@ -1,16 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
-import { Package, CheckCircle, Heart, TrendingUp, ArrowUp } from "lucide-react";
+import { Package, CheckCircle, Heart, TrendingUp, ArrowUp, Clock } from "lucide-react";
+
+interface DashboardMetrics {
+  totalInventory: number;
+  inStock: number;
+  reserved: number;
+  wishlistRequests: number;
+  salesThisMonth: number;
+}
 
 export default function MetricsCards() {
-  const { data: metrics, isLoading } = useQuery({
+  const { data: metrics, isLoading } = useQuery<DashboardMetrics>({
     queryKey: ["/api/dashboard/metrics"],
   });
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {[...Array(4)].map((_, i) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        {[...Array(5)].map((_, i) => (
           <Card key={i}>
             <CardContent className="p-6">
               <div className="animate-pulse">
@@ -43,10 +51,18 @@ export default function MetricsCards() {
         Math.round((metrics.inStock / metrics.totalInventory) * 100) : 0,
     },
     {
+      title: "Reserved",
+      value: metrics?.reserved || 0,
+      icon: Clock,
+      color: "warning",
+      percentage: metrics?.totalInventory ? 
+        Math.round((metrics.reserved / metrics.totalInventory) * 100) : 0,
+    },
+    {
       title: "Wishlist Requests",
       value: metrics?.wishlistRequests || 0,
       icon: Heart,
-      color: "warning",
+      color: "info",
       trend: "+8%",
       trendLabel: "new this week",
     },
