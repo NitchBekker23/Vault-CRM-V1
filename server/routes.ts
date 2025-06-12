@@ -4,12 +4,12 @@ import { createServer, type Server } from "http";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 import multer from "multer";
+import csv from "csv-parser";
+import { Readable } from "stream";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { imageOptimizer } from "./imageOptimizer";
 import { db } from "./db";
-import { users } from "@shared/schema";
-import { eq } from "drizzle-orm";
 import { 
   sendAccountRequestNotification, 
   sendAccountApprovalEmail, 
@@ -17,12 +17,10 @@ import {
   sendTwoFactorCode,
   sendPasswordResetEmail
 } from "./emailService";
-import { insertAccountRequestSchema, insertTwoFactorCodeSchema } from "@shared/schema";
-import { imageOptimizer } from "./imageOptimizer";
-import multer from "multer";
-import csv from "csv-parser";
-import { Readable } from "stream";
 import {
+  users,
+  insertAccountRequestSchema,
+  insertTwoFactorCodeSchema,
   insertInventoryItemSchema,
   insertWishlistItemSchema,
   insertClientSchema,
