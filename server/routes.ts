@@ -1096,7 +1096,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertInventoryItemSchema.parse({
         ...req.body,
-        createdBy: getUserId(req),
+        createdBy: getUserId(req) || "system",
       });
 
       // Auto-inherit images from existing SKUs if no images provided
@@ -1176,13 +1176,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deleteInventoryItem(id);
       
       // Log activity
-      await storage.createActivity({
-        userId: getUserId(req),
-        action: "deleted_item",
-        entityType: "inventory_item",
-        entityId: id,
-        description: `Deleted ${item.name}`,
-      });
+      const userId = getUserId(req);
+      if (userId) {
+        await storage.createActivity({
+          userId,
+          action: "deleted_item",
+          entityType: "inventory_item",
+          entityId: id,
+          description: `Deleted ${item.name}`,
+        });
+      }
 
       res.status(204).send();
     } catch (error) {
@@ -1282,7 +1285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Log activity for bulk delete
       await storage.createActivity({
-        userId: getUserId(req),
+        userId: getUserId(req) || "system",
         action: "bulk_delete",
         entityType: "inventory_item",
         entityId: validIds[0], // Use first deleted item ID as reference
@@ -1400,7 +1403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             imageUrls: row.imageUrls && row.imageUrls.toString().trim() ? 
               row.imageUrls.toString().split(',').map((url: string) => url.trim()).filter(Boolean) : 
               [],
-            createdBy: getUserId(req),
+            createdBy: getUserId(req) || "system",
           };
           
           console.log(`Processing row ${rowNumber}: ${itemData.name} - ${itemData.serialNumber}`);
@@ -1488,7 +1491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Log bulk import activity
       await storage.createActivity({
-        userId: getUserId(req),
+        userId: getUserId(req) || "system",
         action: "bulk_import",
         entityType: "inventory_item",
         entityId: 0,
@@ -1541,14 +1544,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertWishlistItemSchema.parse({
         ...req.body,
-        userId: getUserId(req),
+        userId: getUserId(req) || "system",
       });
 
       const item = await storage.createWishlistItem(validatedData);
       
       // Log activity
       await storage.createActivity({
-        userId: getUserId(req),
+        userId: getUserId(req) || "system",
         action: "wishlist_request",
         entityType: "wishlist_item",
         entityId: item.id,
@@ -1676,7 +1679,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const item = await storage.getInventoryItem(purchase.itemId);
       if (item) {
         await storage.createActivity({
-          userId: getUserId(req),
+          userId: getUserId(req) || "system",
           action: "sold_item",
           entityType: "inventory_item",
           entityId: item.id,

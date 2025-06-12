@@ -2,12 +2,17 @@ import type { Request } from "express";
 
 // Helper function to get user ID from request object
 export function getUserId(req: any): string | null {
-  if (!req.isAuthenticated() || !req.user) {
+  try {
+    if (!req.isAuthenticated || !req.isAuthenticated() || !req.user) {
+      return null;
+    }
+    
+    // Handle different user object structures
+    return req.user?.claims?.sub || req.user?.id || null;
+  } catch (error) {
+    console.error("Error getting user ID:", error);
     return null;
   }
-  
-  // Handle different user object structures
-  return req.user?.claims?.sub || req.user?.id || null;
 }
 
 // Helper function to check if user is authenticated
