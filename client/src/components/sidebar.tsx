@@ -24,6 +24,8 @@ export default function Sidebar() {
   const isMobile = useIsMobile();
   const [isOpen, setIsOpen] = useState(false);
 
+
+
   if (isMobile) {
     return (
       <>
