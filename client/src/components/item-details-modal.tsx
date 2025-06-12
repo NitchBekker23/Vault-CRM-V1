@@ -9,15 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { InventoryItem } from "@shared/schema";
-import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-
-import { Edit2, Save, X } from "lucide-react";
 
 interface ItemDetailsModalProps {
   isOpen: boolean;
@@ -34,52 +27,6 @@ export default function ItemDetailsModal({
   onEdit, 
   onDelete 
 }: ItemDetailsModalProps) {
-  const [isEditingNotes, setIsEditingNotes] = useState(false);
-  const [notesValue, setNotesValue] = useState("");
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  // Update notes value when item changes
-  useEffect(() => {
-    if (item) {
-      setNotesValue(item.notes || "");
-    }
-  }, [item]);
-
-  const updateNotesMutation = useMutation({
-    mutationFn: async (notes: string) => {
-      return await apiRequest(`/api/inventory/${item?.id}`, "PUT", {
-        ...item,
-        notes
-      });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Notes updated",
-        description: "Item notes have been successfully updated.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
-      setIsEditingNotes(false);
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to update notes. Please try again.",
-        variant: "destructive",
-      });
-      console.error("Error updating notes:", error);
-    },
-  });
-
-  const handleSaveNotes = () => {
-    updateNotesMutation.mutate(notesValue);
-  };
-
-  const handleCancelEdit = () => {
-    setNotesValue(item?.notes || "");
-    setIsEditingNotes(false);
-  };
-
   if (!item) return null;
 
   const getStatusColor = (status: string) => {
@@ -120,9 +67,9 @@ export default function ItemDetailsModal({
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Image Gallery */}
-          <div className="space-y-4">
+          <div>
             {item.imageUrls && item.imageUrls.length > 0 ? (
-              <div className="w-full">
+              <div className="space-y-4">
                 {item.imageUrls.length === 1 ? (
                   <div className="aspect-square rounded-lg overflow-hidden bg-slate-100">
                     <img
@@ -130,8 +77,9 @@ export default function ItemDetailsModal({
                       alt={item.name}
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                        e.currentTarget.parentElement!.innerHTML = 
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        target.parentElement!.innerHTML = 
                           '<div class="flex items-center justify-center h-full"><i class="fas fa-image text-slate-400 text-4xl"></i></div>';
                       }}
                     />
@@ -139,16 +87,17 @@ export default function ItemDetailsModal({
                 ) : (
                   <Carousel className="w-full">
                     <CarouselContent>
-                      {item.imageUrls.map((image, index) => (
+                      {item.imageUrls.map((url, index) => (
                         <CarouselItem key={index}>
                           <div className="aspect-square rounded-lg overflow-hidden bg-slate-100">
                             <img
-                              src={image}
+                              src={url}
                               alt={`${item.name} - Image ${index + 1}`}
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                e.currentTarget.parentElement!.innerHTML = 
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                target.parentElement!.innerHTML = 
                                   '<div class="flex items-center justify-center h-full"><i class="fas fa-image text-slate-400 text-4xl"></i></div>';
                               }}
                             />
@@ -219,64 +168,18 @@ export default function ItemDetailsModal({
                     </div>
                   )}
 
-                  {/* Notes Section */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
+                  {/* Notes Section - Read Only */}
+                  {item.notes && (
+                    <div>
                       <span className="text-sm font-medium text-slate-600">Notes</span>
-                      {!isEditingNotes && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setIsEditingNotes(true)}
-                          className="h-6 px-2 text-xs"
-                        >
-                          <Edit2 className="w-3 h-3 mr-1" />
-                          Edit
-                        </Button>
-                      )}
+                      <div className="text-slate-900 text-sm mt-1 leading-relaxed p-3 bg-slate-50 rounded-md border">
+                        {item.notes}
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        To edit notes, click "Edit Item" below
+                      </p>
                     </div>
-                    
-                    {isEditingNotes ? (
-                      <div className="space-y-2">
-                        <Textarea
-                          value={notesValue}
-                          onChange={(e) => setNotesValue(e.target.value)}
-                          placeholder="Add notes about this item..."
-                          className="min-h-[100px] text-sm"
-                        />
-                        <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            onClick={handleSaveNotes}
-                            disabled={updateNotesMutation.isPending}
-                            className="h-7 px-3 text-xs"
-                          >
-                            <Save className="w-3 h-3 mr-1" />
-                            {updateNotesMutation.isPending ? "Saving..." : "Save"}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleCancelEdit}
-                            disabled={updateNotesMutation.isPending}
-                            className="h-7 px-3 text-xs"
-                          >
-                            <X className="w-3 h-3 mr-1" />
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div 
-                        className="text-slate-900 text-sm mt-1 leading-relaxed min-h-[60px] p-3 bg-slate-50 rounded-md border cursor-pointer hover:bg-slate-100 transition-colors"
-                        onClick={() => setIsEditingNotes(true)}
-                      >
-                        {notesValue || (
-                          <span className="text-slate-400 italic">Click to add notes...</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  )}
 
                   <div className="pt-4 border-t border-slate-200">
                     <div className="grid grid-cols-1 gap-2 text-xs text-slate-500">
@@ -311,17 +214,19 @@ export default function ItemDetailsModal({
                 className="flex-1 border-red-200 hover:border-red-300 hover:bg-red-50"
                 onClick={() => onDelete(item)}
               >
-                <i className="fas fa-trash text-red-500 mr-2"></i>
+                <i className="fas fa-trash mr-2 text-red-600"></i>
                 Delete
               </Button>
             </div>
-          </div>
-        </div>
 
-        <div className="flex justify-end pt-4 border-t">
-          <Button variant="outline" onClick={onClose}>
-            Close
-          </Button>
+            <Button 
+              variant="ghost" 
+              className="w-full"
+              onClick={onClose}
+            >
+              Close
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
