@@ -1,4 +1,6 @@
-# The Vault - Inventory Management System
+# The Vault - Inventory Management System (V1)
+
+**GitHub Repository**: https://github.com/NitchBekker23/V1
 
 A sophisticated inventory management platform for watches and leather goods, designed to streamline multi-user inventory tracking with enhanced user experience and interactive features.
 
