@@ -135,7 +135,7 @@ export default function NotificationBell() {
     },
   });
 
-  const unreadCount = countData?.count || 0;
+  const unreadCount = (countData as any)?.count || 0;
   const hasUnread = unreadCount > 0;
 
   const handleNotificationClick = (notification: Notification) => {
@@ -193,7 +193,7 @@ export default function NotificationBell() {
             <div className="p-4 text-center text-sm text-gray-500">
               Loading notifications...
             </div>
-          ) : !notifications || notifications.length === 0 ? (
+          ) : !notifications || (notifications as any[]).length === 0 ? (
             <div className="p-8 text-center">
               <Bell className="h-12 w-12 text-gray-300 mx-auto mb-3" />
               <p className="text-sm text-gray-500">No notifications yet</p>
@@ -203,7 +203,7 @@ export default function NotificationBell() {
             </div>
           ) : (
             <div className="p-0">
-              {notifications.map((notification: Notification) => (
+              {(notifications as any[]).map((notification: Notification) => (
                 <div
                   key={notification.id}
                   className={`border-b last:border-b-0 p-4 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer relative ${
