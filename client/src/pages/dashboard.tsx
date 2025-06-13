@@ -8,6 +8,7 @@ import DashboardMetrics from "@/components/dashboard-metrics";
 import QuickActions from "@/components/quick-actions";
 import RecentActivity from "@/components/recent-activity";
 import InventoryTable from "@/components/inventory-table";
+import MobileTestOverlay from "@/components/mobile-test-overlay";
 
 export default function Dashboard() {
   const { toast } = useToast();
@@ -66,6 +67,9 @@ export default function Dashboard() {
           allowBulkActions={false} 
         />
       </div>
+      
+      {/* Mobile Test Overlay - Only show in development */}
+      {process.env.NODE_ENV === 'development' && <MobileTestOverlay />}
     </div>
   );
 }
