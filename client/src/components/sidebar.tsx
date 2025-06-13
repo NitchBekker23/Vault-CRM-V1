@@ -81,7 +81,7 @@ export default function Sidebar() {
                   </div>
                   <div>
                     <h1 className="text-lg font-semibold text-slate-900">The Vault</h1>
-                    <p className="text-xs text-slate-500">inventory</p>
+                    <p className="text-xs text-slate-500">CRM</p>
                   </div>
                 </div>
                 <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg">
@@ -152,7 +152,7 @@ export default function Sidebar() {
           </div>
           <div>
             <h1 className="text-lg font-semibold text-slate-900">The Vault</h1>
-            <p className="text-xs text-slate-500">inventory</p>
+            <p className="text-xs text-slate-500">CRM</p>
           </div>
         </div>
       </div>

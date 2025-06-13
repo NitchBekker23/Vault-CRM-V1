@@ -32,7 +32,7 @@ export default function Inventory() {
 
   return (
     <>
-      <Header title="CRM Management" />
+      <Header title="Inventory Management" />
       <div className="container-mobile py-2 sm:py-4 lg:py-6">
         <InventoryTable showHeader={true} allowBulkActions={true} />
       </div>
