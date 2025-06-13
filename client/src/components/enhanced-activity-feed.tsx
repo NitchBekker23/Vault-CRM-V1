@@ -6,9 +6,9 @@ interface ActivityItem {
   id: number;
   userId: string;
   action: string;
-  entity: string;
+  entityType: string;
   entityId: number;
-  details: string;
+  description: string;
   createdAt: string;
   user?: {
     firstName?: string;
@@ -46,9 +46,9 @@ function getActivityIcon(action: string): string {
 }
 
 function formatActivityText(activity: ActivityItem): JSX.Element {
-  const { action, entity, details } = activity;
+  const { action, entityType, description } = activity;
   
-  if (details.includes('VIP client')) {
+  if (description && description.includes('VIP client')) {
     return (
       <span>
         has been added as a <span className="font-semibold text-yellow-600">VIP client</span>
@@ -56,7 +56,7 @@ function formatActivityText(activity: ActivityItem): JSX.Element {
     );
   }
   
-  if (details.includes('newsletter')) {
+  if (description && description.includes('newsletter')) {
     return (
       <span>
         <span className="font-semibold">Newsletter</span> subscription updated
@@ -64,18 +64,17 @@ function formatActivityText(activity: ActivityItem): JSX.Element {
     );
   }
   
-  if (entity === 'inventory' && action === 'created') {
+  if (entityType === 'inventory_item' && action === 'added_item') {
     return (
       <span>
-        added a new <span className="font-semibold text-blue-600">{details}</span> to inventory
+        added a new <span className="font-semibold text-blue-600">{description || 'item'}</span> to inventory
       </span>
     );
   }
   
   return (
     <span>
-      {action} a <span className="font-semibold">{entity}</span>
-      {details && `: ${details}`}
+      {action.replace('_', ' ')} - <span className="font-semibold">{description}</span>
     </span>
   );
 }
@@ -157,7 +156,7 @@ export default function EnhancedActivityFeed({
                     {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
                   </span>
                   <span>•</span>
-                  <span className="capitalize">{activity.entity}</span>
+                  <span className="capitalize">{activity.entityType?.replace('_', ' ')}</span>
                 </div>
               </div>
               

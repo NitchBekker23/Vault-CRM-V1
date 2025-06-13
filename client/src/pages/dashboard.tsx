@@ -65,11 +65,11 @@ export default function Dashboard() {
       }`}>
         {/* Welcome Message */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Welcome back, Emily! Here's what's happening today.</h1>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Welcome back! Here's what's happening today.</h1>
         </div>
 
         {/* Metrics Cards */}
-        {metrics && <DashboardMetrics metrics={metrics} />}
+        <DashboardMetrics metrics={metrics as any || { totalInventory: 0, inStock: 0, reserved: 0, wishlistRequests: 0, salesThisMonth: 0 }} />
         
         {/* Main Content Grid */}
         <div className={`grid ${
@@ -82,15 +82,15 @@ export default function Dashboard() {
           {/* Left Column - Activity Feed */}
           <div className={screenSize === 'desktop' ? 'lg:col-span-2' : ''}>
             <div className="grid grid-cols-1 gap-6">
-              <EnhancedActivityFeed activities={activitiesData || []} />
-              <SalesAnalytics />
+              <EnhancedActivityFeed activities={Array.isArray(activitiesData) ? activitiesData : []} />
+              <SalesAnalytics salesData={[]} />
             </div>
           </div>
 
           {/* Right Column - Clients & Events */}
           <div className="space-y-6">
-            <TopClients clients={clientsData?.clients || []} />
-            <UpcomingEvents />
+            <TopClients clients={(clientsData as any)?.clients || []} />
+            <UpcomingEvents events={[]} />
           </div>
         </div>
       </div>
