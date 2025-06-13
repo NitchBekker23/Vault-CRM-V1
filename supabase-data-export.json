@@ -14,5 +14,8 @@
   "account_setup_tokens": [],
   "password_reset_tokens": [],
   "two_factor_codes": [],
-  "sessions": []
+  "sessions": [],
+  "client_files": [],
+  "images": [],
+  "inventory_item_images": []
 }
