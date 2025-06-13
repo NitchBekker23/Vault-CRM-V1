@@ -46,6 +46,7 @@ interface ModernDataTableProps {
     onClick: (selectedItems: any[]) => void;
     variant?: 'default' | 'destructive' | 'outline';
   }>;
+  onRowClick?: (item: any) => void;
   pagination?: {
     currentPage: number;
     totalPages: number;
@@ -75,6 +76,7 @@ export default function ModernDataTable({
   selectable = false,
   actions = [],
   bulkActions = [],
+  onRowClick,
   pagination,
   isLoading = false,
   emptyState

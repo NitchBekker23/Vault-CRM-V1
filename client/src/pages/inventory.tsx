@@ -7,6 +7,7 @@ import Header from "@/components/header";
 import ModernPageHeader from "@/components/modern-page-header";
 import ModernDataTable from "@/components/modern-data-table";
 import ImportInventoryModal from "@/components/import-inventory-modal";
+import EditInventoryModal from "@/components/edit-inventory-modal";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 
@@ -14,6 +15,8 @@ export default function Inventory() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
 
 
   // Fetch inventory data
@@ -57,7 +60,13 @@ export default function Inventory() {
   };
 
   const handleEdit = (item: any) => {
-    console.log("Edit item:", item.id);
+    setSelectedItem(item);
+    setShowEditModal(true);
+  };
+
+  const handleRowClick = (item: any) => {
+    setSelectedItem(item);
+    setShowEditModal(true);
   };
 
   const handleDelete = (item: any) => {
@@ -229,6 +238,7 @@ export default function Inventory() {
             actions={actions}
             bulkActions={bulkActions}
             isLoading={inventoryLoading}
+            onRowClick={handleRowClick}
             emptyState={{
               title: 'No inventory items',
               description: 'Get started by adding your first item to the inventory.',
@@ -245,6 +255,12 @@ export default function Inventory() {
       <ImportInventoryModal
         open={showImportModal}
         onOpenChange={setShowImportModal}
+      />
+
+      <EditInventoryModal
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        item={selectedItem}
       />
     </>
   );
