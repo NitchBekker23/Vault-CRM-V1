@@ -69,7 +69,7 @@ export default function NotificationBell() {
 
   // Fetch unread notification count
   const { data: countData } = useQuery({
-    queryKey: ['/api/notifications/count', { unreadOnly: true }],
+    queryKey: ['/api/notifications/count?unreadOnly=true'],
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
@@ -86,7 +86,7 @@ export default function NotificationBell() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications/count'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/count?unreadOnly=true'] });
     },
     onError: () => {
       toast({
@@ -103,7 +103,7 @@ export default function NotificationBell() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications/count'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/count?unreadOnly=true'] });
       toast({
         title: "Success",
         description: "All notifications marked as read",
@@ -124,7 +124,7 @@ export default function NotificationBell() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications/count'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/count?unreadOnly=true'] });
     },
     onError: () => {
       toast({
