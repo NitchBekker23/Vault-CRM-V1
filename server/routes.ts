@@ -1888,6 +1888,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const notificationId = parseInt(req.params.id);
       
+      if (!notificationId || isNaN(notificationId)) {
+        return res.status(400).json({ message: "Invalid notification ID" });
+      }
+      
       await storage.markNotificationRead(notificationId, userId);
       res.json({ success: true });
     } catch (error) {
