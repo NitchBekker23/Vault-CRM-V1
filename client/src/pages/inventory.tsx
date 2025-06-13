@@ -214,7 +214,7 @@ export default function Inventory() {
         
         <div className="p-6">
           <ModernDataTable
-            data={inventoryData?.items || []}
+            data={(inventoryData as any)?.items || []}
             columns={columns}
             searchable={true}
             searchPlaceholder="Search inventory..."
