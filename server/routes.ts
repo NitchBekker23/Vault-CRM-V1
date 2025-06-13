@@ -1116,11 +1116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Item not found" });
       }
       
-      // Get associated images
-      const images = await imageOptimizer.getItemImages(id);
-      const itemWithImages = { ...item, images };
-      
-      res.json(itemWithImages);
+      res.json(item);
     } catch (error) {
       console.error("Error fetching inventory item:", error);
       res.status(500).json({ message: "Failed to fetch inventory item" });
@@ -1172,44 +1168,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/inventory/:id", isAuthenticated, upload.array('images', 10), async (req: any, res) => {
+  app.put("/api/inventory/:id", isAuthenticated, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      
-      // Handle both FormData and JSON
-      let updateData: any = {};
-      
-      if (req.body.name) updateData.name = req.body.name;
-      if (req.body.brand) updateData.brand = req.body.brand;
-      if (req.body.serialNumber) updateData.serialNumber = req.body.serialNumber;
-      if (req.body.sku) updateData.sku = req.body.sku;
-      if (req.body.category) updateData.category = req.body.category;
-      if (req.body.status) updateData.status = req.body.status;
-      if (req.body.notes) updateData.notes = req.body.notes;
-      if (req.body.price) updateData.price = parseFloat(req.body.price);
+      const validatedData = insertInventoryItemSchema.partial().parse(req.body);
 
-      // Handle images if uploaded
-      if (req.files && req.files.length > 0) {
-        const userId = req.user?.claims?.sub || req.user?.id;
-        const imageIds: number[] = [];
-        
-        for (const file of req.files) {
-          const imageData = {
-            url: file.path,
-            filename: file.filename,
-            mimeType: file.mimetype,
-            size: file.size
-          };
-          
-          const imageId = await imageOptimizer.storeImage(imageData, userId);
-          imageIds.push(imageId);
-        }
-        
-        // Link images to item
-        await imageOptimizer.linkImagesToItem(id, imageIds);
-      }
-
-      const item = await storage.updateInventoryItem(id, updateData);
+      const item = await storage.updateInventoryItem(id, validatedData);
       
       // Log activity
       const userId = req.user?.claims?.sub || req.user?.id;
@@ -1223,6 +1187,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(item);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
       console.error("Error updating inventory item:", error);
       res.status(500).json({ message: "Failed to update inventory item" });
     }
