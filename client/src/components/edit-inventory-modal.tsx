@@ -103,19 +103,29 @@ export default function EditInventoryModal({ open, onOpenChange, item }: EditInv
 
   const updateMutation = useMutation({
     mutationFn: async (data: EditInventoryFormData) => {
+      console.log("Submitting form data:", data);
+      
       const formData = new FormData();
       
-      // Add form fields
-      Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined && value !== "") {
-          formData.append(key, value.toString());
-        }
-      });
+      // Add form fields - ensure all fields are included
+      if (data.name) formData.append('name', data.name);
+      if (data.brand) formData.append('brand', data.brand);
+      if (data.serialNumber) formData.append('serialNumber', data.serialNumber);
+      if (data.sku) formData.append('sku', data.sku);
+      if (data.category) formData.append('category', data.category);
+      if (data.status) formData.append('status', data.status);
+      if (data.notes) formData.append('notes', data.notes);
+      if (data.price) formData.append('price', data.price);
 
       // Add images
-      selectedImages.forEach((image, index) => {
-        formData.append(`images`, image);
+      selectedImages.forEach((image) => {
+        formData.append('images', image);
       });
+
+      console.log("FormData contents:");
+      for (let [key, value] of formData.entries()) {
+        console.log(key, value);
+      }
 
       const response = await fetch(`/api/inventory/${item.id}`, {
         method: 'PUT',
