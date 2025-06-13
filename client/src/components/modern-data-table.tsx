@@ -83,6 +83,8 @@ export default function ModernDataTable({
   const [filterValue, setFilterValue] = useState("all");
   const [selectedItems, setSelectedItems] = useState<Set<any>>(new Set());
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const screenSize = useScreenSize();
 
   const handleSort = (key: string) => {
@@ -109,6 +111,25 @@ export default function ModernDataTable({
     }
     setSelectedItems(newSelected);
   };
+
+  // Filter and search data
+  const filteredData = data.filter(item => {
+    const matchesSearch = !searchable || !searchTerm || 
+      Object.values(item).some(value => 
+        String(value).toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    
+    const matchesFilter = !filterable || filterValue === "all" || 
+      String(item.category || '').toLowerCase() === filterValue.toLowerCase();
+    
+    return matchesSearch && matchesFilter;
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedData = filteredData.slice(startIndex, endIndex);
 
   if (isLoading) {
     return (
@@ -252,7 +273,7 @@ export default function ModernDataTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {data.map((item, index) => (
+            {paginatedData.map((item, index) => (
               <tr key={item.id || index} className="hover:bg-slate-50 transition-colors">
                 {selectable && (
                   <td className="px-6 py-4">
@@ -295,27 +316,66 @@ export default function ModernDataTable({
       </div>
 
       {/* Pagination */}
-      {pagination && (
-        <div className="p-6 border-t border-slate-200 flex items-center justify-between">
-          <div className="text-sm text-slate-600">
-            Page {pagination.currentPage} of {pagination.totalPages}
+      {totalPages > 1 && (
+        <div className="p-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
+          <div className="flex items-center space-x-4">
+            <div className="text-sm text-slate-600">
+              Showing {startIndex + 1} to {Math.min(endIndex, filteredData.length)} of {filteredData.length} items
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-slate-600">Items per page:</span>
+              <Select value={itemsPerPage.toString()} onValueChange={(value) => {
+                setItemsPerPage(Number(value));
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="flex items-center space-x-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => pagination.onPageChange(pagination.currentPage - 1)}
-              disabled={pagination.currentPage === 1}
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
             >
-              <i className="fas fa-chevron-left"></i>
+              <i className="fas fa-angle-double-left"></i>
             </Button>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => pagination.onPageChange(pagination.currentPage + 1)}
-              disabled={pagination.currentPage === pagination.totalPages}
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              <i className="fas fa-chevron-left"></i>
+            </Button>
+            <span className="text-sm text-slate-600 px-2">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
             >
               <i className="fas fa-chevron-right"></i>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+            >
+              <i className="fas fa-angle-double-right"></i>
             </Button>
           </div>
         </div>
