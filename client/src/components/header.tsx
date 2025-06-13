@@ -3,7 +3,7 @@ import { useIsMobile, useScreenSize } from "@/hooks/use-mobile";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
-import { LogOut, Bell, User } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import NotificationBell from "@/components/notification-bell";
 
 interface HeaderProps {
   title: string;
