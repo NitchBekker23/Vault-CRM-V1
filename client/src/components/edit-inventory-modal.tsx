@@ -76,7 +76,7 @@ export default function EditInventoryModal({ open, onOpenChange, item }: EditInv
   // Update form when item changes
   useEffect(() => {
     if (item && open) {
-      form.reset({
+      const formData = {
         name: item.name || "",
         brand: item.brand || "",
         serialNumber: item.serialNumber || "",
@@ -85,11 +85,18 @@ export default function EditInventoryModal({ open, onOpenChange, item }: EditInv
         price: item.price ? item.price.toString() : "",
         status: item.status || "in-stock",
         notes: item.notes || "",
-      });
+      };
+      
+      console.log("Loading item data:", item);
+      console.log("Setting form data:", formData);
+      
+      form.reset(formData);
       
       // Load existing images if any
       if (item.images) {
         setExistingImages(item.images);
+      } else {
+        setExistingImages([]);
       }
     }
   }, [item, open, form]);
@@ -258,7 +265,7 @@ export default function EditInventoryModal({ open, onOpenChange, item }: EditInv
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select category" />
@@ -295,7 +302,7 @@ export default function EditInventoryModal({ open, onOpenChange, item }: EditInv
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />
