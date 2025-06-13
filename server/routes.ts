@@ -17,6 +17,7 @@ import {
   sendTwoFactorCode,
   sendPasswordResetEmail
 } from "./emailService";
+import { notificationService } from "./notificationService";
 import {
   users,
   images,
