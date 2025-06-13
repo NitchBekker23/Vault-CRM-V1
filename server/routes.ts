@@ -365,7 +365,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User management routes (admin only)
-  app.get('/api/admin/users', async (req, res) => {
+  app.get('/api/admin/users', isAuthenticated, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       res.json(users);
@@ -393,7 +393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get individual user
-  app.get('/api/admin/users/:id', async (req, res) => {
+  app.get('/api/admin/users/:id', isAuthenticated, async (req, res) => {
     try {
       const userId = req.params.id;
       const user = await storage.getUser(userId);
@@ -410,7 +410,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update user
-  app.patch('/api/admin/users/:id', async (req, res) => {
+  app.patch('/api/admin/users/:id', isAuthenticated, async (req, res) => {
     try {
       const userId = req.params.id;
       const updates = req.body;
@@ -765,6 +765,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error in test login:", error);
       res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  // Update user role
+  app.patch('/api/admin/users/:id/role', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.params.id;
+      const { role } = req.body;
+      
+      if (!['admin', 'owner', 'user'].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+      
+      const updatedUser = await storage.updateUserRole(userId, role);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      res.status(500).json({ message: "Failed to update user role" });
+    }
+  });
+
+  // Delete user
+  app.delete('/api/admin/users/:id', isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.params.id;
+      await storage.deleteUser(userId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
     }
   });
 
