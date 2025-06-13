@@ -1,41 +1,41 @@
-import { neon } from '@neondatabase/serverless';
+import postgres from 'postgres';
 
 async function testSupabaseConnection() {
-  console.log("Testing Database_Url (Supabase) connection...");
+  console.log('Testing Supabase connection configuration...');
   
   if (!process.env.Database_Url) {
-    console.log("❌ Database_Url not found in environment variables");
+    console.log('❌ Database_Url not found');
     return false;
   }
   
-  console.log("Current Database_Url format:", process.env.Database_Url.substring(0, 50) + "...");
+  console.log('Connection string format check...');
+  console.log('First 60 chars:', process.env.Database_Url.substring(0, 60) + '...');
   
   try {
-    const sql = neon(process.env.Database_Url);
-    const result = await sql`SELECT current_database(), version()`;
-    console.log("✅ Supabase database:", result[0].current_database);
-    console.log("✅ Version:", result[0].version.split(',')[0]);
+    const url = new URL(process.env.Database_Url);
+    console.log('Parsed hostname:', url.hostname);
+    console.log('Parsed port:', url.port);
     
-    // Check if it's empty (new database)
-    try {
-      const tableCheck = await sql`
-        SELECT COUNT(*) as table_count 
-        FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_type = 'BASE TABLE'
-      `;
-      console.log(`📋 Tables in Supabase: ${tableCheck[0].table_count}`);
-      
-      if (tableCheck[0].table_count == 0) {
-        console.log("🎯 Perfect! Empty Supabase database ready for migration");
-      }
-    } catch (error) {
-      console.log("📋 Cannot check tables (database might be empty)");
+    if (url.hostname === 'postgres') {
+      console.log('❌ Invalid hostname detected - connection string needs fixing');
+      return false;
     }
     
+    const sql = postgres(process.env.Database_Url, {
+      ssl: { rejectUnauthorized: false },
+      max: 1,
+      connect_timeout: 10
+    });
+    
+    const result = await sql`SELECT current_database(), current_user`;
+    console.log('✅ Supabase connection successful');
+    console.log('Database:', result[0].current_database);
+    
+    await sql.end();
     return true;
+    
   } catch (error) {
-    console.error("❌ Supabase connection failed:", error.message);
+    console.log('❌ Connection failed:', error.message);
     return false;
   }
 }
