@@ -1,6 +1,8 @@
-# The Vault - Inventory Management System
+# The Vault - Inventory Management System (V2 Development)
 
 **GitHub Repository**: https://github.com/NitchBekker23/Vault-CRM-V1
+**Current Branch**: v2-development
+**Status**: Development version with Supabase migration prep
 
 A sophisticated inventory management platform for watches and leather goods, designed to streamline multi-user inventory tracking with enhanced user experience and interactive features.
 
