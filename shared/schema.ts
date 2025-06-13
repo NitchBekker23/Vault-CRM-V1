@@ -349,6 +349,30 @@ export const accountSetupTokensRelations = relations(accountSetupTokens, ({ one 
   }),
 }));
 
+// Notifications table
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  type: varchar("type").notNull(), // 'inventory', 'wishlist', 'sale', 'system', 'approval'
+  title: varchar("title").notNull(),
+  message: text("message").notNull(),
+  actionUrl: varchar("action_url"),
+  actionLabel: varchar("action_label"),
+  isRead: boolean("is_read").default(false),
+  priority: varchar("priority").default("normal"), // 'low', 'normal', 'high', 'urgent'
+  entityType: varchar("entity_type"), // 'inventory_item', 'wishlist_item', 'sale', 'user'
+  entityId: varchar("entity_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  readAt: timestamp("read_at"),
+});
+
+export const notificationRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
+}));
+
 // Schema types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -448,3 +472,11 @@ export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTo
 });
 export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+  readAt: true,
+});
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
