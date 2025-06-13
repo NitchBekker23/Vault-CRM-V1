@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile, useScreenSize } from "@/hooks/use-mobile";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import Header from "@/components/header";
 import DashboardMetrics from "@/components/dashboard-metrics";
@@ -13,6 +13,7 @@ export default function Dashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
   const isMobile = useIsMobile();
+  const screenSize = useScreenSize();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -37,17 +38,33 @@ export default function Dashboard() {
   }
 
   return (
-    <div className={isMobile ? 'mobile-container' : ''}>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <Header title="Dashboard" />
-      <div className={`${isMobile ? 'p-4' : 'p-6'} space-y-6 ${isMobile ? 'max-w-full overflow-x-hidden' : ''}`}>
+      <div className={`${
+        screenSize === 'mobile' 
+          ? 'p-4 space-y-4 max-w-full overflow-x-hidden' 
+          : screenSize === 'tablet'
+          ? 'p-5 space-y-5'
+          : 'p-6 space-y-6'
+      }`}>
         <DashboardMetrics />
         
-        <div className={`grid ${isMobile ? 'grid-cols-1 gap-4' : 'grid-cols-1 lg:grid-cols-2 gap-6'}`}>
+        <div className={`grid ${
+          screenSize === 'mobile' 
+            ? 'grid-cols-1 gap-4' 
+            : screenSize === 'tablet'
+            ? 'grid-cols-1 gap-5'
+            : 'grid-cols-1 lg:grid-cols-2 gap-6'
+        }`}>
           <QuickActions />
           <RecentActivity />
         </div>
 
-        <InventoryTable showHeader={true} limit={10} allowBulkActions={false} />
+        <InventoryTable 
+          showHeader={true} 
+          limit={screenSize === 'mobile' ? 5 : 10} 
+          allowBulkActions={false} 
+        />
       </div>
     </div>
   );

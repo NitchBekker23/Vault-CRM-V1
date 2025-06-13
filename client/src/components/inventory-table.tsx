@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile, useScreenSize } from "@/hooks/use-mobile";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -41,6 +41,7 @@ import AddItemModal from "./add-item-modal";
 import EditItemModal from "./edit-item-modal";
 import BulkUploadModal from "./bulk-upload-modal";
 import ItemDetailsModal from "./item-details-modal";
+import InventoryCardView from "./inventory-card-view";
 
 interface InventoryTableProps {
   showHeader?: boolean;
