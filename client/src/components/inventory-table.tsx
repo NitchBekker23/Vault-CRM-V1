@@ -470,8 +470,8 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                             
                             <div className="mt-3 space-y-2">
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-slate-600">Serial:</span>
-                                <span className="text-sm font-medium text-slate-900">{item.serialNumber}</span>
+                                <span className="text-sm text-slate-600">SKU:</span>
+                                <span className="text-sm font-medium text-slate-900">{item.sku || item.serialNumber}</span>
                               </div>
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-slate-600">Brand:</span>
@@ -611,7 +611,7 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="text-slate-900">{item.serialNumber}</TableCell>
+                          <TableCell className="text-slate-900">{item.sku || item.serialNumber}</TableCell>
                           <TableCell className="text-slate-900">{item.brand}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className="capitalize">
