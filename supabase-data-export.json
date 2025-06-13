@@ -1,0 +1,18 @@
+{
+  "users": [],
+  "brands": [],
+  "skus": [],
+  "client_categories": [],
+  "inventory_items": [],
+  "clients": [],
+  "sales": [],
+  "sale_items": [],
+  "purchases": [],
+  "activity_log": [],
+  "wishlist_items": [],
+  "account_requests": [],
+  "account_setup_tokens": [],
+  "password_reset_tokens": [],
+  "two_factor_codes": [],
+  "sessions": []
+}
