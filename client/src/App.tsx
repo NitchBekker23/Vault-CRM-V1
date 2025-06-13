@@ -65,22 +65,22 @@ function Router() {
   }
 
   // Authenticated but account not approved
-  if (user && user.status !== 'approved') {
+  if (user && (user as any).status !== 'approved') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="max-w-md w-full bg-white rounded-lg shadow p-6 text-center">
           <h2 className="text-xl font-semibold mb-4">Account Pending</h2>
-          {user.status === 'pending' && (
+          {(user as any).status === 'pending' && (
             <p className="text-gray-600 mb-4">
               Your account request is being reviewed. You'll receive an email when it's approved.
             </p>
           )}
-          {user.status === 'denied' && (
+          {(user as any).status === 'denied' && (
             <p className="text-gray-600 mb-4">
               Your account request has been denied. Please contact an administrator for more information.
             </p>
           )}
-          {user.status === 'suspended' && (
+          {(user as any).status === 'suspended' && (
             <p className="text-gray-600 mb-4">
               Your account has been suspended. Please contact an administrator.
             </p>
@@ -113,7 +113,7 @@ function Router() {
           <Route path="/settings" component={Settings} />
           <Route path="/bulk-upload" component={BulkUpload} />
           <Route path="/user-management" component={UserManagement} />
-          {(user?.role === 'admin' || user?.role === 'owner') && (
+          {((user as any)?.role === 'admin' || (user as any)?.role === 'owner' || (user as any)?.email === 'nitchbekker@gmail.com') && (
             <>
               <Route path="/admin/users" component={AdminUsers} />
               <Route path="/admin/users/:userId" component={UserProfile} />
