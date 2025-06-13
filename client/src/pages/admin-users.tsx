@@ -112,6 +112,31 @@ export default function AdminUsers() {
     },
   });
 
+  const deleteUser = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to delete user");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "User Deleted",
+        description: "User has been removed successfully.",
+      });
+    },
+    onError: (error) => {
+      console.error("Error deleting user:", error);
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete user.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const reviewRequest = useMutation({
     mutationFn: async ({ requestId, approved, denialReason }: { requestId: number; approved: boolean; denialReason?: string }) => {
       const response = await fetch(`/api/admin/account-requests/${requestId}/review`, {
@@ -164,33 +189,6 @@ export default function AdminUsers() {
       });
     }
   };
-
-  const deleteUser = useMutation({
-    mutationFn: async (userId: string) => {
-      const response = await fetch(`/api/admin/users/${userId}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to delete user: ${response.statusText}`);
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      toast({
-        title: "User Deleted",
-        description: "User has been permanently deleted from the system.",
-      });
-    },
-    onError: (error) => {
-      console.error("Error deleting user:", error);
-      toast({
-        title: "Delete Failed",
-        description: "Failed to delete user.",
-        variant: "destructive",
-      });
-    },
-  });
 
   const getStatusBadge = (status: string) => {
     const variants = {
