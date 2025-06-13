@@ -563,7 +563,7 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                           </TableHead>
                         )}
                         <TableHead>Item</TableHead>
-                        <TableHead>Serial/SKU</TableHead>
+                        <TableHead>SKU</TableHead>
                         <TableHead>Brand</TableHead>
                         <TableHead>Category</TableHead>
                         <TableHead>Status</TableHead>
