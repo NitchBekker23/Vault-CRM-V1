@@ -8,6 +8,9 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Use HTTP connection instead of WebSocket for better stability
+// Configure for both Neon and Supabase compatibility
+neonConfig.fetchConnectionCache = true;
+
+// Use HTTP connection for better stability with both providers
 const sql = neon(process.env.DATABASE_URL);
 export const db = drizzle(sql, { schema });

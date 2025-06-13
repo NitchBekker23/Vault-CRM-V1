@@ -20,6 +20,24 @@ A sophisticated inventory management platform for watches and leather goods, des
 
 - **Frontend**: TypeScript React with Tailwind CSS
 - **Backend**: Node.js Express with TypeScript
+- **Database**: PostgreSQL (Supabase-ready)
+- **ORM**: Drizzle with Neon HTTP adapter
+
+## Database Setup (Supabase)
+
+### Prerequisites
+1. Create a Supabase project at [supabase.com/dashboard](https://supabase.com/dashboard)
+2. Get your connection string from Project Settings → Database → Connection string (Transaction pooler)
+3. Add `DATABASE_URL` to your environment variables
+
+### Migration Process
+```bash
+# Push schema to Supabase
+npm run db:push
+
+# Run data migration (if needed)
+npm run migrate
+```
 - **Database**: PostgreSQL with Drizzle ORM
 - **Authentication**: Replit Auth (migrating to Supabase)
 - **Email**: Brevo API
