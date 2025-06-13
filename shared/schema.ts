@@ -9,6 +9,8 @@ import {
   integer,
   decimal,
   boolean,
+  numeric,
+  uuid,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -104,23 +106,44 @@ export const images = pgTable("images", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Inventory items table
+// New normalized brand management
+export const brands = pgTable("brands", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const skus = pgTable("skus", {
+  id: serial("id").primaryKey(),
+  brandId: integer("brand_id").references(() => brands.id),
+  model: varchar("model").notNull(),
+  skuCode: varchar("sku_code").unique(),
+  retailPrice: numeric("retail_price", { precision: 10, scale: 2 }),
+  condition: varchar("condition").default("new"), // new, used, cpo
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Inventory items table - refactored to use SKU reference
 export const inventoryItems = pgTable("inventory_items", {
   id: serial("id").primaryKey(),
-  name: varchar("name").notNull(),
-  description: text("description"),
-  brand: varchar("brand").notNull(),
+  skuId: integer("sku_id").references(() => skus.id),
   serialNumber: varchar("serial_number").unique().notNull(),
-  sku: varchar("sku"),
-  category: varchar("category").notNull(), // 'watches' or 'leather-goods'
-  price: decimal("price", { precision: 10, scale: 2 }),
+  condition: varchar("condition").default("new"), // new, used, cpo
   status: varchar("status").default("in_stock").notNull(), // 'in_stock', 'reserved'
-  imageUrls: text("image_urls").array(), // Keep for backward compatibility
-  imageIds: integer("image_ids").array(), // New: reference to images table
-  notes: text("notes"), // Internal notes for the item
-  createdAt: timestamp("created_at").defaultNow(),
+  location: varchar("location"), // e.g. Sandton, Cape Town
+  price: decimal("price", { precision: 10, scale: 2 }), // Individual item price (can override SKU retail price)
+  notes: text("notes"), // Internal notes for this specific item
+  addedAt: timestamp("added_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   createdBy: varchar("created_by").references(() => users.id),
+  // Keep legacy fields for backward compatibility during migration
+  name: varchar("name"), // Will be populated from SKU+brand
+  description: text("description"),
+  brand: varchar("brand"), // Will be populated from SKU relationship
+  sku: varchar("sku"), // Legacy field
+  category: varchar("category"), // Legacy field
+  imageUrls: text("image_urls").array(), // Legacy field
+  imageIds: integer("image_ids").array(),
 });
 
 // Junction table for many-to-many relationship between items and images
@@ -146,16 +169,36 @@ export const wishlistItems = pgTable("wishlist_items", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Client profiles table
+// Enhanced client profiles table
 export const clients = pgTable("clients", {
   id: serial("id").primaryKey(),
-  firstName: varchar("first_name").notNull(),
-  lastName: varchar("last_name").notNull(),
-  email: varchar("email").unique().notNull(),
-  phone: varchar("phone"),
-  address: text("address"),
+  fullName: varchar("full_name").notNull(),
+  email: varchar("email").unique(),
+  phoneNumber: varchar("phone_number"),
+  location: varchar("location"),
+  clientCategory: varchar("client_category").default("Regular"),
+  totalSpend: numeric("total_spend", { precision: 12, scale: 2 }).default("0"),
+  notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  // Keep legacy fields for backward compatibility
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  phone: varchar("phone"),
+  address: text("address"),
+});
+
+export const clientFiles = pgTable("client_files", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").references(() => clients.id),
+  fileUrl: varchar("file_url").notNull(),
+  fileType: varchar("file_type").notNull(), // ID, Proof of Address, Bank Statement, etc.
+  uploadedAt: timestamp("uploaded_at").defaultNow(),
+});
+
+export const clientCategories = pgTable("client_categories", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull().unique(),
 });
 
 // Sales tables

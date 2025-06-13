@@ -1,0 +1,141 @@
+
+# CRM + Inventory Management System Database Schema
+
+## ✅ CORE TABLES
+
+### 1. clients
+Stores all client details.
+
+| Field            | Type          | Notes |
+|------------------|---------------|-------|
+| id               | UUID / INT PK | Primary Key |
+| full_name        | TEXT          | |
+| email            | TEXT          | Unique |
+| phone_number     | TEXT          | |
+| location         | TEXT          | City or suburb |
+| client_category  | TEXT or FK    | e.g. VIP, Regular |
+| total_spend      | NUMERIC       | Calculated |
+| notes            | TEXT          | Optional remarks |
+| created_at       | TIMESTAMP     | Default now() |
+| updated_at       | TIMESTAMP     | Auto-updated |
+
+### 2. client_files
+Stores FICA and other document uploads per client.
+
+| Field       | Type          | Notes |
+|-------------|---------------|-------|
+| id          | UUID / INT PK | |
+| client_id   | FK to clients | |
+| file_url    | TEXT          | Supabase Storage URL |
+| file_type   | TEXT          | e.g. ID, Proof of Address |
+| uploaded_at | TIMESTAMP     | |
+
+### 3. brands
+To normalize watch brands.
+
+| Field      | Type         | Notes |
+|------------|--------------|-------|
+| id         | UUID / INT PK| |
+| name       | TEXT         | e.g. Rolex, Omega |
+| created_at | TIMESTAMP    | |
+
+### 4. skus
+Represents a model type (can have multiple serials in inventory).
+
+| Field        | Type         | Notes |
+|--------------|--------------|-------|
+| id           | UUID / INT PK| |
+| brand_id     | FK to brands | |
+| model        | TEXT         | e.g. Submariner |
+| sku_code     | TEXT         | Internal code or model ref |
+| retail_price | NUMERIC      | |
+| created_at   | TIMESTAMP    | |
+
+### 5. inventory_items
+Each physical watch/item tracked by serial number.
+
+| Field         | Type          | Notes |
+|---------------|---------------|-------|
+| id            | UUID / INT PK | |
+| sku_id        | FK to skus    | |
+| serial_number | TEXT UNIQUE   | |
+| condition     | TEXT          | New / Used / CPO |
+| status        | TEXT          | In stock / Sold / Reserved |
+| location      | TEXT          | e.g. Sandton |
+| added_at      | TIMESTAMP     | |
+| notes         | TEXT          | Optional |
+
+### 6. inventory_item_images
+Photos of each item.
+
+| Field              | Type          | Notes |
+|--------------------|---------------|-------|
+| id                 | UUID / INT PK | |
+| inventory_item_id  | FK            | |
+| image_url          | TEXT          | Supabase URL |
+| uploaded_at        | TIMESTAMP     | |
+
+## 💰 SALES-RELATED TABLES
+
+### 7. sales
+One row per completed sale.
+
+| Field        | Type         | Notes |
+|--------------|--------------|-------|
+| id           | UUID / INT PK| |
+| client_id    | FK to clients| |
+| sold_by      | FK to users  | Staff member |
+| total_amount | NUMERIC      | Auto sum from sale_items |
+| sale_date    | TIMESTAMP    | |
+| notes        | TEXT         | |
+
+### 8. sale_items
+Watches/items involved in a sale.
+
+| Field            | Type          | Notes |
+|------------------|---------------|-------|
+| id               | UUID / INT PK | |
+| sale_id          | FK to sales   | |
+| inventory_item_id| FK            | |
+| selling_price    | NUMERIC       | |
+| discount_applied | NUMERIC       | Optional |
+
+## 🔐 USER / AUTH TABLES
+
+### 9. users / staff_accounts
+Your internal users.
+
+| Field      | Type         | Notes |
+|------------|--------------|-------|
+| id         | UUID         | Link to Supabase Auth UID |
+| full_name  | TEXT         | |
+| role       | TEXT         | admin / sales / viewer |
+| email      | TEXT         | |
+| status     | TEXT         | active / suspended |
+| created_at | TIMESTAMP    | |
+
+### 10. activity_log
+Track logins, edits, actions.
+
+| Field       | Type         | Notes |
+|-------------|--------------|-------|
+| id          | UUID / INT PK| |
+| user_id     | FK to users  | |
+| action      | TEXT         | e.g. updated client, deleted item |
+| target_type | TEXT         | 'client', 'inventory_item', etc. |
+| target_id   | UUID         | ID of the item modified |
+| timestamp   | TIMESTAMP    | |
+
+## 🏷️ OPTIONAL
+
+### 11. client_categories
+| id | name |
+|----|------|
+| 1  | Regular |
+| 2  | VIP |
+| 3  | Wholesale |
+
+## 🔒 RLS Notes (for Supabase)
+- Use `auth.uid()` and role-based access control.
+- Restrict access to `client_files` and sensitive data to admin roles.
+- Enable row-level filtering on `clients`, `sales`, `inventory_items` for user security.
