@@ -1,8 +1,8 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { useState } from "react";
+import { useIsMobile, useScreenSize } from "@/hooks/use-mobile";
+import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 
 const navigation = [
@@ -22,7 +22,25 @@ export default function Sidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
   const isMobile = useIsMobile();
+  const screenSize = useScreenSize();
   const [isOpen, setIsOpen] = useState(false);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsOpen(false);
+  }, [location]);
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (isOpen && isMobile) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, isMobile]);
 
   // Check if user has admin privileges
   const isAdmin: boolean = !!(user && (
@@ -33,22 +51,29 @@ export default function Sidebar() {
 
 
 
-  if (isMobile) {
+  if (screenSize === 'mobile' || screenSize === 'tablet') {
     return (
       <>
         {/* Mobile menu button */}
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-lg border border-slate-200 lg:hidden"
+          className="fixed top-4 left-4 z-50 p-3 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 lg:hidden transition-all duration-200 hover:shadow-xl active:scale-95"
+          aria-label="Open navigation menu"
         >
-          <Menu className="h-6 w-6 text-slate-600" />
+          <Menu className="h-6 w-6 text-slate-600 dark:text-slate-300" />
         </button>
 
         {/* Mobile sidebar overlay */}
         {isOpen && (
           <div className="fixed inset-0 z-50 lg:hidden">
-            <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setIsOpen(false)} />
-            <aside className="fixed left-0 top-0 bottom-0 w-80 bg-white shadow-xl">
+            <div 
+              className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity duration-300" 
+              onClick={() => setIsOpen(false)}
+              onTouchStart={() => setIsOpen(false)}
+            />
+            <aside className={`fixed left-0 top-0 bottom-0 bg-white dark:bg-slate-800 shadow-xl transform transition-transform duration-300 ease-out ${
+              screenSize === 'mobile' ? 'w-80 max-w-[85vw]' : 'w-96'
+            }`}>
               <div className="flex items-center justify-between p-4 border-b border-slate-200">
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">

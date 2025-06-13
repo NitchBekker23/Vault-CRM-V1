@@ -4,7 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile, useScreenSize } from "@/hooks/use-mobile";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
@@ -31,6 +31,7 @@ import Sidebar from "@/components/sidebar";
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const isMobile = useIsMobile();
+  const screenSize = useScreenSize();
 
   // Loading state
   if (isLoading) {
@@ -94,9 +95,15 @@ function Router() {
 
   // Authenticated and approved - show full application
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="min-h-screen flex bg-slate-50 dark:bg-slate-900">
       <Sidebar />
-      <main className={`flex-1 ${isMobile ? 'ml-0 w-full' : 'ml-64'} transition-all duration-300 ${isMobile ? 'min-w-0' : ''}`}>
+      <main className={`flex-1 transition-all duration-300 ${
+        screenSize === 'mobile' 
+          ? 'ml-0 w-full min-w-0' 
+          : screenSize === 'tablet'
+          ? 'ml-0 w-full min-w-0'
+          : 'ml-64'
+      }`}>
         <Switch>
           <Route path="/" component={Dashboard} />
           <Route path="/inventory" component={Inventory} />
