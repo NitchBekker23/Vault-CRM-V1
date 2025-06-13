@@ -6,12 +6,14 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import Header from "@/components/header";
 import ModernPageHeader from "@/components/modern-page-header";
 import ModernDataTable from "@/components/modern-data-table";
+import ImportInventoryModal from "@/components/import-inventory-modal";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 
 export default function Inventory() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
+  const [showImportModal, setShowImportModal] = useState(false);
 
 
   // Fetch inventory data
@@ -51,8 +53,7 @@ export default function Inventory() {
   };
 
   const handleImport = () => {
-    // Navigate to import page or open modal
-    console.log("Import items");
+    setShowImportModal(true);
   };
 
   const handleEdit = (item: any) => {
@@ -220,9 +221,9 @@ export default function Inventory() {
             searchPlaceholder="Search inventory..."
             filterable={true}
             filterOptions={[
-              { value: 'watches', label: 'Watches' },
-              { value: 'leather-goods', label: 'Leather Goods' },
-              { value: 'accessories', label: 'Accessories' }
+              { value: 'Watches', label: 'Watches' },
+              { value: 'Leather Goods', label: 'Leather Goods' },
+              { value: 'Accessories', label: 'Accessories' }
             ]}
             selectable={true}
             actions={actions}
@@ -240,6 +241,11 @@ export default function Inventory() {
           />
         </div>
       </div>
+
+      <ImportInventoryModal
+        open={showImportModal}
+        onOpenChange={setShowImportModal}
+      />
     </>
   );
 }
