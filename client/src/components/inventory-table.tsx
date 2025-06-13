@@ -67,6 +67,7 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
+  const screenSize = useScreenSize();
 
   const { data: inventoryData, isLoading } = useQuery<{
     items: InventoryItem[];

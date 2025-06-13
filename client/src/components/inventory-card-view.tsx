@@ -32,9 +32,7 @@ export default function InventoryCardView({ items, onItemUpdated }: InventoryCar
 
   const deleteItemMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest(`/api/inventory/${id}`, {
-        method: "DELETE",
-      });
+      await apiRequest(`/api/inventory/${id}`, "DELETE");
     },
     onSuccess: () => {
       toast({
@@ -188,7 +186,7 @@ export default function InventoryCardView({ items, onItemUpdated }: InventoryCar
                     {item.status}
                   </Badge>
                   <span className="text-xs text-gray-500 dark:text-gray-400">
-                    Added {new Date(item.createdAt).toLocaleDateString()}
+                    Added {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
                   </span>
                 </div>
 
@@ -214,8 +212,8 @@ export default function InventoryCardView({ items, onItemUpdated }: InventoryCar
             onClose={() => {
               setShowEditModal(false);
               setSelectedItem(null);
+              onItemUpdated();
             }}
-            onItemUpdated={onItemUpdated}
           />
           <ItemDetailsModal
             item={selectedItem}
@@ -223,6 +221,15 @@ export default function InventoryCardView({ items, onItemUpdated }: InventoryCar
             onClose={() => {
               setShowDetailsModal(false);
               setSelectedItem(null);
+            }}
+            onEdit={(item) => {
+              setSelectedItem(item);
+              setShowDetailsModal(false);
+              setShowEditModal(true);
+            }}
+            onDelete={(item) => {
+              setShowDetailsModal(false);
+              handleDelete(item);
             }}
           />
         </>
