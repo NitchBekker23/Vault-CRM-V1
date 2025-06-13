@@ -260,7 +260,7 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
           <div className="p-4 lg:px-6 lg:py-4 border-b border-slate-200">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <h3 className="text-lg font-semibold text-slate-900">
-                {limit ? "Recent Inventory" : "Inventory Management"}
+                {limit ? "Recent CRM" : "CRM Management"}
               </h3>
               
               {/* Mobile-first responsive controls */}
@@ -270,7 +270,7 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                   <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
                   <Input
                     type="text"
-                    placeholder="Search inventory..."
+                    placeholder="Search CRM..."
                     className="pl-10"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
