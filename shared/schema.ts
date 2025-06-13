@@ -123,27 +123,27 @@ export const skus = pgTable("skus", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Inventory items table - refactored to use SKU reference
+// Inventory items table
 export const inventoryItems = pgTable("inventory_items", {
   id: serial("id").primaryKey(),
-  skuId: integer("sku_id").references(() => skus.id),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  brand: varchar("brand").notNull(),
   serialNumber: varchar("serial_number").unique().notNull(),
-  condition: varchar("condition").default("new"), // new, used, cpo
+  sku: varchar("sku"),
+  category: varchar("category").notNull(), // 'watches' or 'leather-goods'
+  price: decimal("price", { precision: 10, scale: 2 }),
   status: varchar("status").default("in_stock").notNull(), // 'in_stock', 'reserved'
-  location: varchar("location"), // e.g. Sandton, Cape Town
-  price: decimal("price", { precision: 10, scale: 2 }), // Individual item price (can override SKU retail price)
-  notes: text("notes"), // Internal notes for this specific item
-  addedAt: timestamp("added_at").defaultNow(),
+  imageUrls: text("image_urls").array(), // Keep for backward compatibility
+  imageIds: integer("image_ids").array(), // New: reference to images table
+  notes: text("notes"), // Internal notes for the item
+  createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   createdBy: varchar("created_by").references(() => users.id),
-  // Keep legacy fields for backward compatibility during migration
-  name: varchar("name"), // Will be populated from SKU+brand
-  description: text("description"),
-  brand: varchar("brand"), // Will be populated from SKU relationship
-  sku: varchar("sku"), // Legacy field
-  category: varchar("category"), // Legacy field
-  imageUrls: text("image_urls").array(), // Legacy field
-  imageIds: integer("image_ids").array(),
+  // New normalized fields (optional during transition)
+  skuId: integer("sku_id").references(() => skus.id),
+  location: varchar("location"), // e.g. Sandton, Cape Town
+  condition: varchar("condition").default("new"), // new, used, cpo
 });
 
 // Junction table for many-to-many relationship between items and images
@@ -353,7 +353,11 @@ export const accountSetupTokensRelations = relations(accountSetupTokens, ({ one 
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 
-export const insertInventoryItemSchema = createInsertSchema(inventoryItems).omit({
+export const insertInventoryItemSchema = createInsertSchema(inventoryItems, {
+  skuId: z.number().optional(),
+  location: z.string().optional(),
+  condition: z.string().optional(),
+}).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
