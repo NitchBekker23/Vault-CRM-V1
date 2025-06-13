@@ -1739,13 +1739,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const requireAdminRole = async (req: any, res: any, next: any) => {
     try {
-      const userId = (req.session as any)?.userId;
+      const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
       
       const user = await storage.getUser(userId);
-      if (!user || user.status !== 'approved' || (user.role !== 'admin' && user.role !== 'owner')) {
+      if (!user || user.status !== 'approved' || (user.role !== 'admin' && user.role !== 'owner' && user.email !== 'nitchbekker@gmail.com')) {
         return res.status(403).json({ message: "Admin access required" });
       }
       
@@ -1799,7 +1799,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Update user role
-  app.patch("/api/admin/users/:id/role", requireAuth, requireAdminRole, async (req: any, res) => {
+  app.patch("/api/admin/users/:id/role", isAuthenticated, requireAdminRole, async (req: any, res) => {
     try {
       const userId = req.params.id;
       const { role } = req.body;
@@ -1818,7 +1818,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Update user status
-  app.patch("/api/admin/users/:id/status", requireAuth, requireAdminRole, async (req: any, res) => {
+  app.patch("/api/admin/users/:id/status", isAuthenticated, requireAdminRole, async (req: any, res) => {
     try {
       const userId = req.params.id;
       const { status } = req.body;
@@ -1837,10 +1837,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Delete user
-  app.delete("/api/admin/users/:id", requireAuth, requireAdminRole, async (req: any, res) => {
+  app.delete("/api/admin/users/:id", isAuthenticated, requireAdminRole, async (req: any, res) => {
     try {
       const userId = req.params.id;
-      const currentUserId = (req.session as any).userId;
+      const currentUserId = req.user.claims.sub;
       
       // Prevent self-deletion
       if (userId === currentUserId) {

@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { getQueryFn } from "@/lib/queryClient";
+import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { Users, UserCheck, UserX, Shield, Crown, Trash2, Eye } from "lucide-react";
 import Header from "@/components/header";
 
@@ -64,7 +64,6 @@ export default function AdminUsers() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
-        credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to update status");
       return response.json();
@@ -92,7 +91,6 @@ export default function AdminUsers() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role }),
-        credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to update role");
       return response.json();
@@ -118,7 +116,6 @@ export default function AdminUsers() {
     mutationFn: async (userId: string) => {
       const response = await fetch(`/api/admin/users/${userId}`, {
         method: "DELETE",
-        credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to delete user");
       return response.json();
@@ -146,7 +143,6 @@ export default function AdminUsers() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ approved, denialReason }),
-        credentials: "include",
       });
       if (!response.ok) {
         const error = await response.text();
@@ -195,6 +191,13 @@ export default function AdminUsers() {
   };
 
   const getStatusBadge = (status: string) => {
+    const variants = {
+      pending: "default",
+      approved: "default",
+      denied: "destructive",
+      suspended: "secondary",
+    } as const;
+
     const colors = {
       pending: "bg-yellow-100 text-yellow-800",
       approved: "bg-green-100 text-green-800",
@@ -220,7 +223,7 @@ export default function AdminUsers() {
     }
   };
 
-  const pendingRequests = (accountRequests as any[]).filter((req: AccountRequest) => req.status === "pending");
+  const pendingRequests = accountRequests.filter((req: AccountRequest) => req.status === "pending");
 
   return (
     <div className="space-y-6">
@@ -244,38 +247,42 @@ export default function AdminUsers() {
                 <div key={request.id} className="border rounded-lg p-4 space-y-3">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h4 className="font-medium">{request.firstName} {request.lastName}</h4>
-                      <p className="text-sm text-gray-500">{request.email}</p>
-                      <p className="text-sm text-gray-500">{request.company}</p>
+                      <h4 className="font-medium">
+                        {request.firstName} {request.lastName}
+                      </h4>
+                      <p className="text-sm text-gray-600">{request.email}</p>
+                      <p className="text-sm text-gray-600">{request.company}</p>
+                      {request.phoneNumber && (
+                        <p className="text-sm text-gray-600">{request.phoneNumber}</p>
+                      )}
                     </div>
-                    {getStatusBadge(request.status)}
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => handleApproveRequest(request)}
+                        disabled={reviewRequest.isPending}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDenyRequest(request)}
+                        disabled={reviewRequest.isPending}
+                      >
+                        Deny
+                      </Button>
+                    </div>
                   </div>
-                  
                   {request.message && (
                     <div className="bg-gray-50 p-3 rounded">
-                      <p className="text-sm text-gray-700">{request.message}</p>
+                      <p className="text-sm font-medium text-gray-700">Message:</p>
+                      <p className="text-sm text-gray-600">{request.message}</p>
                     </div>
                   )}
-
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => handleApproveRequest(request)}
-                      disabled={reviewRequest.isPending}
-                    >
-                      <UserCheck className="h-4 w-4 mr-1" />
-                      Approve
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDenyRequest(request)}
-                      disabled={reviewRequest.isPending}
-                    >
-                      <UserX className="h-4 w-4 mr-1" />
-                      Deny
-                    </Button>
-                  </div>
+                  <p className="text-xs text-gray-500">
+                    Requested on {new Date(request.requestedAt).toLocaleDateString()}
+                  </p>
                 </div>
               ))}
             </div>
@@ -283,15 +290,15 @@ export default function AdminUsers() {
         </Card>
       )}
 
-      {/* Existing Users */}
+      {/* Users Management */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            System Users ({(users as any[]).length})
+            System Users ({users.length})
           </CardTitle>
           <CardDescription>
-            Manage existing user accounts, roles, and permissions
+            Manage user roles and access permissions
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -302,6 +309,7 @@ export default function AdminUsers() {
               <TableHeader>
                 <TableRow>
                   <TableHead>User</TableHead>
+                  <TableHead>Company</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Last Login</TableHead>
@@ -309,15 +317,17 @@ export default function AdminUsers() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(users as any[]).map((user: User) => (
+                {users.map((user: User) => (
                   <TableRow key={user.id}>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{user.firstName} {user.lastName}</div>
-                        <div className="text-sm text-gray-500">{user.email}</div>
-                        <div className="text-xs text-gray-400">{user.company}</div>
+                        <div className="font-medium">
+                          {user.firstName} {user.lastName}
+                        </div>
+                        <div className="text-sm text-gray-600">{user.email}</div>
                       </div>
                     </TableCell>
+                    <TableCell>{user.company}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {getRoleIcon(user.role)}
@@ -367,12 +377,12 @@ export default function AdminUsers() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {((currentUser as any)?.role === "owner" || (currentUser as any)?.role === "admin") && (
+                        {(currentUser?.role === "owner" || currentUser?.role === "admin") && (
                           <Button
                             variant="destructive"
                             size="sm"
                             onClick={() => deleteUser.mutate(user.id)}
-                            disabled={deleteUser.isPending || user.id === (currentUser as any)?.id}
+                            disabled={deleteUser.isPending || user.id === currentUser?.id}
                             className="h-8 w-8 p-0"
                           >
                             <Trash2 className="h-4 w-4" />
