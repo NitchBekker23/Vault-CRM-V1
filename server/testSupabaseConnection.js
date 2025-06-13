@@ -8,6 +8,8 @@ async function testSupabaseConnection() {
     return false;
   }
   
+  console.log("Current Database_Url format:", process.env.Database_Url.substring(0, 50) + "...");
+  
   try {
     const sql = neon(process.env.Database_Url);
     const result = await sql`SELECT current_database(), version()`;

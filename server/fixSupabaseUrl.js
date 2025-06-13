@@ -11,7 +11,7 @@ if (urlParts) {
   const cleanPassword = password.replace(/^\[|\]$/g, '');
   const encodedPassword = encodeURIComponent(cleanPassword);
   
-  const fixedUrl = `postgres://${username}:${encodedPassword}@${host}:${port}/${database}`;
+  const fixedUrl = `postgresql://${username}:${encodedPassword}@${host}:${port}/${database}`;
   
   console.log("Original URL:", originalUrl);
   console.log("Fixed URL:", fixedUrl);
