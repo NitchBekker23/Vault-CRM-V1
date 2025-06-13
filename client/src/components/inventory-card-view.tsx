@@ -111,22 +111,23 @@ export default function InventoryCardView({ items, onItemUpdated }: InventoryCar
 
   return (
     <>
-      <div className="grid gap-4">
+      <div className="grid gap-3 sm:gap-4">
         {items.map((item) => (
           <Card key={item.id} className="overflow-hidden hover:shadow-md transition-shadow duration-200">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
+              {/* Header with title and actions */}
               <div className="flex items-start justify-between mb-3">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-lg text-gray-900 dark:text-white truncate">
+                <div className="flex-1 min-w-0 pr-2">
+                  <h3 className="font-semibold text-base sm:text-lg text-gray-900 dark:text-white break-words">
                     {item.name}
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                  <p className="text-sm text-gray-600 dark:text-gray-300 break-words">
                     {item.brand}
                   </p>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0">
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -150,39 +151,41 @@ export default function InventoryCardView({ items, onItemUpdated }: InventoryCar
                 </DropdownMenu>
               </div>
 
+              {/* Details grid */}
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                   <span className="text-sm text-gray-500 dark:text-gray-400">Category:</span>
-                  <span className="text-sm font-medium">{item.category}</span>
+                  <span className="text-sm font-medium break-words">{item.category}</span>
                 </div>
                 
                 {item.serialNumber && (
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                     <span className="text-sm text-gray-500 dark:text-gray-400">Serial:</span>
-                    <span className="text-sm font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                    <span className="text-xs sm:text-sm font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded break-all">
                       {item.serialNumber}
                     </span>
                   </div>
                 )}
 
                 {item.sku && (
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                     <span className="text-sm text-gray-500 dark:text-gray-400">SKU:</span>
-                    <span className="text-sm font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                    <span className="text-xs sm:text-sm font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded break-all">
                       {item.sku}
                     </span>
                   </div>
                 )}
 
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                   <span className="text-sm text-gray-500 dark:text-gray-400">Price:</span>
                   <span className="text-sm font-semibold text-green-600 dark:text-green-400">
                     {formatPrice(item.price)}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between pt-2">
-                  <Badge className={getStatusColor(item.status)}>
+                {/* Status and date row */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-2">
+                  <Badge className={`${getStatusColor(item.status)} text-xs px-2 py-1`}>
                     {item.status}
                   </Badge>
                   <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -191,12 +194,34 @@ export default function InventoryCardView({ items, onItemUpdated }: InventoryCar
                 </div>
 
                 {item.notes && (
-                  <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+                  <div className="pt-2 mt-2 border-t border-gray-200 dark:border-gray-700">
+                    <p className="text-sm text-gray-600 dark:text-gray-300 break-words line-clamp-3">
                       {item.notes}
                     </p>
                   </div>
                 )}
+              </div>
+
+              {/* Action buttons for mobile */}
+              <div className="flex gap-2 mt-3 sm:hidden">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleView(item)}
+                  className="flex-1 text-xs h-8"
+                >
+                  <Eye className="mr-1 h-3 w-3" />
+                  View
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleEdit(item)}
+                  className="flex-1 text-xs h-8"
+                >
+                  <Edit className="mr-1 h-3 w-3" />
+                  Edit
+                </Button>
               </div>
             </CardContent>
           </Card>

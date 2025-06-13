@@ -60,12 +60,12 @@ export default function Header({ title }: HeaderProps) {
 
   return (
     <header className={`bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 ${
-      screenSize === 'mobile' ? 'px-4 py-3' : 'px-6 py-4'
+      screenSize === 'mobile' ? 'px-3 py-2' : 'px-6 py-4'
     }`}>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between min-h-[48px]">
         <div className="flex-1 min-w-0">
           <h2 className={`font-bold text-slate-900 dark:text-white ${
-            screenSize === 'mobile' ? 'text-lg truncate pr-4' : 'text-2xl'
+            screenSize === 'mobile' ? 'text-base truncate pr-2' : 'text-2xl'
           }`}>
             {title}
           </h2>
