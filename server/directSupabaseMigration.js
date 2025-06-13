@@ -1,82 +1,166 @@
+import { createClient } from '@supabase/supabase-js';
 import { neon } from '@neondatabase/serverless';
 
-// Direct migration approach - switch DATABASE_URL to Supabase
-const SUPABASE_URL = "postgresql://postgres:%23Thevault2436@db.tepalkbwlyfknalwbmlg.supabase.co:6543/postgres";
-
-async function testSupabaseConnection() {
-  console.log("Testing Supabase connection directly...");
+async function migrateToSupabaseNow() {
+  console.log('Starting data migration to Supabase...');
+  
+  const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_ANON_KEY
+  );
+  
+  const neonSql = neon(process.env.DATABASE_URL);
   
   try {
-    const sql = neon(SUPABASE_URL);
-    const result = await sql`SELECT current_database(), version()`;
-    console.log("✅ Supabase database:", result[0].current_database);
-    console.log("✅ Version:", result[0].version.split(',')[0]);
+    // Test Supabase tables
+    const { data: testData, error: testError } = await supabase
+      .from('users')
+      .select('*')
+      .limit(1);
+      
+    if (testError) {
+      console.log('Schema verification:', testError.message);
+    } else {
+      console.log('✅ Supabase tables ready');
+    }
     
-    // Check existing tables
-    const tableCheck = await sql`
-      SELECT COUNT(*) as table_count 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-      AND table_type = 'BASE TABLE'
-    `;
-    console.log(`📋 Tables in Supabase: ${tableCheck[0].table_count}`);
+    // Export users from Neon
+    console.log('Exporting users from Neon...');
+    const users = await neonSql`SELECT * FROM users ORDER BY created_at`;
+    console.log(`Found ${users.length} users to migrate`);
     
-    return true;
+    // Migrate users to Supabase
+    let userCount = 0;
+    for (const user of users) {
+      console.log(`Migrating user: ${user.email || user.id}`);
+      
+      const { error } = await supabase
+        .from('users')
+        .upsert({
+          id: user.id,
+          email: user.email,
+          first_name: user.firstName,
+          last_name: user.lastName,
+          profile_image_url: user.profileImageUrl,
+          role: user.role || 'user',
+          status: user.status || 'active',
+          password_hash: user.passwordHash,
+          two_factor_enabled: user.twoFactorEnabled || false,
+          created_at: user.createdAt,
+          updated_at: user.updatedAt
+        }, { 
+          onConflict: 'id',
+          ignoreDuplicates: false 
+        });
+        
+      if (error) {
+        console.log(`User migration error: ${error.message}`);
+      } else {
+        userCount++;
+        console.log(`✅ Migrated: ${user.email || user.id}`);
+      }
+    }
+    
+    // Export inventory from Neon
+    console.log('\nExporting inventory from Neon...');
+    const inventory = await neonSql`SELECT * FROM inventory_items ORDER BY created_at`;
+    console.log(`Found ${inventory.length} inventory items to migrate`);
+    
+    // Migrate inventory to Supabase
+    let itemCount = 0;
+    for (const item of inventory) {
+      console.log(`Migrating item: ${item.name}`);
+      
+      const { error } = await supabase
+        .from('inventory_items')
+        .upsert({
+          id: item.id,
+          name: item.name,
+          brand: item.brand,
+          model: item.model,
+          serial_number: item.serialNumber,
+          sku: item.sku,
+          category: item.category,
+          status: item.status,
+          condition: item.condition,
+          price: item.price,
+          cost: item.cost,
+          notes: item.notes,
+          location: item.location,
+          created_by: item.createdBy,
+          created_at: item.createdAt,
+          updated_at: item.updatedAt
+        }, { 
+          onConflict: 'id',
+          ignoreDuplicates: false 
+        });
+        
+      if (error) {
+        console.log(`Item migration error: ${error.message}`);
+      } else {
+        itemCount++;
+        console.log(`✅ Migrated: ${item.name}`);
+      }
+    }
+    
+    // Migrate activity logs
+    console.log('\nMigrating activity logs...');
+    const activities = await neonSql`SELECT * FROM activity_log ORDER BY created_at DESC LIMIT 50`;
+    
+    let activityCount = 0;
+    for (const activity of activities) {
+      const { error } = await supabase
+        .from('activity_log')
+        .upsert({
+          id: activity.id,
+          user_id: activity.userId,
+          action: activity.action,
+          entity_type: activity.entityType,
+          entity_id: activity.entityId,
+          details: activity.details,
+          ip_address: activity.ipAddress,
+          user_agent: activity.userAgent,
+          created_at: activity.createdAt
+        }, { 
+          onConflict: 'id',
+          ignoreDuplicates: false 
+        });
+        
+      if (!error) {
+        activityCount++;
+      }
+    }
+    
+    // Verify migration results
+    const { data: finalUsers } = await supabase.from('users').select('*');
+    const { data: finalItems } = await supabase.from('inventory_items').select('*');
+    const { data: finalActivities } = await supabase.from('activity_log').select('*');
+    
+    console.log('\n🎉 Migration Results:');
+    console.log(`Users: ${finalUsers?.length || 0} in Supabase`);
+    console.log(`Inventory: ${finalItems?.length || 0} in Supabase`);
+    console.log(`Activities: ${finalActivities?.length || 0} in Supabase`);
+    
+    // Test a sample query
+    if (finalUsers?.length > 0) {
+      console.log(`\nSample user: ${finalUsers[0].email || finalUsers[0].id}`);
+    }
+    
+    if (finalItems?.length > 0) {
+      console.log(`Sample item: ${finalItems[0].name}`);
+    }
+    
+    return {
+      success: true,
+      users: finalUsers?.length || 0,
+      items: finalItems?.length || 0,
+      activities: finalActivities?.length || 0
+    };
+    
   } catch (error) {
-    console.error("❌ Supabase connection failed:", error.message);
-    return false;
+    console.log('Migration failed:', error.message);
+    return { success: false, error: error.message };
   }
 }
 
-async function exportCurrentData() {
-  console.log("Exporting data from current Neon database...");
-  
-  try {
-    const currentSql = neon(process.env.DATABASE_URL);
-    
-    // Export key tables
-    const users = await currentSql`SELECT * FROM users`;
-    const inventory = await currentSql`SELECT * FROM inventory_items`;
-    const brands = await currentSql`SELECT * FROM brands`;
-    const skus = await currentSql`SELECT * FROM skus`;
-    
-    console.log("📊 Export complete:");
-    console.log(`  Users: ${users.length}`);
-    console.log(`  Inventory: ${inventory.length}`);
-    console.log(`  Brands: ${brands.length}`);
-    console.log(`  SKUs: ${skus.length}`);
-    
-    return { users, inventory, brands, skus };
-  } catch (error) {
-    console.error("❌ Export failed:", error.message);
-    return null;
-  }
-}
-
-async function performMigration() {
-  console.log("🚀 Starting direct Supabase migration...");
-  
-  // Step 1: Test Supabase connection
-  const supabaseOk = await testSupabaseConnection();
-  if (!supabaseOk) {
-    console.log("❌ Cannot connect to Supabase. Check connection string.");
-    return false;
-  }
-  
-  // Step 2: Export current data
-  const exportedData = await exportCurrentData();
-  if (!exportedData) {
-    console.log("❌ Data export failed.");
-    return false;
-  }
-  
-  console.log("✅ Migration ready!");
-  console.log("📝 Next steps:");
-  console.log("1. Update DATABASE_URL to Supabase connection string");
-  console.log("2. Run: npm run db:push");
-  console.log("3. Import data to new database");
-  
-  return true;
-}
-
-performMigration();
+migrateToSupabaseNow();
