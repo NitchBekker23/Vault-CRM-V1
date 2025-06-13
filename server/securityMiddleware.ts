@@ -18,11 +18,11 @@ export function requireRole(requiredRole: 'admin' | 'user') {
         return res.status(401).json({ message: 'User not found' });
       }
       
-      if (user.status !== 'active') {
+      if (user.status !== 'approved' && user.status !== 'active') {
         return res.status(403).json({ message: 'Account not active' });
       }
       
-      if (requiredRole === 'admin' && user.role !== 'admin') {
+      if (requiredRole === 'admin' && user.role !== 'admin' && user.role !== 'owner') {
         return res.status(403).json({ message: 'Admin access required' });
       }
       

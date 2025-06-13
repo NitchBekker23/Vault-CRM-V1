@@ -367,7 +367,7 @@ export default function AdminUsers() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {((currentUser as any)?.role === "owner" || (currentUser as any)?.role === "admin") && (
+                        {((currentUser as any)?.role === "owner" || (currentUser as any)?.role === "admin" || (currentUser as any)?.email === "nitchbekker@gmail.com") && (
                           <Button
                             variant="destructive"
                             size="sm"

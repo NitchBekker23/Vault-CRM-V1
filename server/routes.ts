@@ -1799,7 +1799,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Update user role
-  app.patch("/api/admin/users/:id/role", isAuthenticated, requireAdminRole, async (req: any, res) => {
+  app.patch("/api/admin/users/:id/role", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const userId = req.params.id;
       const { role } = req.body;
@@ -1818,7 +1818,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Update user status
-  app.patch("/api/admin/users/:id/status", isAuthenticated, requireAdminRole, async (req: any, res) => {
+  app.patch("/api/admin/users/:id/status", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const userId = req.params.id;
       const { status } = req.body;
@@ -1837,7 +1837,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Delete user
-  app.delete("/api/admin/users/:id", isAuthenticated, requireAdminRole, async (req: any, res) => {
+  app.delete("/api/admin/users/:id", isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const userId = req.params.id;
       const currentUserId = req.user.claims.sub;
