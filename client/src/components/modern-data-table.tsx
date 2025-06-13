@@ -276,9 +276,13 @@ export default function ModernDataTable({
           </thead>
           <tbody className="divide-y divide-slate-200">
             {paginatedData.map((item, index) => (
-              <tr key={item.id || index} className="hover:bg-slate-50 transition-colors">
+              <tr 
+                key={item.id || index} 
+                className={`hover:bg-slate-50 transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
+                onClick={() => onRowClick && onRowClick(item)}
+              >
                 {selectable && (
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                       checked={selectedItems.has(item.id)}
                       onCheckedChange={(checked) => handleSelectItem(item.id, checked as boolean)}
@@ -291,7 +295,7 @@ export default function ModernDataTable({
                   </td>
                 ))}
                 {actions.length > 0 && (
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end space-x-2">
                       {actions.map((action, actionIndex) => {
                         if (action.condition && !action.condition(item)) return null;
