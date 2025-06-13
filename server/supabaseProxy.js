@@ -1,75 +1,58 @@
-import fetch from 'node-fetch';
+import postgres from 'postgres';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { execSync } = require('child_process');
 
 async function testSupabaseAPI() {
-  console.log("Testing Supabase REST API connectivity...");
-  
-  // Try connecting via Supabase's REST API first
-  const projectRef = "tepalkbwlyfknalwbmlg";
-  const apiUrl = `https://${projectRef}.supabase.co/rest/v1/`;
+  console.log("Testing Supabase API accessibility...");
   
   try {
-    const response = await fetch(apiUrl, {
-      method: 'GET',
+    const response = await fetch('https://tepalkbwlyfknalwbmlg.supabase.co/rest/v1/', {
       headers: {
-        'Content-Type': 'application/json'
+        'Accept': 'application/json'
       }
     });
     
-    console.log("API Response status:", response.status);
-    console.log("API connectivity:", response.ok ? "✅ Working" : "❌ Failed");
-    
-    // If API works, the issue is specifically with the database port
-    if (response.ok) {
-      console.log("Supabase API is accessible, database port may be blocked");
+    console.log(`API Status: ${response.status}`);
+    if (response.status === 401) {
+      console.log("✅ Supabase project is accessible (401 = authentication required)");
       return true;
     }
-    
-    return false;
   } catch (error) {
-    console.error("API test failed:", error.message);
+    console.log(`❌ API test failed: ${error.message}`);
     return false;
   }
 }
 
 async function checkDNSResolution() {
-  console.log("Checking DNS resolution...");
+  console.log("Testing DNS resolution for Supabase hosts...");
   
-  try {
-    const response = await fetch('https://db.tepalkbwlyfknalwbmlg.supabase.co', {
-      method: 'HEAD',
-      timeout: 5000
-    });
-    console.log("DNS resolution: ✅ Working");
-    return true;
-  } catch (error) {
-    console.error("DNS resolution: ❌ Failed -", error.message);
-    return false;
+  const hosts = [
+    'db.tepalkbwlyfknalwbmlg.supabase.co',
+    'aws-0-us-east-1.pooler.supabase.com',
+    'supabase.com'
+  ];
+  
+  for (const host of hosts) {
+    try {
+      execSync(`nslookup ${host}`, { encoding: 'utf8', timeout: 5000 });
+      console.log(`✅ ${host} resolves correctly`);
+    } catch (error) {
+      console.log(`❌ ${host} DNS resolution failed`);
+    }
   }
 }
 
 async function diagnosticTest() {
-  console.log("Running Supabase connectivity diagnostics...");
+  console.log("Running comprehensive Supabase connectivity test...\n");
   
-  const dnsOk = await checkDNSResolution();
-  const apiOk = await testSupabaseAPI();
+  await testSupabaseAPI();
+  await checkDNSResolution();
   
-  if (!dnsOk) {
-    console.log("\n🔍 Issue: DNS resolution failed");
-    console.log("Solutions:");
-    console.log("1. Check if Supabase project is paused");
-    console.log("2. Verify project URL is correct");
-    console.log("3. Try creating a new project in different region");
-  } else if (dnsOk && !apiOk) {
-    console.log("\n🔍 Issue: DNS works but API fails");
-    console.log("Solutions:");
-    console.log("1. Check project status in Supabase dashboard");
-    console.log("2. Verify project is fully initialized");
-  } else {
-    console.log("\n🔍 Issue: API works but database port blocked");
-    console.log("Solutions:");
-    console.log("1. Use different connection pooler port");
-    console.log("2. Try direct connection port 5432");
-  }
+  console.log("\n📋 Connection String Requirements:");
+  console.log("Format should be: postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-REGION.pooler.supabase.com:6543/postgres");
+  console.log("Or direct: postgresql://postgres:PASSWORD@db.PROJECT_REF.supabase.co:5432/postgres");
+  console.log("\nEnsure you're using the exact connection string from Supabase Dashboard → Database → Connection string (URI tab)");
 }
 
 diagnosticTest();
