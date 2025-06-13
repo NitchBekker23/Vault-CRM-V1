@@ -9,7 +9,7 @@ async function testSupabaseWithPostgres() {
       port: 6543,
       database: 'postgres',
       username: 'postgres',
-      password: '#Thevault2436',
+      password: '#Thevaultcrm2436',
       ssl: { rejectUnauthorized: false }
     });
     
