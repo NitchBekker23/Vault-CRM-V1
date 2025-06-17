@@ -115,6 +115,11 @@ REPLIT_DOMAINS=[development]
 ```
 
 ## Recent Changes
+- June 17, 2025: Fixed bulk import data integrity issues
+  - Implemented two-phase transaction system for CSV imports
+  - Added complete validation before any database operations
+  - Eliminated partial imports that caused serial number conflicts
+  - Enhanced error reporting and transaction rollback handling
 - June 17, 2025: Added new inventory categories
   - Added "pens" category for luxury writing instruments
   - Added "other" category for miscellaneous items

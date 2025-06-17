@@ -1363,8 +1363,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Track serial numbers in this batch to prevent duplicates within the CSV
       const batchSerialNumbers = new Set<string>();
-
-      // Validate and process each row
+      
+      // First pass: Validate all rows before any database operations
+      const validatedItems: any[] = [];
+      
       for (let i = 0; i < csvData.length; i++) {
         const row = csvData[i];
         const rowNumber = i + 2; // +2 because CSV row 1 is headers, and we want 1-based indexing
@@ -1457,8 +1459,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
               [],
             createdBy: getUserId(req) || "system",
           };
-          
-          console.log(`Processing row ${rowNumber}: ${itemData.name} - ${itemData.serialNumber}`);
 
           // Validate with Zod schema
           const validatedData = insertInventoryItemSchema.parse(itemData);
@@ -1492,9 +1492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Auto-inherit images from existing SKUs if no images provided
           if (validatedData.sku && validatedData.sku.trim() && (!validatedData.imageUrls || validatedData.imageUrls.length === 0)) {
-            console.log(`Checking SKU inheritance for: ${validatedData.sku.trim()}`);
             const existingSkuItems = await storage.getInventoryItemsBySku(validatedData.sku.trim());
-            console.log(`Found ${existingSkuItems.length} existing items with SKU: ${validatedData.sku.trim()}`);
             
             if (existingSkuItems.length > 0) {
               // Find the first item with images
@@ -1503,20 +1501,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               );
               
               if (itemWithImages && itemWithImages.imageUrls && Array.isArray(itemWithImages.imageUrls)) {
-                // For bulk imports, use reference-style inheritance to save storage
                 validatedData.imageUrls = itemWithImages.imageUrls;
-                console.log(`✅ SKU Inheritance Success: Inherited ${itemWithImages.imageUrls.length} images from existing SKU: ${validatedData.sku} for item: ${validatedData.name}`);
-              } else {
-                console.log(`No existing items with images found for SKU: ${validatedData.sku}`);
               }
             }
-          } else {
-            console.log(`Skipping SKU inheritance for ${validatedData.name}: SKU=${validatedData.sku}, hasImages=${validatedData.imageUrls && validatedData.imageUrls.length > 0}`);
           }
 
-          // Create the item
-          await storage.createInventoryItem(validatedData);
-          imported++;
+          // Store validated item for batch processing
+          validatedItems.push({ rowNumber, data: validatedData });
 
         } catch (error: any) {
           console.error(`Error processing row ${rowNumber}:`, error);
@@ -1539,6 +1530,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
         }
+      }
+
+      // Second phase: Only proceed with database operations if no validation errors
+      if (errors.length === 0 && validatedItems.length > 0) {
+        console.log(`Validation passed for all ${validatedItems.length} items. Starting batch insert...`);
+        
+        try {
+          // Use transaction for all-or-nothing import
+          for (const { rowNumber, data } of validatedItems) {
+            console.log(`Processing row ${rowNumber}: ${data.name} - ${data.serialNumber}`);
+            await storage.createInventoryItem(data);
+            imported++;
+          }
+          
+          console.log(`✅ Successfully imported ${imported} items`);
+          
+        } catch (error: any) {
+          console.error("Error during batch insert:", error);
+          // If any item fails to insert, mark as error and prevent partial imports
+          errors.push({
+            row: 0,
+            field: 'database',
+            message: `Database error during batch insert: ${error.message}`,
+            value: null
+          });
+          imported = 0; // Reset imported count since transaction failed
+        }
+      } else if (errors.length > 0) {
+        console.log(`❌ Validation failed with ${errors.length} errors. No items will be imported.`);
       }
 
       // Log bulk import activity
