@@ -33,8 +33,8 @@ import { eq, desc, sql, and, ilike, or } from "drizzle-orm";
 import { z } from "zod";
 import { getUserId } from "./authHelper";
 
-// Configure multer for file uploads
-const upload = multer({
+// Configure multer for CSV file uploads
+const csvUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
@@ -44,6 +44,21 @@ const upload = multer({
       cb(null, true);
     } else {
       cb(new Error('Only CSV files are allowed'));
+    }
+  },
+});
+
+// Configure multer for image uploads
+const imageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit for images
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
     }
   },
 });
@@ -1091,7 +1106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Image upload endpoint for inventory items
-  app.post("/api/inventory/upload-image", isAuthenticated, upload.single('image'), async (req: any, res) => {
+  app.post("/api/inventory/upload-image", isAuthenticated, imageUpload.single('image'), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No image file provided" });
@@ -1371,7 +1386,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bulk import route
-  app.post("/api/inventory/bulk-import", isAuthenticated, upload.single('file'), async (req: any, res) => {
+  app.post("/api/inventory/bulk-import", isAuthenticated, csvUpload.single('file'), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
