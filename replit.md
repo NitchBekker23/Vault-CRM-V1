@@ -115,6 +115,10 @@ REPLIT_DOMAINS=[development]
 ```
 
 ## Recent Changes
+- June 17, 2025: Added new inventory categories
+  - Added "pens" category for luxury writing instruments
+  - Added "other" category for miscellaneous items
+  - Updated forms, filters, and CSV templates with new categories
 - June 17, 2025: Complete date tracking system implementation
   - Added dateReceived field to database with automatic defaults
   - Implemented "Days in Stock" calculation and display

@@ -229,6 +229,8 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
                       <SelectContent>
                         <SelectItem value="watches">Watches</SelectItem>
                         <SelectItem value="leather-goods">Leather Goods</SelectItem>
+                        <SelectItem value="pens">Pens</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

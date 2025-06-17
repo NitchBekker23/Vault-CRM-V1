@@ -120,7 +120,7 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
       "Rolex",
       "RS12345",
       "ROLEX-SUB-001",
-      "watches", // watches, leather-goods, accessories
+      "watches", // watches, leather-goods, pens, other
       "in_stock", // in_stock, sold, out_of_stock
       "8500.00",
       "Classic diving watch",
@@ -129,22 +129,36 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
     ];
     
     const sampleData2 = [
-      "Rolex Submariner",
-      "Rolex", 
-      "RS12346",
-      "ROLEX-SUB-001",
-      "watches",
+      "Montblanc Meisterstück",
+      "Montblanc", 
+      "MB12345",
+      "MB-MSTR-001",
+      "pens",
       "in_stock",
-      "8500.00",
-      "Classic diving watch - same SKU will reuse images",
-      "2024-06-05", // dateReceived
+      "750.00",
+      "Classic fountain pen with gold nib",
+      "2024-06-03", // dateReceived
+      ""
+    ];
+
+    const sampleData3 = [
+      "Custom Leather Portfolio",
+      "Artisan", 
+      "CLP001",
+      "CUSTOM-PORT-001",
+      "other",
+      "in_stock",
+      "450.00",
+      "Hand-crafted leather portfolio for documents",
+      "2024-06-04", // dateReceived
       ""
     ];
     
     const csvContent = [
       headers.join(","),
       sampleData.join(","),
-      sampleData2.join(",")
+      sampleData2.join(","),
+      sampleData3.join(",")
     ].join("\n");
     
     const blob = new Blob([csvContent], { type: "text/csv" });

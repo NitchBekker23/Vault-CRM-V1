@@ -249,6 +249,8 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
                       <SelectContent>
                         <SelectItem value="watches">Watches</SelectItem>
                         <SelectItem value="leather-goods">Leather Goods</SelectItem>
+                        <SelectItem value="pens">Pens</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

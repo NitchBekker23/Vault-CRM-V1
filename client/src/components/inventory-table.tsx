@@ -306,6 +306,8 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                       <SelectItem value="all">All Categories</SelectItem>
                       <SelectItem value="watches">Watches</SelectItem>
                       <SelectItem value="leather-goods">Leather Goods</SelectItem>
+                      <SelectItem value="pens">Pens</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
                   

@@ -1385,7 +1385,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           // Validate category
-          const validCategories = ['watches', 'leather-goods', 'accessories'];
+          const validCategories = ['watches', 'leather-goods', 'pens', 'other'];
           if (row.category && !validCategories.includes(row.category)) {
             errors.push({
               row: rowNumber,
