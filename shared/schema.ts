@@ -133,6 +133,7 @@ export const inventoryItems = pgTable("inventory_items", {
   sku: varchar("sku"),
   category: varchar("category").notNull(), // 'watches' or 'leather-goods'
   price: decimal("price", { precision: 10, scale: 2 }),
+  costPrice: decimal("cost_price", { precision: 10, scale: 2 }),
   status: varchar("status").default("in_stock").notNull(), // 'in_stock', 'reserved', 'sold'
   imageUrls: text("image_urls").array(), // Keep for backward compatibility
   imageIds: integer("image_ids").array(), // New: reference to images table

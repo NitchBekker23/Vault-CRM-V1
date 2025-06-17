@@ -321,7 +321,7 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
                 name="price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Price (ZAR)</FormLabel>
+                    <FormLabel>Selling Price (ZAR)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -336,6 +336,26 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
                 )}
               />
             </div>
+            
+            <FormField
+              control={form.control}
+              name="costPrice"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cost Price (ZAR)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      step="0.01"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <ImageUpload
               images={form.watch("imageUrls") || []}
