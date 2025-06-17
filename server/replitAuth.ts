@@ -57,6 +57,9 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
+  // Check if user already exists to preserve their role
+  const existingUser = await storage.getUser(claims["sub"]);
+  
   await storage.upsertUser({
     id: claims["sub"],
     email: claims["email"],
@@ -65,10 +68,10 @@ async function upsertUser(
     company: claims["company"] || null,
     phoneNumber: claims["phone_number"] || null,
     profileImageUrl: claims["profile_image_url"],
-    role: "user",
-    status: "approved",
-    twoFactorEnabled: false,
-    twoFactorMethod: "email",
+    role: existingUser?.role || "user", // Preserve existing role or default to user
+    status: existingUser?.status || "approved", // Preserve existing status
+    twoFactorEnabled: existingUser?.twoFactorEnabled || false,
+    twoFactorMethod: existingUser?.twoFactorMethod || "email",
     lastLoginAt: new Date(),
   });
 }
