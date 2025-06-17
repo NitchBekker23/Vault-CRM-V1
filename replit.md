@@ -115,6 +115,13 @@ REPLIT_DOMAINS=[development]
 ```
 
 ## Recent Changes
+- June 17, 2025: Fixed critical authentication session bug affecting all users
+  - **CRITICAL FIX**: Authentication was overwriting all user roles to "user" on every login
+  - Modified authentication to preserve existing admin/owner roles across login sessions
+  - Fixed session cookie configuration for proper session persistence
+  - Updated admin routes to use consistent authentication middleware
+  - All users (including 40 daily users) now maintain proper role-based access after logout/login cycles
+  - User management tab now functions properly with preserved owner privileges
 - June 17, 2025: Enhanced security system and database management
   - Implemented comprehensive role-based access control with audit logging
   - Added role hierarchy validation preventing privilege escalation
