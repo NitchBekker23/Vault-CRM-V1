@@ -307,16 +307,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin route middleware
   const isAdmin = async (req: any, res: any, next: any) => {
     try {
-      const userId = req.user?.claims?.sub;
+      // Use the same getUserId function that other routes use
+      const userId = getUserId(req);
       if (!userId) {
+        console.log("Admin middleware: No user ID found");
         return res.status(401).json({ message: "Unauthorized" });
       }
       
+      console.log("Admin middleware: Checking user:", userId);
       const user = await storage.getUser(userId);
-      if (!user || user.status !== 'approved' || (user.role !== 'admin' && user.role !== 'owner')) {
+      
+      if (!user) {
+        console.log("Admin middleware: User not found:", userId);
+        return res.status(403).json({ message: "User not found" });
+      }
+      
+      if (user.status !== 'approved') {
+        console.log("Admin middleware: User not approved:", user.status);
+        return res.status(403).json({ message: "Account not approved" });
+      }
+      
+      if (user.role !== 'admin' && user.role !== 'owner') {
+        console.log("Admin middleware: Insufficient role:", user.role);
         return res.status(403).json({ message: "Admin access required" });
       }
       
+      console.log("Admin middleware: Access granted for user:", userId, "with role:", user.role);
       req.currentUser = user;
       next();
     } catch (error) {
