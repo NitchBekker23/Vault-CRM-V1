@@ -1335,7 +1335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Storage analytics endpoint
-  app.get("/api/inventory/storage-analytics", isAuthenticated, async (req: any, res) => {
+  app.get("/api/inventory/storage-analytics", checkAuth, async (req: any, res) => {
     try {
       const stats = await imageOptimizer.getStorageStats();
       res.json(stats);
@@ -1346,7 +1346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Utility route to inherit images for existing SKUs
-  app.post("/api/inventory/inherit-sku-images", isAuthenticated, async (req: any, res) => {
+  app.post("/api/inventory/inherit-sku-images", checkAuth, async (req: any, res) => {
     try {
       let updatedCount = 0;
       const errors: string[] = [];
@@ -1407,7 +1407,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bulk delete route
-  app.post("/api/inventory/bulk-delete", isAuthenticated, async (req: any, res) => {
+  app.post("/api/inventory/bulk-delete", checkAuth, async (req: any, res) => {
     try {
       const { ids } = req.body;
       
