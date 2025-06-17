@@ -18,6 +18,16 @@ import {
   sendPasswordResetEmail
 } from "./emailService";
 import { notificationService } from "./notificationService";
+import { 
+  requireAuth, 
+  requireAdminRole, 
+  requireOwnerRole,
+  requireAdminAccess,
+  requireOwnerAccess,
+  validateRoleHierarchy,
+  auditLog,
+  type AuthenticatedRequest
+} from "./authMiddleware";
 import {
   users,
   images,
