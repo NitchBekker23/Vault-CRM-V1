@@ -250,6 +250,7 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
                       <SelectContent>
                         <SelectItem value="in_stock">In Stock</SelectItem>
                         <SelectItem value="reserved">Reserved</SelectItem>
+                        <SelectItem value="sold">Sold</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

@@ -270,6 +270,7 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
                       <SelectContent>
                         <SelectItem value="in_stock">In Stock</SelectItem>
                         <SelectItem value="reserved">Reserved</SelectItem>
+                        <SelectItem value="sold">Sold</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
