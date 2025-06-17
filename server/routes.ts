@@ -1098,8 +1098,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const search = req.query.search as string;
       const category = req.query.category as string;
       const status = req.query.status as string;
+      const dateRange = req.query.dateRange as string;
 
-      const result = await storage.getInventoryItems(page, limit, search, category, status);
+      const result = await storage.getInventoryItems(page, limit, search, category, status, dateRange);
       res.json(result);
     } catch (error) {
       console.error("Error fetching inventory:", error);
