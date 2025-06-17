@@ -137,18 +137,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Session-based authentication check
   const checkAuth = (req: any, res: any, next: any) => {
+    console.log("CheckAuth: Starting authentication check");
+    console.log("CheckAuth: req.session:", req.session ? JSON.stringify(req.session) : "null");
+    console.log("CheckAuth: req.isAuthenticated():", req.isAuthenticated?.());
+    console.log("CheckAuth: req.user:", req.user ? JSON.stringify(req.user) : "null");
+    
     // Check session-based auth first (standalone)
     if (req.session?.authenticated && req.session?.userId) {
+      console.log("CheckAuth: Session auth success, userId:", req.session.userId);
       req.currentUserId = req.session.userId;
       return next();
     }
     
     // Fallback to Replit auth if available
     if (req.isAuthenticated && req.isAuthenticated() && req.user?.claims?.sub) {
+      console.log("CheckAuth: Replit auth success, userId:", req.user.claims.sub);
       req.currentUserId = getUserId(req);
       return next();
     }
     
+    console.log("CheckAuth: No valid authentication found, returning 401");
     return res.status(401).json({ message: "Unauthorized" });
   };
 
@@ -2012,9 +2020,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/notifications/count", isAuthenticated, async (req: any, res) => {
+  app.get("/api/notifications/count", checkAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUserId;
       const unreadOnly = req.query.unreadOnly === 'true';
       
       const count = await storage.getNotificationCount(userId, unreadOnly);
