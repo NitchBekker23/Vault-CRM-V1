@@ -82,6 +82,7 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
         ...(search.trim() && { search: search.trim() }),
         ...(category && { category }),
         ...(status && { status }),
+        ...(dateRange && { dateRange }),
       });
       
       const response = await fetch(`/api/inventory?${params}`, {
@@ -321,6 +322,23 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                       <SelectItem value="in_stock">In Stock</SelectItem>
                       <SelectItem value="reserved">Reserved</SelectItem>
                       <SelectItem value="sold">Sold</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select value={dateRange || "all"} onValueChange={(value) => {
+                    const newDateRange = value === "all" ? "" : value;
+                    setDateRange(newDateRange);
+                    setPage(1);
+                  }}>
+                    <SelectTrigger className="w-full sm:w-40">
+                      <SelectValue placeholder="All Dates" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Dates</SelectItem>
+                      <SelectItem value="last-7-days">Last 7 Days</SelectItem>
+                      <SelectItem value="last-30-days">Last 30 Days</SelectItem>
+                      <SelectItem value="last-90-days">Last 90 Days</SelectItem>
+                      <SelectItem value="over-90-days">Over 90 Days</SelectItem>
                     </SelectContent>
                   </Select>
                   

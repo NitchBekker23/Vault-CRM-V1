@@ -40,8 +40,7 @@ import {
   type InsertNotification,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, and, ilike, or } from "drizzle-orm";
-import { inArray } from "drizzle-orm";
+import { eq, desc, sql, and, ilike, or, gte, lt, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -193,7 +192,8 @@ export class DatabaseStorage implements IStorage {
     limit = 10,
     search?: string,
     category?: string,
-    status?: string
+    status?: string,
+    dateRange?: string
   ): Promise<{ items: InventoryItem[]; total: number }> {
     const offset = (page - 1) * limit;
     
@@ -215,6 +215,34 @@ export class DatabaseStorage implements IStorage {
     
     if (status) {
       whereConditions.push(eq(inventoryItems.status, status));
+    }
+
+    if (dateRange) {
+      const now = new Date();
+      let dateCondition;
+      
+      switch (dateRange) {
+        case 'last-7-days':
+          const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          dateCondition = gte(inventoryItems.dateReceived, sevenDaysAgo);
+          break;
+        case 'last-30-days':
+          const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          dateCondition = gte(inventoryItems.dateReceived, thirtyDaysAgo);
+          break;
+        case 'last-90-days':
+          const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          dateCondition = gte(inventoryItems.dateReceived, ninetyDaysAgo);
+          break;
+        case 'over-90-days':
+          const ninetyDaysAgoForOlder = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          dateCondition = lt(inventoryItems.dateReceived, ninetyDaysAgoForOlder);
+          break;
+      }
+      
+      if (dateCondition) {
+        whereConditions.push(dateCondition);
+      }
     }
 
     const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
