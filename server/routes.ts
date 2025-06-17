@@ -1406,6 +1406,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
 
+          // Validate dateReceived if provided
+          let dateReceived = null;
+          if (row.dateReceived && row.dateReceived.trim()) {
+            const dateStr = row.dateReceived.trim();
+            const parsedDate = new Date(dateStr);
+            
+            if (isNaN(parsedDate.getTime())) {
+              errors.push({
+                row: rowNumber,
+                field: 'dateReceived',
+                message: 'Invalid date format. Use YYYY-MM-DD format',
+                value: row.dateReceived
+              });
+            } else {
+              dateReceived = parsedDate;
+            }
+          }
+
           // Validate price
           const price = parseFloat(row.price);
           if (isNaN(price) || price < 0) {
@@ -1433,6 +1451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: row.status,
             price: price.toString(),
             description: row.description?.trim() || null,
+            dateReceived: dateReceived || new Date(), // Use provided date or current date
             imageUrls: row.imageUrls && row.imageUrls.toString().trim() ? 
               row.imageUrls.toString().split(',').map((url: string) => url.trim()).filter(Boolean) : 
               [],

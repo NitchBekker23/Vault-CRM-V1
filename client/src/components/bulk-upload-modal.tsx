@@ -111,6 +111,7 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
       "status",
       "price",
       "description",
+      "dateReceived",
       "imageUrls"
     ];
     
@@ -123,6 +124,7 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
       "in_stock", // in_stock, sold, out_of_stock
       "8500.00",
       "Classic diving watch",
+      "2024-06-01", // dateReceived (YYYY-MM-DD format, leave empty for current date)
       ""
     ];
     
@@ -135,6 +137,7 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
       "in_stock",
       "8500.00",
       "Classic diving watch - same SKU will reuse images",
+      "2024-06-05", // dateReceived
       ""
     ];
     
