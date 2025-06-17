@@ -114,8 +114,14 @@ BREVO_API_KEY=[configured]
 REPLIT_DOMAINS=[development]
 ```
 
-## Changelog
-- June 17, 2025. Initial setup
+## Recent Changes
+- June 17, 2025: Complete date tracking system implementation
+  - Added dateReceived field to database with automatic defaults
+  - Implemented "Days in Stock" calculation and display
+  - Added date range filtering (7/30/90 days, over 90 days)
+  - Updated CSV bulk import to include dateReceived field
+  - Enhanced inventory table with date tracking column
+- June 17, 2025: Initial setup
 
 ## User Preferences
 

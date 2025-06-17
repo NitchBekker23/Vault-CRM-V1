@@ -74,6 +74,7 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
         category: item.category,
         price: item.price || "",
         status: item.status,
+        dateReceived: item.dateReceived ? new Date(item.dateReceived) : new Date(),
         imageUrls: item.imageUrls || [],
         notes: item.notes || "",
       });
