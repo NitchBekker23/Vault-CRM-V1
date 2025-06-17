@@ -1544,6 +1544,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
 
+          // Validate cost price (optional field)
+          let costPrice = null;
+          if (row.costPrice && row.costPrice.toString().trim()) {
+            const parsedCostPrice = parseFloat(row.costPrice);
+            if (isNaN(parsedCostPrice) || parsedCostPrice < 0) {
+              errors.push({
+                row: rowNumber,
+                field: 'costPrice',
+                message: 'Cost price must be a valid positive number',
+                value: row.costPrice
+              });
+            } else {
+              costPrice = parsedCostPrice.toString();
+            }
+          }
+
           // Skip this row if there are validation errors
           const rowErrors = errors.filter(e => e.row === rowNumber);
           if (rowErrors.length > 0) {
@@ -1559,6 +1575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             category: row.category,
             status: row.status,
             price: price.toString(),
+            costPrice: costPrice,
             description: row.description?.trim() || null,
             dateReceived: dateReceived || new Date(), // Use provided date or current date
             imageUrls: row.imageUrls && row.imageUrls.toString().trim() ? 

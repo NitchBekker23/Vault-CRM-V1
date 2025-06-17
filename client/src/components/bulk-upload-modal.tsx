@@ -110,6 +110,7 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
       "category",
       "status",
       "price",
+      "costPrice",
       "description",
       "dateReceived",
       "imageUrls"
@@ -123,6 +124,7 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
       "watches", // watches, leather-goods, pens, other
       "in_stock", // in_stock, sold, out_of_stock
       "8500.00",
+      "7200.00",
       "Classic diving watch",
       "2024-06-01", // dateReceived (YYYY-MM-DD format, leave empty for current date)
       ""
@@ -136,6 +138,7 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
       "pens",
       "in_stock",
       "750.00",
+      "620.00",
       "Classic fountain pen with gold nib",
       "2024-06-03", // dateReceived
       ""
@@ -149,6 +152,7 @@ export default function BulkUploadModal({ isOpen, onClose }: BulkUploadModalProp
       "other",
       "in_stock",
       "450.00",
+      "280.00",
       "Hand-crafted leather portfolio for documents",
       "2024-06-04", // dateReceived
       ""

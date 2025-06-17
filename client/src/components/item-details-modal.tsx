@@ -132,9 +132,16 @@ export default function ItemDetailsModal({
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-slate-600">Price</span>
+                    <span className="text-sm font-medium text-slate-600">Selling Price</span>
                     <span className="text-lg font-bold text-green-600">
                       R{item.price ? parseFloat(item.price).toLocaleString() : '0.00'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-slate-600">Cost Price</span>
+                    <span className="text-lg font-bold text-orange-600">
+                      R{item.costPrice ? parseFloat(item.costPrice).toLocaleString() : '0.00'}
                     </span>
                   </div>
 
