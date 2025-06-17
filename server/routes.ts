@@ -572,17 +572,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.patch('/api/admin/users/:id/role', 
-    isAuthenticated, 
-    isAdmin, 
-    validateRoleHierarchy,
+    checkAuth,
     auditLog('USER_ROLE_UPDATE'),
-    async (req: AuthenticatedRequest, res) => {
+    async (req: any, res) => {
       try {
+        const currentUserId = req.currentUserId;
+        const currentUser = await storage.getUser(currentUserId);
+        
+        if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'owner')) {
+          return res.status(403).json({ message: "Admin privileges required" });
+        }
+        
         const userId = req.params.id;
         const { role } = req.body;
         
         if (!['user', 'admin', 'owner'].includes(role)) {
           return res.status(400).json({ message: "Invalid role" });
+        }
+        
+        // Prevent self-modification
+        if (userId === currentUserId) {
+          return res.status(403).json({ message: "Cannot modify your own role" });
+        }
+        
+        // Only owners can assign owner role
+        if (role === 'owner' && currentUser.role !== 'owner') {
+          return res.status(403).json({ message: "Only owners can assign owner role" });
         }
         
         const updatedUser = await storage.updateUserRole(userId, role);
@@ -833,24 +848,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error in test login:", error);
       res.status(500).json({ message: "Login failed" });
-    }
-  });
-
-  // Update user role
-  app.patch('/api/admin/users/:id/role', isAuthenticated, async (req, res) => {
-    try {
-      const userId = req.params.id;
-      const { role } = req.body;
-      
-      if (!['admin', 'owner', 'user'].includes(role)) {
-        return res.status(400).json({ message: "Invalid role" });
-      }
-      
-      const updatedUser = await storage.updateUserRole(userId, role);
-      res.json(updatedUser);
-    } catch (error) {
-      console.error("Error updating user role:", error);
-      res.status(500).json({ message: "Failed to update user role" });
     }
   });
 
@@ -1949,13 +1946,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Update user role
-  app.patch("/api/admin/users/:id/role", isAuthenticated, isAdmin, async (req: any, res) => {
+  app.patch("/api/admin/users/:id/role", checkAuth, async (req: any, res) => {
     try {
+      const currentUserId = req.currentUserId;
+      const currentUser = await storage.getUser(currentUserId);
+      
+      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'owner')) {
+        return res.status(403).json({ message: "Admin privileges required" });
+      }
+      
       const userId = req.params.id;
       const { role } = req.body;
       
       if (!['user', 'admin', 'owner'].includes(role)) {
         return res.status(400).json({ message: "Invalid role" });
+      }
+      
+      // Prevent self-modification
+      if (userId === currentUserId) {
+        return res.status(403).json({ message: "Cannot modify your own role" });
+      }
+      
+      // Only owners can assign owner role
+      if (role === 'owner' && currentUser.role !== 'owner') {
+        return res.status(403).json({ message: "Only owners can assign owner role" });
       }
       
       const updatedUser = await storage.updateUserRole(userId, role);
