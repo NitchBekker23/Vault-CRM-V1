@@ -55,6 +55,7 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("");
+  const [dateRange, setDateRange] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -73,7 +74,7 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
     items: InventoryItem[];
     total: number;
   }>({
-    queryKey: ["/api/inventory", page, pageSize, search, category, status],
+    queryKey: ["/api/inventory", page, pageSize, search, category, status, dateRange],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -509,6 +510,12 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                                   {item.price ? `R${parseFloat(item.price).toLocaleString()}` : "-"}
                                 </span>
                               </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-slate-600">Days in Stock:</span>
+                                <span className="text-sm font-medium text-slate-900">
+                                  {item.dateReceived ? `${calculateDaysInStock(item.dateReceived)} days` : "-"}
+                                </span>
+                              </div>
                             </div>
                             
                             {/* Mobile Actions */}
@@ -640,6 +647,9 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                           </TableCell>
                           <TableCell className="text-slate-900">
                             {item.price ? `R${parseFloat(item.price).toLocaleString()}` : "-"}
+                          </TableCell>
+                          <TableCell className="text-slate-600">
+                            {item.dateReceived ? `${calculateDaysInStock(item.dateReceived)} days` : "-"}
                           </TableCell>
                           <TableCell>
                             <div className="flex space-x-2">
