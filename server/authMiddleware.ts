@@ -16,20 +16,32 @@ export interface AuthenticatedRequest extends Request {
 // Base authentication check
 export const requireAuth = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
+    console.log("Auth middleware: Starting auth check");
+    console.log("Auth middleware: req.isAuthenticated():", req.isAuthenticated?.());
+    console.log("Auth middleware: req.user:", req.user ? JSON.stringify(req.user) : "null");
+    
     const userId = getUserId(req);
+    console.log("Auth middleware: userId from getUserId:", userId);
+    
     if (!userId) {
+      console.log("Auth middleware: No userId found, returning 401");
       return res.status(401).json({ message: "Authentication required" });
     }
 
     const user = await storage.getUser(userId);
+    console.log("Auth middleware: User from database:", user ? `${user.id} (${user.role})` : "null");
+    
     if (!user) {
+      console.log("Auth middleware: User not found in database, returning 401");
       return res.status(401).json({ message: "User not found" });
     }
 
     if (user.status !== 'approved') {
+      console.log("Auth middleware: User not approved, returning 403");
       return res.status(403).json({ message: "Account not approved" });
     }
 
+    console.log("Auth middleware: Success - setting currentUser");
     req.currentUser = user;
     next();
   } catch (error) {
