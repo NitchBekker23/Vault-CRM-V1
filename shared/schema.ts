@@ -390,7 +390,12 @@ export const insertInventoryItemSchema = createInsertSchema(inventoryItems, {
   sku: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   price: z.string().optional(),
-  dateReceived: z.date().optional(),
+  dateReceived: z.union([z.date(), z.string()]).optional().transform((val) => {
+    if (typeof val === 'string') {
+      return new Date(val);
+    }
+    return val;
+  }),
   imageUrls: z.array(z.string()).optional(),
 });
 export type InsertInventoryItem = z.infer<typeof insertInventoryItemSchema>;
