@@ -725,6 +725,7 @@ export class DatabaseStorage implements IStorage {
     totalInventory: number;
     inStock: number;
     reserved: number;
+    sold: number;
     wishlistRequests: number;
     salesThisMonth: number;
   }> {
@@ -732,7 +733,7 @@ export class DatabaseStorage implements IStorage {
     currentMonth.setDate(1);
     currentMonth.setHours(0, 0, 0, 0);
 
-    const [totalInventoryResult, inStockResult, reservedResult, wishlistResult, salesResult] = await Promise.all([
+    const [totalInventoryResult, inStockResult, reservedResult, soldResult, wishlistResult, salesResult] = await Promise.all([
       db.select({ count: sql<number>`count(*)` }).from(inventoryItems),
       db
         .select({ count: sql<number>`count(*)` })
@@ -742,6 +743,10 @@ export class DatabaseStorage implements IStorage {
         .select({ count: sql<number>`count(*)` })
         .from(inventoryItems)
         .where(eq(inventoryItems.status, "reserved")),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(inventoryItems)
+        .where(eq(inventoryItems.status, "sold")),
       db
         .select({ count: sql<number>`count(*)` })
         .from(wishlistItems)
@@ -756,6 +761,7 @@ export class DatabaseStorage implements IStorage {
       totalInventory: Number(totalInventoryResult[0].count),
       inStock: Number(inStockResult[0].count),
       reserved: Number(reservedResult[0].count),
+      sold: Number(soldResult[0].count),
       wishlistRequests: Number(wishlistResult[0].count),
       salesThisMonth: Number(salesResult[0].total || 0),
     };

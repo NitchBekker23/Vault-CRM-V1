@@ -6,6 +6,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 interface Metrics {
   totalInventory: number;
   inStock: number;
+  reserved: number;
+  sold: number;
   wishlistRequests: number;
   salesThisMonth: number;
 }
@@ -18,8 +20,8 @@ export default function DashboardMetrics() {
 
   if (isLoading) {
     return (
-      <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'} mb-6`}>
-        {[...Array(4)].map((_, i) => (
+      <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6'} mb-6`}>
+        {[...Array(5)].map((_, i) => (
           <Card key={i}>
             <CardContent className={isMobile ? "p-4" : "p-6"}>
               <Skeleton className="h-4 w-24 mb-2" />
@@ -33,7 +35,7 @@ export default function DashboardMetrics() {
   }
 
   return (
-    <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'} mb-6`}>
+    <div className={`grid ${isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6'} mb-6`}>
       <Card>
         <CardContent className={isMobile ? "p-4" : "p-6"}>
           <div className={`flex items-center ${isMobile ? 'flex-col text-center space-y-3' : 'justify-between'}`}>
@@ -74,6 +76,28 @@ export default function DashboardMetrics() {
             <span className="text-slate-500">
               {metrics?.totalInventory ? 
                 Math.round((metrics.inStock / metrics.totalInventory) * 100) : 0}% of total inventory
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className={isMobile ? "p-4" : "p-6"}>
+          <div className={`flex items-center ${isMobile ? 'flex-col text-center space-y-3' : 'justify-between'}`}>
+            <div className={isMobile ? 'order-2' : ''}>
+              <p className="text-sm font-medium text-slate-600">Sold</p>
+              <p className={`font-bold text-slate-900 ${isMobile ? 'text-xl' : 'text-2xl'}`}>
+                {metrics?.sold || 0}
+              </p>
+            </div>
+            <div className={`bg-red-100 rounded-lg flex items-center justify-center ${isMobile ? 'h-10 w-10 order-1' : 'h-12 w-12'}`}>
+              <i className="fas fa-check text-red-600"></i>
+            </div>
+          </div>
+          <div className={`text-sm ${isMobile ? 'mt-3 text-center' : 'mt-4'}`}>
+            <span className="text-slate-500">
+              {metrics?.totalInventory ? 
+                Math.round((metrics.sold / metrics.totalInventory) * 100) : 0}% of total inventory
             </span>
           </div>
         </CardContent>
