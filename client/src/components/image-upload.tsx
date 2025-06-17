@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Loader2, X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface ImageUploadProps {
   images: string[];
@@ -12,6 +13,7 @@ interface ImageUploadProps {
 export default function ImageUpload({ images, onImagesChange, maxImages = 5 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -26,24 +28,45 @@ export default function ImageUpload({ images, onImagesChange, maxImages = 5 }: I
         
         // Validate file type
         if (!file.type.startsWith('image/')) {
-          console.warn(`File ${file.name} is not an image`);
+          toast({
+            title: "Invalid file type",
+            description: `${file.name} is not an image file`,
+            variant: "destructive",
+          });
           continue;
         }
 
         // Validate file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
-          console.warn(`File ${file.name} is too large (max 5MB)`);
+          toast({
+            title: "File too large", 
+            description: `${file.name} exceeds 5MB limit`,
+            variant: "destructive",
+          });
           continue;
         }
 
-        // Convert to base64 for storage
-        const base64 = await fileToBase64(file);
-        newImages.push(base64);
+        // Upload file to server
+        const imageUrl = await uploadFileToServer(file);
+        if (imageUrl) {
+          newImages.push(imageUrl);
+        }
       }
 
-      onImagesChange([...images, ...newImages]);
+      if (newImages.length > 0) {
+        onImagesChange([...images, ...newImages]);
+        toast({
+          title: "Images uploaded",
+          description: `Successfully uploaded ${newImages.length} image(s)`,
+        });
+      }
     } catch (error) {
       console.error('Error uploading images:', error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload images. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -52,13 +75,26 @@ export default function ImageUpload({ images, onImagesChange, maxImages = 5 }: I
     }
   };
 
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
-    });
+  const uploadFileToServer = async (file: File): Promise<string | null> => {
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('/api/inventory/upload-image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const result = await response.json();
+      return result.imageUrl;
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      return null;
+    }
   };
 
   const removeImage = (index: number) => {

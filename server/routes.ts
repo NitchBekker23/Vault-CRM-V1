@@ -1090,6 +1090,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Image upload endpoint for inventory items
+  app.post("/api/inventory/upload-image", isAuthenticated, upload.single('image'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      // Store image using the image optimizer
+      const imageId = await imageOptimizer.storeImage(
+        {
+          url: `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`,
+          filename: req.file.originalname,
+          mimeType: req.file.mimetype,
+          size: req.file.size
+        },
+        userId
+      );
+
+      // Return the image URL
+      const imageUrl = `/api/images/${imageId}`;
+      
+      res.json({ 
+        success: true,
+        imageId,
+        imageUrl,
+        message: "Image uploaded successfully" 
+      });
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      res.status(500).json({ message: "Failed to upload image" });
+    }
+  });
+
   // Inventory routes
   app.get("/api/inventory", async (req, res) => {
     try {
