@@ -1225,6 +1225,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/inventory/:id", isAuthenticated, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // Log the incoming data for debugging
+      console.log("PUT /api/inventory/:id - Request body:", JSON.stringify(req.body, null, 2));
+      
       const validatedData = insertInventoryItemSchema.partial().parse(req.body);
 
       const item = await storage.updateInventoryItem(id, validatedData);
@@ -1242,6 +1246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(item);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("Validation error details:", error.errors);
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
       console.error("Error updating inventory item:", error);
