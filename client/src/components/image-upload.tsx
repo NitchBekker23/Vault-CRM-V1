@@ -83,9 +83,18 @@ export default function ImageUpload({ images, onImagesChange, maxImages = 5 }: I
       const response = await fetch('/api/inventory/upload-image', {
         method: 'POST',
         body: formData,
+        credentials: 'include', // Include session cookies for authentication
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          toast({
+            title: "Authentication required",
+            description: "Please log in to upload images",
+            variant: "destructive",
+          });
+          return null;
+        }
         throw new Error('Upload failed');
       }
 
