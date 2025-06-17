@@ -19,7 +19,7 @@ import {
 } from "./emailService";
 import { notificationService } from "./notificationService";
 import { 
-  requireAuth, 
+  requireAuth as requireAuthentication, 
   requireAdminRole, 
   requireOwnerRole,
   requireAdminAccess,
@@ -417,22 +417,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/admin/users/:id/status', isAuthenticated, isAdmin, async (req: any, res) => {
-    try {
-      const userId = req.params.id;
-      const { status } = req.body;
-      
-      if (!['approved', 'suspended', 'denied'].includes(status)) {
-        return res.status(400).json({ message: "Invalid status" });
+  app.patch('/api/admin/users/:id/status', 
+    isAuthenticated, 
+    isAdmin,
+    auditLog('USER_STATUS_UPDATE'),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const userId = req.params.id;
+        const { status } = req.body;
+        
+        if (!['approved', 'suspended', 'denied'].includes(status)) {
+          return res.status(400).json({ message: "Invalid status" });
+        }
+        
+        // Prevent self-modification
+        if (userId === req.currentUser?.id) {
+          return res.status(403).json({ message: "Cannot modify your own status" });
+        }
+        
+        const updatedUser = await storage.updateUserStatus(userId, status);
+        res.json(updatedUser);
+      } catch (error) {
+        console.error("Error updating user status:", error);
+        res.status(500).json({ message: "Failed to update user status" });
       }
-      
-      const updatedUser = await storage.updateUserStatus(userId, status);
-      res.json(updatedUser);
-    } catch (error) {
-      console.error("Error updating user status:", error);
-      res.status(500).json({ message: "Failed to update user status" });
     }
-  });
+  );
 
   // Get individual user
   app.get('/api/admin/users/:id', isAuthenticated, async (req, res) => {
@@ -546,27 +556,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/admin/users/:id/role', isAuthenticated, isAdmin, async (req: any, res) => {
-    try {
-      const userId = req.params.id;
-      const { role } = req.body;
-      
-      if (!['user', 'admin', 'owner'].includes(role)) {
-        return res.status(400).json({ message: "Invalid role" });
+  app.patch('/api/admin/users/:id/role', 
+    isAuthenticated, 
+    isAdmin, 
+    validateRoleHierarchy,
+    auditLog('USER_ROLE_UPDATE'),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const userId = req.params.id;
+        const { role } = req.body;
+        
+        if (!['user', 'admin', 'owner'].includes(role)) {
+          return res.status(400).json({ message: "Invalid role" });
+        }
+        
+        const updatedUser = await storage.updateUserRole(userId, role);
+        res.json(updatedUser);
+      } catch (error) {
+        console.error("Error updating user role:", error);
+        res.status(500).json({ message: "Failed to update user role" });
       }
-      
-      // Only owners can assign owner role
-      if (role === 'owner' && req.currentUser.role !== 'owner') {
-        return res.status(403).json({ message: "Only owners can assign owner role" });
-      }
-      
-      const updatedUser = await storage.updateUserRole(userId, role);
-      res.json(updatedUser);
-    } catch (error) {
-      console.error("Error updating user role:", error);
-      res.status(500).json({ message: "Failed to update user role" });
     }
-  });
+  );
 
   app.delete('/api/admin/users/:id', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
