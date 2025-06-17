@@ -137,6 +137,7 @@ export const inventoryItems = pgTable("inventory_items", {
   imageUrls: text("image_urls").array(), // Keep for backward compatibility
   imageIds: integer("image_ids").array(), // New: reference to images table
   notes: text("notes"), // Internal notes for the item
+  dateReceived: timestamp("date_received").defaultNow(), // When the item was received/acquired
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   createdBy: varchar("created_by").references(() => users.id),

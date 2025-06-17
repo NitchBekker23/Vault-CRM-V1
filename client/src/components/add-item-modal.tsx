@@ -59,6 +59,7 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
       status: "in_stock",
       imageUrls: [],
       notes: "",
+      dateReceived: new Date(), // Default to today
     },
   });
 
@@ -278,6 +279,25 @@ export default function AddItemModal({ isOpen, onClose }: AddItemModalProps) {
                 )}
               />
             </div>
+            
+            <FormField
+              control={form.control}
+              name="dateReceived"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date Received *</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      {...field}
+                      value={field.value ? new Date(field.value).toISOString().split('T')[0] : ""}
+                      onChange={(e) => field.onChange(e.target.value)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <div>
               <FormLabel>Product Images</FormLabel>

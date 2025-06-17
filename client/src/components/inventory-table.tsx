@@ -255,6 +255,15 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
     }
   };
 
+  const calculateDaysInStock = (dateReceived: string | Date) => {
+    if (!dateReceived) return 0;
+    const receivedDate = new Date(dateReceived);
+    const today = new Date();
+    const diffTime = Math.abs(today.getTime() - receivedDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
   const totalPages = inventoryData ? Math.ceil(inventoryData.total / pageSize) : 0;
 
   return (
@@ -573,6 +582,7 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                         <TableHead>Category</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Price</TableHead>
+                        <TableHead>Days in Stock</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
