@@ -1155,7 +1155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Image upload endpoint for inventory items
-  app.post("/api/inventory/upload-image", isAuthenticated, imageUpload.single('image'), async (req: any, res) => {
+  app.post("/api/inventory/upload-image", checkAuth, imageUpload.single('image'), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No image file provided" });
@@ -1226,7 +1226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/inventory", isAuthenticated, async (req: any, res) => {
+  app.post("/api/inventory", checkAuth, async (req: any, res) => {
     try {
       const validatedData = insertInventoryItemSchema.parse({
         ...req.body,
@@ -1271,7 +1271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/inventory/:id", isAuthenticated, async (req: any, res) => {
+  app.put("/api/inventory/:id", checkAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       
@@ -1304,7 +1304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-  app.delete("/api/inventory/:id", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/inventory/:id", checkAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const item = await storage.getInventoryItem(id);
@@ -1440,7 +1440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bulk import route
-  app.post("/api/inventory/bulk-import", isAuthenticated, csvUpload.single('file'), async (req: any, res) => {
+  app.post("/api/inventory/bulk-import", checkAuth, csvUpload.single('file'), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
