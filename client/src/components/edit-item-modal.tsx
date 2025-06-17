@@ -117,6 +117,41 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
     },
   });
 
+  const deleteItemMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest("DELETE", `/api/inventory/${id}`);
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Item deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/activities/recent"] });
+      onClose();
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error as Error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to delete item. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: InsertInventoryItem) => {
     updateItemMutation.mutate(data);
   };
@@ -308,23 +343,48 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
               maxImages={5}
             />
             
-            <div className="flex items-center justify-end space-x-4 pt-4 border-t border-slate-200">
-              <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
+            <div className="flex items-center justify-between pt-4 border-t border-slate-200">
               <Button 
-                type="submit" 
-                disabled={updateItemMutation.isPending}
+                type="button" 
+                variant="outline"
+                onClick={() => {
+                  if (item && window.confirm(`Are you sure you want to delete "${item.name}"? This action cannot be undone.`)) {
+                    deleteItemMutation.mutate(item.id);
+                  }
+                }}
+                disabled={deleteItemMutation.isPending}
+                className="border-red-200 hover:border-red-300 hover:bg-red-50 text-red-600"
               >
-                {updateItemMutation.isPending ? (
+                {deleteItemMutation.isPending ? (
                   <>
                     <i className="fas fa-spinner fa-spin mr-2"></i>
-                    Updating...
+                    Deleting...
                   </>
                 ) : (
-                  "Update Item"
+                  <>
+                    <i className="fas fa-trash mr-2"></i>
+                    Delete Item
+                  </>
                 )}
               </Button>
+              <div className="flex space-x-4">
+                <Button type="button" variant="outline" onClick={onClose}>
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={updateItemMutation.isPending}
+                >
+                  {updateItemMutation.isPending ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin mr-2"></i>
+                      Updating...
+                    </>
+                  ) : (
+                    "Update Item"
+                  )}
+                </Button>
+              </div>
             </div>
           </form>
         </Form>

@@ -677,15 +677,6 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                                 <i className="fas fa-edit mr-1"></i>
                                 Edit
                               </Button>
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                onClick={() => handleDelete(item)}
-                                className="border-red-200 hover:border-red-300 hover:bg-red-50"
-                              >
-                                <i className="fas fa-trash text-red-500 mr-1"></i>
-                                Delete
-                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
