@@ -548,14 +548,6 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                                 <Edit className="h-4 w-4 mr-1" />
                                 Edit
                               </Button>
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                onClick={() => handleDelete(item)}
-                                className="border-red-200 hover:border-red-300 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                              </Button>
                             </div>
                           </div>
                           
