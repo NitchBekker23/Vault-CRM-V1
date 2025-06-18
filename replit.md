@@ -115,6 +115,12 @@ REPLIT_DOMAINS=[development]
 ```
 
 ## Recent Changes
+- June 18, 2025: Added sortable table columns for inventory management
+  - Implemented clickable Price and Days in Stock column headers
+  - Added ascending/descending sort functionality with visual indicators
+  - Icons show current sort direction (up/down arrows, neutral state)
+  - Hover effects on sortable headers for better user experience
+  - Works seamlessly on both mobile and desktop views
 - June 17, 2025: Fixed inventory management authentication issues
   - **CRITICAL FIX**: Resolved logout issues during edit/create/delete operations
   - Updated all inventory routes to use session-based authentication instead of Passport authentication
@@ -172,3 +178,34 @@ REPLIT_DOMAINS=[development]
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+
+## Planned Development: Sales Management System (June 18, 2025)
+
+### Vision
+Transform inventory management into complete business workflow by implementing sales processing system that moves items from inventory to client purchase history via CSV bulk import.
+
+### Key Requirements Discussed
+- **CSV Sales Import**: Bulk process sales data from previous day
+- **Duplicate Prevention**: Handle overlap between manual sales and CSV imports
+- **Client Purchase Tracking**: Build comprehensive client profiles with purchase history
+- **Inventory Flow**: Clear progression from in_stock → sold → transferred_to_client
+- **VIP Classification**: Automatic client classification based on purchase behavior
+
+### Technical Architecture Planned
+- **Sales Transactions Table**: Link clients to inventory items with pricing data
+- **Enhanced Client Profiles**: Add birthday, preferences, notes, purchase analytics
+- **Composite Unique Keys**: Prevent duplicate sales (client_id + item_serial + sale_date)
+- **Audit Trail System**: Track all inventory status changes with timestamps
+- **Smart CSV Processing**: Preview conflicts, skip duplicates, detailed reporting
+
+### Implementation Phases
+1. **Database Schema**: Sales transactions and enhanced client tables
+2. **Client Management**: Enhanced profiles with purchase history
+3. **CSV Sales Import**: Duplicate-aware bulk processing system
+4. **Analytics Dashboard**: Purchase patterns, VIP identification, profit tracking
+
+### Concerns Addressed
+- Automatic duplicate detection without manual CSV editing
+- Unified transaction system for both manual and CSV sales
+- Complete audit trail for inventory status transitions
+- Conflict resolution with detailed import previews
