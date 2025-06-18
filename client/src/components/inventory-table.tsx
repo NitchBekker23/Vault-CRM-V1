@@ -29,7 +29,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MoreVertical, Plus, Upload, Eye, Edit, Trash2 } from "lucide-react";
+import { MoreVertical, Plus, Upload, Eye, Edit, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,6 +49,9 @@ interface InventoryTableProps {
   allowBulkActions?: boolean;
 }
 
+type SortField = 'price' | 'daysInStock' | null;
+type SortDirection = 'asc' | 'desc';
+
 export default function InventoryTable({ showHeader = true, limit, allowBulkActions = true }: InventoryTableProps) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(limit || 10);
@@ -56,6 +59,8 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("");
   const [dateRange, setDateRange] = useState("");
+  const [sortField, setSortField] = useState<SortField>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -231,6 +236,26 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
     }
   };
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new field with ascending direction
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ChevronsUpDown className="h-4 w-4" />;
+    }
+    return sortDirection === 'asc' ? 
+      <ChevronUp className="h-4 w-4" /> : 
+      <ChevronDown className="h-4 w-4" />;
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "in_stock":
@@ -265,6 +290,27 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
   };
+
+  // Sort the inventory data
+  const sortedItems = inventoryData?.items ? [...inventoryData.items].sort((a, b) => {
+    if (!sortField) return 0;
+    
+    let aValue: number | undefined;
+    let bValue: number | undefined;
+    
+    if (sortField === 'price') {
+      aValue = a.price ? parseFloat(a.price) : 0;
+      bValue = b.price ? parseFloat(b.price) : 0;
+    } else if (sortField === 'daysInStock') {
+      aValue = a.dateReceived ? calculateDaysInStock(a.dateReceived) : 0;
+      bValue = b.dateReceived ? calculateDaysInStock(b.dateReceived) : 0;
+    }
+    
+    if (aValue === undefined || bValue === undefined) return 0;
+    
+    const comparison = aValue - bValue;
+    return sortDirection === 'asc' ? comparison : -comparison;
+  }) : [];
 
   const totalPages = inventoryData ? Math.ceil(inventoryData.total / pageSize) : 0;
 
@@ -457,7 +503,7 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                       )}
                     </div>
                   )}
-                  {inventoryData.items.map((item) => (
+                  {sortedItems.map((item) => (
                     <Card key={item.id} className="overflow-hidden">
                       <CardContent className="p-4">
                         <div className="flex items-start space-x-3">
@@ -600,8 +646,24 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                         <TableHead>Brand</TableHead>
                         <TableHead>Category</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Days in Stock</TableHead>
+                        <TableHead 
+                          className="cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                          onClick={() => handleSort('price')}
+                        >
+                          <div className="flex items-center space-x-1">
+                            <span>Price</span>
+                            {getSortIcon('price')}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                          onClick={() => handleSort('daysInStock')}
+                        >
+                          <div className="flex items-center space-x-1">
+                            <span>Days in Stock</span>
+                            {getSortIcon('daysInStock')}
+                          </div>
+                        </TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
