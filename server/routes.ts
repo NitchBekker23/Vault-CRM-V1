@@ -1235,16 +1235,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Auto-inherit images from existing SKUs if no images provided
       if (validatedData.sku && validatedData.sku.trim() && (!validatedData.imageUrls || validatedData.imageUrls.length === 0)) {
+        console.log(`Individual creation: Checking for existing SKU images for SKU: ${validatedData.sku.trim()}`);
         const existingSkuItems = await storage.getInventoryItemsBySku(validatedData.sku.trim());
+        console.log(`Individual creation: Found ${existingSkuItems.length} existing items with SKU: ${validatedData.sku.trim()}`);
         
         if (existingSkuItems.length > 0) {
+          // Log all found items for debugging
+          for (const item of existingSkuItems) {
+            console.log(`- Item ID ${item.id}: ${item.name}, Images: ${item.imageUrls ? item.imageUrls.length : 0}`);
+          }
+          
           const itemWithImages = existingSkuItems.find(item => 
             item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0
           );
           
           if (itemWithImages && itemWithImages.imageUrls && Array.isArray(itemWithImages.imageUrls)) {
             validatedData.imageUrls = itemWithImages.imageUrls;
-            console.log(`Individual creation: Inherited ${itemWithImages.imageUrls.length} images from existing SKU: ${validatedData.sku}`);
+            console.log(`Individual creation: Inherited ${itemWithImages.imageUrls.length} images from existing SKU item: ${itemWithImages.name} (ID: ${itemWithImages.id})`);
+          } else {
+            console.log(`Individual creation: No existing items with images found for SKU: ${validatedData.sku.trim()}`);
           }
         }
       }
@@ -1616,7 +1625,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Auto-inherit images from existing SKUs if no images provided
           if (validatedData.sku && validatedData.sku.trim() && (!validatedData.imageUrls || validatedData.imageUrls.length === 0)) {
+            console.log(`CSV Import: Checking for existing SKU images for SKU: ${validatedData.sku.trim()}`);
             const existingSkuItems = await storage.getInventoryItemsBySku(validatedData.sku.trim());
+            console.log(`CSV Import: Found ${existingSkuItems.length} existing items with SKU: ${validatedData.sku.trim()}`);
             
             if (existingSkuItems.length > 0) {
               // Find the first item with images
@@ -1626,6 +1637,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               if (itemWithImages && itemWithImages.imageUrls && Array.isArray(itemWithImages.imageUrls)) {
                 validatedData.imageUrls = itemWithImages.imageUrls;
+                console.log(`CSV Import: Inherited ${itemWithImages.imageUrls.length} images from existing SKU item: ${itemWithImages.name} (ID: ${itemWithImages.id})`);
+              } else {
+                console.log(`CSV Import: No existing items with images found for SKU: ${validatedData.sku.trim()}`);
               }
             }
           }

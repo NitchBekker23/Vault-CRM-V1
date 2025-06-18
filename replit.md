@@ -115,6 +115,22 @@ REPLIT_DOMAINS=[development]
 ```
 
 ## Recent Changes
+- June 17, 2025: Fixed inventory management authentication issues
+  - **CRITICAL FIX**: Resolved logout issues during edit/create/delete operations
+  - Updated all inventory routes to use session-based authentication instead of Passport authentication
+  - Fixed routes: create items, edit items, delete items, bulk import, image uploads, storage analytics
+  - Users can now edit items with cost prices without being logged out
+  - Authentication remains stable throughout all inventory operations
+- June 17, 2025: Implemented complete cost price functionality
+  - Added costPrice field to database schema with proper decimal precision
+  - Updated add/edit forms with side-by-side selling price and cost price fields
+  - Enhanced item details modal to display both prices (selling price in green, cost price in orange)
+  - Updated CSV import template and processing to include cost price validation
+  - Cost price is optional and validates as positive decimal number
+- June 17, 2025: Enhanced SKU image inheritance debugging
+  - Added comprehensive logging for SKU image inheritance during imports
+  - Improved debugging for both individual item creation and bulk CSV imports
+  - System now logs detailed information about existing SKU items and image inheritance
 - June 17, 2025: Fixed critical authentication session bug affecting all users
   - **CRITICAL FIX**: Authentication was overwriting all user roles to "user" on every login
   - Modified authentication to preserve existing admin/owner roles across login sessions
