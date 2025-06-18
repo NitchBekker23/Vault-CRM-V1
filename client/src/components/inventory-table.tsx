@@ -213,8 +213,8 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
   };
 
   const handleSelectAll = (checked: boolean) => {
-    if (checked && inventoryData) {
-      setSelectedItems(new Set(inventoryData.items.map(item => item.id)));
+    if (checked && sortedItems.length > 0) {
+      setSelectedItems(new Set(sortedItems.map(item => item.id)));
     } else {
       setSelectedItems(new Set());
     }
@@ -491,7 +491,7 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                     <div className="flex items-center justify-between pb-3 border-b border-slate-200">
                       <div className="flex items-center space-x-2">
                         <Checkbox
-                          checked={inventoryData?.items.length > 0 && selectedItems.size === inventoryData.items.length}
+                          checked={sortedItems.length > 0 && selectedItems.size === sortedItems.length}
                           onCheckedChange={handleSelectAll}
                         />
                         <span className="text-sm text-slate-600">Select all</span>
@@ -636,7 +636,7 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                         {allowBulkActions && (
                           <TableHead className="w-12">
                             <Checkbox
-                              checked={inventoryData?.items.length > 0 && selectedItems.size === inventoryData.items.length}
+                              checked={sortedItems.length > 0 && selectedItems.size === sortedItems.length}
                               onCheckedChange={handleSelectAll}
                             />
                           </TableHead>
@@ -668,7 +668,7 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {inventoryData.items.map((item) => (
+                      {sortedItems.map((item) => (
                         <TableRow key={item.id} className="hover:bg-slate-50">
                           {allowBulkActions && (
                             <TableCell>
