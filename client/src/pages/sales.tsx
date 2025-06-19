@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, Plus, FileText, TrendingUp, Users, DollarSign, Package } from "lucide-react";
+import { Upload, Plus, FileText, TrendingUp, Users, DollarSign, Package, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -119,12 +119,29 @@ export default function Sales() {
     }
   };
 
+  const downloadTemplate = () => {
+    const csvContent = `clientEmail,itemSerialNumber,saleDate,sellingPrice,retailPrice,transactionType,notes
+john.doe@example.com,SN123456789,2025-06-19,2500.00,3000.00,sale,Premium watch sale
+jane.smith@example.com,SN987654321,2025-06-19,1800.00,2200.00,sale,Leather goods purchase
+customer@example.com,SN555666777,2025-06-19,500.00,600.00,credit,Return credit for defective item`;
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('hidden', '');
+    a.setAttribute('href', url);
+    a.setAttribute('download', 'sales_import_template.csv');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   const formatCurrency = (amount: string | number | null) => {
-    if (!amount) return "$0.00";
+    if (!amount) return "R0.00";
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-ZA', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'ZAR',
     }).format(num);
   };
 
@@ -155,14 +172,19 @@ export default function Sales() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Sales Management</h1>
-        <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <Upload className="w-4 h-4 mr-2" />
-              Import Sales CSV
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={downloadTemplate}>
+            <Download className="w-4 h-4 mr-2" />
+            Download Template
+          </Button>
+          <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+            <DialogTrigger asChild>
+              <Button>
+                <Upload className="w-4 h-4 mr-2" />
+                Import Sales CSV
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
             <DialogHeader>
               <DialogTitle>Import Sales Transactions</DialogTitle>
             </DialogHeader>
@@ -176,7 +198,7 @@ export default function Sales() {
                   onChange={handleFileChange}
                 />
                 <p className="text-sm text-muted-foreground mt-1">
-                  CSV should include: clientEmail, itemSerialNumber, saleDate, sellingPrice
+                  CSV should include: clientEmail, itemSerialNumber, saleDate, sellingPrice, retailPrice, transactionType, notes
                 </p>
               </div>
               {csvFile && (
@@ -201,7 +223,8 @@ export default function Sales() {
               </div>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>

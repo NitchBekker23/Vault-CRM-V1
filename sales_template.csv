@@ -1,0 +1,4 @@
+clientEmail,itemSerialNumber,saleDate,sellingPrice,retailPrice,transactionType,notes
+john.doe@example.com,SN123456789,2025-06-19,2500.00,3000.00,sale,Premium watch sale
+jane.smith@example.com,SN987654321,2025-06-19,1800.00,2200.00,sale,Leather goods purchase
+customer@example.com,SN555666777,2025-06-19,500.00,600.00,credit,Return credit for defective item
