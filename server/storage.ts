@@ -225,9 +225,31 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     try {
-      const { data: user, error } = await db.from('users').select('*').eq('email', email).single();
-      if (error && error.code !== 'PGRST116') throw error;
-      return user || undefined;
+      const { data: users, error } = await db.from('users').select('*').eq('email', email);
+      if (error) throw error;
+      
+      const user = users && users.length > 0 ? users[0] : undefined;
+      if (!user) return undefined;
+      
+      // Map snake_case database fields to camelCase for compatibility
+      return {
+        id: user.id.toString(),
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        company: user.company,
+        phoneNumber: user.phone_number,
+        password: user.password, // For legacy compatibility
+        password_hash: user.password_hash, // Keep both for password verification
+        profileImageUrl: user.profile_image_url,
+        role: user.role,
+        status: user.status,
+        twoFactorEnabled: user.two_factor_enabled,
+        twoFactorMethod: user.two_factor_method,
+        lastLoginAt: user.last_login_at,
+        createdAt: user.created_at,
+        updatedAt: user.updated_at
+      } as User;
     } catch (error) {
       console.error('Error fetching user by email:', error);
       throw error;

@@ -255,23 +255,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Simple admin bypass for testing
       if (adminKey === "admin123temp") {
-        const user = await storage.getUserByEmail("nitchbekker@gmail.com");
+        // Direct Supabase query to bypass storage layer issues
+        const { data: users, error } = await db.from('users').select('*').eq('email', 'nitchbekker@gmail.com');
+        if (error) {
+          console.error("Database error:", error);
+          return res.status(500).json({ message: "Admin login failed" });
+        }
+        
+        const user = users && users.length > 0 ? users[0] : null;
         if (!user) {
           return res.status(404).json({ message: "Admin user not found" });
         }
         
         // Store user session
-        (req.session as any).userId = user.id;
+        (req.session as any).userId = user.id.toString();
         (req.session as any).authenticated = true;
         (req.session as any).userEmail = user.email;
         
         res.json({ 
           message: "Admin login successful",
           user: {
-            id: user.id,
+            id: user.id.toString(),
             email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
+            firstName: user.first_name,
+            lastName: user.last_name,
             company: user.company,
             role: user.role,
             status: user.status
@@ -789,8 +796,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email and password are required" });
       }
       
-      // Find user by email
-      const user = await storage.getUserByEmail(email);
+      // Direct Supabase query to bypass storage layer issues
+      const { data: users, error } = await db
+        .from('users')
+        .select('*')
+        .eq('email', email);
+      if (error) {
+        console.error("Database error:", error);
+        return res.status(500).json({ message: "Login failed" });
+      }
+      
+      const user = users && users.length > 0 ? users[0] : null;
       if (!user) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
@@ -807,17 +823,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Store user session
-      (req.session as any).userId = user.id;
+      (req.session as any).userId = user.id.toString();
       (req.session as any).authenticated = true;
       (req.session as any).userEmail = user.email;
       
       res.json({ 
         message: "Login successful",
         user: {
-          id: user.id,
+          id: user.id.toString(),
           email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
+          firstName: user.first_name,
+          lastName: user.last_name,
           company: user.company,
           role: user.role,
           status: user.status
