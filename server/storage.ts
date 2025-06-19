@@ -54,6 +54,8 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, ilike, or, gte, lt, inArray } from "drizzle-orm";
+import csv from "csv-parser";
+import { Readable } from "stream";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -1073,8 +1075,10 @@ export class DatabaseStorage implements IStorage {
     errors: Array<{ row: number; error: string; data: any }>;
     duplicates: Array<{ row: number; existing: SalesTransaction; data: any }>;
   }> {
-    const csv = require('csv-parser');
-    const { Readable } = require('stream');
+    console.log(`=== SALES CSV IMPORT STARTED ===`);
+    console.log(`User ID: ${userId}`);
+    console.log(`Batch ID: ${batchId}`);
+    console.log(`CSV Buffer Size: ${csvBuffer.length} bytes`);
     
     const results: any[] = [];
     const errors: Array<{ row: number; error: string; data: any }> = [];
@@ -1091,13 +1095,36 @@ export class DatabaseStorage implements IStorage {
         })
         .on('end', async () => {
           try {
+            console.log(`=== CSV PARSING COMPLETE ===`);
+            console.log(`Total rows parsed: ${results.length}`);
+            
+            if (results.length === 0) {
+              console.error(`No data rows found in CSV`);
+              resolve({ successful: 0, errors: [{ row: 1, error: "No data rows found in CSV file", data: {} }], duplicates: [] });
+              return;
+            }
+            
             for (let i = 0; i < results.length; i++) {
               const row = results[i];
               const rowNumber = i + 2; // +2 because CSV header is row 1, data starts at row 2
 
               try {
+                console.log(`=== PROCESSING ROW ${rowNumber} ===`);
+                console.log(`Raw row data:`, JSON.stringify(row, null, 2));
+                
+                // Skip empty rows or comment rows
+                if (!row.itemSerialNumber || row.itemSerialNumber.trim() === '' || row.itemSerialNumber.startsWith('#')) {
+                  console.log(`Skipping empty or comment row ${rowNumber}`);
+                  continue;
+                }
+                
                 // Validate required fields
                 if (!row.itemSerialNumber || !row.saleDate || !row.sellingPrice) {
+                  console.error(`Row ${rowNumber} missing required fields:`, {
+                    hasItemSerialNumber: !!row.itemSerialNumber,
+                    hasSaleDate: !!row.saleDate,
+                    hasSellingPrice: !!row.sellingPrice
+                  });
                   errors.push({
                     row: rowNumber,
                     error: "Missing required fields: itemSerialNumber, saleDate, sellingPrice",
@@ -1107,15 +1134,17 @@ export class DatabaseStorage implements IStorage {
                 }
 
                 // Find or create client (prioritize clientId, then customerCode)
+                console.log(`Looking up client - clientId: ${row.clientId}, customerCode: ${row.customerCode}`);
                 let client;
                 if (row.clientId) {
-                  // Look up existing client by ID
+                  console.log(`Searching for client with ID: ${row.clientId}`);
                   [client] = await db
                     .select()
                     .from(clients)
                     .where(eq(clients.id, parseInt(row.clientId)));
                   
                   if (!client) {
+                    console.error(`Client not found with ID: ${row.clientId}`);
                     errors.push({
                       row: rowNumber,
                       error: `Client not found with ID: ${row.clientId}`,
@@ -1123,15 +1152,16 @@ export class DatabaseStorage implements IStorage {
                     });
                     continue;
                   }
+                  console.log(`Found existing client:`, { id: client.id, fullName: client.fullName });
                 } else if (row.customerCode) {
-                  // Try to find existing client by customer code or create new one
+                  console.log(`Searching for client with customer code: ${row.customerCode}`);
                   [client] = await db
                     .select()
                     .from(clients)
                     .where(eq(clients.notes, `Customer Code: ${row.customerCode}`));
                   
                   if (!client) {
-                    // Create client with customer code
+                    console.log(`Creating new client for customer code: ${row.customerCode}`);
                     [client] = await db
                       .insert(clients)
                       .values({
@@ -1139,9 +1169,12 @@ export class DatabaseStorage implements IStorage {
                         notes: `Customer Code: ${row.customerCode}`
                       })
                       .returning();
+                    console.log(`Created new client:`, { id: client.id, fullName: client.fullName });
+                  } else {
+                    console.log(`Found existing client for customer code:`, { id: client.id, fullName: client.fullName });
                   }
                 } else {
-                  // Create anonymous client for this transaction
+                  console.log(`Creating anonymous client for item: ${row.itemSerialNumber}`);
                   [client] = await db
                     .insert(clients)
                     .values({
@@ -1149,15 +1182,18 @@ export class DatabaseStorage implements IStorage {
                       notes: `Anonymous sale for item ${row.itemSerialNumber}`
                     })
                     .returning();
+                  console.log(`Created anonymous client:`, { id: client.id, fullName: client.fullName });
                 }
 
                 // Find inventory item by serial number
+                console.log(`Looking up inventory item with serial: ${row.itemSerialNumber}`);
                 const [inventoryItem] = await db
                   .select()
                   .from(inventoryItems)
                   .where(eq(inventoryItems.serialNumber, row.itemSerialNumber));
 
                 if (!inventoryItem) {
+                  console.error(`Inventory item not found with serial: ${row.itemSerialNumber}`);
                   errors.push({
                     row: rowNumber,
                     error: `Inventory item not found with serial number: ${row.itemSerialNumber}`,
@@ -1165,9 +1201,12 @@ export class DatabaseStorage implements IStorage {
                   });
                   continue;
                 }
+                console.log(`Found inventory item:`, { id: inventoryItem.id, name: inventoryItem.name, status: inventoryItem.status });
 
+                console.log(`Validating sale date: ${row.saleDate}`);
                 const saleDate = new Date(row.saleDate);
                 if (isNaN(saleDate.getTime())) {
+                  console.error(`Invalid sale date: ${row.saleDate}`);
                   errors.push({
                     row: rowNumber,
                     error: `Invalid sale date format: ${row.saleDate}`,
@@ -1177,8 +1216,12 @@ export class DatabaseStorage implements IStorage {
                 }
 
                 // Validate sales person and store data
+                console.log(`Validating sales person: ${row.salesPerson}, store: ${row.store}`);
                 const validation = await this.validateSalesData(row.salesPerson, row.store);
+                console.log(`Validation result:`, validation);
+                
                 if (row.salesPerson && !validation.validSalesPerson) {
+                  console.error(`Invalid sales person: ${row.salesPerson}`);
                   errors.push({
                     row: rowNumber,
                     error: `Invalid sales person: ${row.salesPerson}`,
@@ -1187,6 +1230,7 @@ export class DatabaseStorage implements IStorage {
                   continue;
                 }
                 if (row.store && !validation.validStore) {
+                  console.error(`Invalid store: ${row.store}`);
                   errors.push({
                     row: rowNumber,
                     error: `Invalid store: ${row.store}`,
