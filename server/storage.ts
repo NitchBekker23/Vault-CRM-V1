@@ -1166,6 +1166,9 @@ export class DatabaseStorage implements IStorage {
                       .insert(clients)
                       .values({
                         fullName: `Customer ${row.customerCode}`,
+                        firstName: `Customer`,
+                        lastName: `${row.customerCode}`,
+                        email: `${row.customerCode.toLowerCase()}@customer.vault.com`,
                         notes: `Customer Code: ${row.customerCode}`
                       })
                       .returning();
@@ -1175,10 +1178,14 @@ export class DatabaseStorage implements IStorage {
                   }
                 } else {
                   console.log(`Creating anonymous client for item: ${row.itemSerialNumber}`);
+                  const timestamp = Date.now();
                   [client] = await db
                     .insert(clients)
                     .values({
-                      fullName: `Anonymous Sale ${Date.now()}`,
+                      fullName: `Anonymous Sale ${timestamp}`,
+                      firstName: `Anonymous`,
+                      lastName: `Sale${timestamp}`,
+                      email: `anonymous.${timestamp}@sale.vault.com`,
                       notes: `Anonymous sale for item ${row.itemSerialNumber}`
                     })
                     .returning();
@@ -1264,9 +1271,9 @@ export class DatabaseStorage implements IStorage {
                   inventoryItemId: inventoryItem.id,
                   transactionType: (row.transactionType as any) || 'sale',
                   saleDate,
-                  retailPrice: row.retailPrice ? parseFloat(row.retailPrice).toString() : null,
-                  sellingPrice: parseFloat(row.sellingPrice).toString(),
-                  profitMargin: row.profitMargin ? parseFloat(row.profitMargin).toString() : null,
+                  retailPrice: row.retailPrice ? parseFloat(row.retailPrice) : null,
+                  sellingPrice: parseFloat(row.sellingPrice),
+                  profitMargin: row.profitMargin ? parseFloat(row.profitMargin) : null,
                   customerCode: row.customerCode || null,
                   salesPerson: row.salesPerson || null,
                   store: row.store || null,
