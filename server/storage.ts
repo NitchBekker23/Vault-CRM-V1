@@ -989,6 +989,9 @@ export class DatabaseStorage implements IStorage {
           retailPrice: salesTransactions.retailPrice,
           sellingPrice: salesTransactions.sellingPrice,
           profitMargin: salesTransactions.profitMargin,
+          customerCode: salesTransactions.customerCode,
+          salesPerson: salesTransactions.salesPerson,
+          store: salesTransactions.store,
           originalTransactionId: salesTransactions.originalTransactionId,
           csvBatchId: salesTransactions.csvBatchId,
           source: salesTransactions.source,
@@ -1117,10 +1120,7 @@ export class DatabaseStorage implements IStorage {
                     [client] = await db
                       .insert(clients)
                       .values({
-                        full_name: `Customer ${row.customerCode}`,
-                        email: null,
-                        phone: null,
-                        address: null,
+                        fullName: `Customer ${row.customerCode}`,
                         notes: `Customer Code: ${row.customerCode}`
                       })
                       .returning();
@@ -1130,10 +1130,7 @@ export class DatabaseStorage implements IStorage {
                   [client] = await db
                     .insert(clients)
                     .values({
-                      full_name: `Anonymous Sale ${Date.now()}`,
-                      email: null,
-                      phone: null,
-                      address: null,
+                      fullName: `Anonymous Sale ${Date.now()}`,
                       notes: `Anonymous sale for item ${row.itemSerialNumber}`
                     })
                     .returning();
@@ -1298,7 +1295,7 @@ export class DatabaseStorage implements IStorage {
                 if (!client) {
                   client = {
                     id: 0,
-                    fullName: row.customerCode ? `Customer ${row.customerCode}` : 'Anonymous Customer'
+                    full_name: row.customerCode ? `Customer ${row.customerCode}` : 'Anonymous Customer'
                   };
                 }
 
