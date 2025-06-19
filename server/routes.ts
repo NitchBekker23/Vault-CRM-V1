@@ -2211,7 +2211,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate unique batch ID for this import
       const batchId = `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
+      console.log(`=== STARTING CSV IMPORT ROUTE ===`);
+      console.log(`File size: ${req.file.buffer.length} bytes`);
+      console.log(`User ID: ${userId}`);
+      console.log(`Batch ID: ${batchId}`);
+      
       const results = await storage.processSalesCSVImport(req.file.buffer, userId, batchId);
+      
+      console.log(`=== CSV IMPORT ROUTE COMPLETE ===`);
+      console.log(`Results:`, JSON.stringify(results, null, 2));
 
       // Log bulk import activity
       await storage.createActivity({
