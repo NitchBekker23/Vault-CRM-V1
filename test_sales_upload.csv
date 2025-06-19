@@ -1,0 +1,3 @@
+itemSerialNumber,saleDate,sellingPrice,retailPrice,transactionType,clientId,customerCode,salesPerson,store,notes
+# Test CSV file for sales upload with comprehensive logging
+# This should work with existing inventory items

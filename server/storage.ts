@@ -1240,6 +1240,7 @@ export class DatabaseStorage implements IStorage {
                 }
 
                 // Check for duplicates
+                console.log(`Checking for duplicate transaction: clientId=${client.id}, itemId=${inventoryItem.id}, date=${saleDate.toISOString()}`);
                 const existing = await this.findDuplicateTransaction(
                   client.id,
                   inventoryItem.id,
@@ -1247,6 +1248,7 @@ export class DatabaseStorage implements IStorage {
                 );
 
                 if (existing) {
+                  console.log(`Duplicate transaction found:`, { id: existing.id, clientId: existing.clientId });
                   duplicates.push({
                     row: rowNumber,
                     existing,
@@ -1256,6 +1258,7 @@ export class DatabaseStorage implements IStorage {
                 }
 
                 // Create transaction
+                console.log(`Creating transaction data...`);
                 const transactionData: InsertSalesTransaction = {
                   clientId: client.id,
                   inventoryItemId: inventoryItem.id,
@@ -1272,20 +1275,26 @@ export class DatabaseStorage implements IStorage {
                   notes: row.notes || null,
                   processedBy: userId,
                 };
+                console.log(`Transaction data prepared:`, JSON.stringify(transactionData, null, 2));
 
+                console.log(`Creating sales transaction...`);
                 await this.createSalesTransaction(transactionData);
 
                 // Update inventory item status
+                console.log(`Updating inventory item status to 'sold'...`);
                 await this.updateInventoryItem(inventoryItem.id, {
                   status: 'sold'
                 });
 
                 // Update client statistics
+                console.log(`Updating client purchase stats...`);
                 await this.updateClientPurchaseStats(client.id);
 
                 successful++;
+                console.log(`Row ${rowNumber} processed successfully. Total successful: ${successful}`);
 
               } catch (error) {
+                console.error(`Error processing row ${rowNumber}:`, error);
                 errors.push({
                   row: rowNumber,
                   error: error instanceof Error ? error.message : 'Unknown error',
@@ -1294,12 +1303,20 @@ export class DatabaseStorage implements IStorage {
               }
             }
 
+            console.log(`=== CSV IMPORT COMPLETE ===`);
+            console.log(`Total successful: ${successful}`);
+            console.log(`Total errors: ${errors.length}`);
+            console.log(`Total duplicates: ${duplicates.length}`);
             resolve({ successful, errors, duplicates });
           } catch (error) {
+            console.error(`Critical error during CSV processing:`, error);
             reject(error);
           }
         })
-        .on('error', reject);
+        .on('error', (error) => {
+          console.error(`CSV parsing error:`, error);
+          reject(error);
+        });
     });
   }
 
@@ -1308,8 +1325,6 @@ export class DatabaseStorage implements IStorage {
     duplicates: Array<{ row: number; existing: SalesTransaction; data: any }>;
     errors: Array<{ row: number; error: string; data: any }>;
   }> {
-    const csv = require('csv-parser');
-    const { Readable } = require('stream');
     
     const results: any[] = [];
     const valid: any[] = [];
