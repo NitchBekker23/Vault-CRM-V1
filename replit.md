@@ -115,6 +115,15 @@ REPLIT_DOMAINS=[development]
 ```
 
 ## Recent Changes
+- June 19, 2025: Enhanced sales tracking system with comprehensive field expansion
+  - **EXPANDED SALES TRACKING**: Added customer code, sales person, and store tracking fields to sales transactions
+  - Updated CSV import template to include customerCode, salesPerson, and store columns for detailed attribution
+  - Created database tables for stores and sales_persons with proper relationships and validation
+  - Enhanced sales analytics to support store-based and sales person performance tracking
+  - Fixed currency display issues - replaced all dollar ($) symbols with South African Rand (R) symbols
+  - Updated CSV template examples with realistic customer codes (CUST001, etc.), sales person names, and store locations
+  - **DATABASE SCHEMA**: Added customer_code, sales_person, and store VARCHAR columns to sales_transactions table
+  - **FUTURE ANALYTICS**: Infrastructure ready for sales person performance reports and store-based revenue analysis
 - June 19, 2025: Implemented comprehensive sales management system
   - **MAJOR FEATURE**: Complete sales transaction system with CSV bulk import capability
   - Added sales_transactions and transaction_status_log database tables with proper relationships
