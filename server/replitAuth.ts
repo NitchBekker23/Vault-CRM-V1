@@ -24,16 +24,10 @@ const getOidcConfig = memoize(
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
-    ttl: sessionTtl,
-    tableName: "sessions",
-  });
+  
+  // Use memory store for Teams environment (PostgreSQL direct connection blocked)
   return session({
     secret: process.env.SESSION_SECRET!,
-    store: sessionStore,
     resave: true,
     saveUninitialized: true,
     cookie: {

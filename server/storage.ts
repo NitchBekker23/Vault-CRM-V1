@@ -202,7 +202,9 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   async testConnection(): Promise<void> {
     try {
-      await db.execute(sql`SELECT 1`);
+      // Test Supabase connection
+      const { data, error } = await db.from('users').select('count').limit(1);
+      if (error) throw error;
       console.log('Database connection test successful');
     } catch (error) {
       console.error('Database connection test failed:', error);
@@ -212,8 +214,9 @@ export class DatabaseStorage implements IStorage {
 
   async getUser(id: string): Promise<User | undefined> {
     try {
-      const [user] = await db.select().from(users).where(eq(users.id, id));
-      return user;
+      const { data: users, error } = await db.from('users').select('*').eq('id', id).single();
+      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows found
+      return users || undefined;
     } catch (error) {
       console.error('Error fetching user:', error);
       throw error;
@@ -222,8 +225,9 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     try {
-      const [user] = await db.select().from(users).where(eq(users.email, email));
-      return user;
+      const { data: user, error } = await db.from('users').select('*').eq('email', email).single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return user || undefined;
     } catch (error) {
       console.error('Error fetching user by email:', error);
       throw error;

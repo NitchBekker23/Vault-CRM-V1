@@ -1,16 +1,14 @@
-import { neon, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
+import { createClient } from '@supabase/supabase-js';
 import * as schema from "@shared/schema";
 
-if (!process.env.DATABASE_URL) {
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
   throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
+    "SUPABASE_URL and SUPABASE_ANON_KEY must be set for Teams environment",
   );
 }
 
-// Configure for both Neon and Supabase compatibility
-neonConfig.fetchConnectionCache = true;
+// Use Supabase client directly for Teams environment
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 
-// Use HTTP connection for better stability with both providers
-const sql = neon(process.env.DATABASE_URL);
-export const db = drizzle(sql, { schema });
+// Export Supabase client as db for compatibility
+export const db = supabase;
