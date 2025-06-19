@@ -228,10 +228,21 @@ export const salesPersons = pgTable("sales_persons", {
   lastName: varchar("last_name").notNull(),
   employeeId: varchar("employee_id").unique(),
   email: varchar("email").unique(),
-  storeId: integer("store_id").references(() => stores.id),
+  currentStoreId: integer("current_store_id").references(() => stores.id), // Current assignment
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Track sales person store assignment history
+export const salesPersonStoreHistory = pgTable("sales_person_store_history", {
+  id: serial("id").primaryKey(),
+  salesPersonId: integer("sales_person_id").references(() => salesPersons.id).notNull(),
+  storeId: integer("store_id").references(() => stores.id).notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date"), // NULL means current assignment
+  reason: varchar("reason"), // "transfer", "promotion", "temporary"
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Enhanced sales transactions table
