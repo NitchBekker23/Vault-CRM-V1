@@ -435,7 +435,7 @@ export const storesRelations = relations(stores, ({ many }) => ({
 
 export const salesPersonsRelations = relations(salesPersons, ({ one }) => ({
   store: one(stores, {
-    fields: [salesPersons.storeId],
+    fields: [salesPersons.currentStoreId],
     references: [stores.id],
   }),
 }));

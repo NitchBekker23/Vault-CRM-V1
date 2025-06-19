@@ -2329,6 +2329,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Store management endpoints
+  app.get("/api/stores", checkAuth, async (req: any, res) => {
+    try {
+      const stores = await storage.getAllStores();
+      res.json(stores);
+    } catch (error) {
+      console.error("Error fetching stores:", error);
+      res.status(500).json({ message: "Failed to fetch stores" });
+    }
+  });
+
+  app.post("/api/stores", checkAuth, async (req: any, res) => {
+    try {
+      const store = await storage.createStore(req.body);
+      res.json(store);
+    } catch (error) {
+      console.error("Error creating store:", error);
+      res.status(500).json({ message: "Failed to create store" });
+    }
+  });
+
+  // Sales person management endpoints
+  app.get("/api/sales-persons", checkAuth, async (req: any, res) => {
+    try {
+      const salesPersons = await storage.getAllSalesPersons();
+      res.json(salesPersons);
+    } catch (error) {
+      console.error("Error fetching sales persons:", error);
+      res.status(500).json({ message: "Failed to fetch sales persons" });
+    }
+  });
+
+  app.post("/api/sales-persons", checkAuth, async (req: any, res) => {
+    try {
+      const salesPerson = await storage.createSalesPerson(req.body);
+      res.json(salesPerson);
+    } catch (error) {
+      console.error("Error creating sales person:", error);
+      res.status(500).json({ message: "Failed to create sales person" });
+    }
+  });
+
   // Sales analytics endpoint
   app.get("/api/sales-analytics", checkAuth, async (req: any, res) => {
     try {

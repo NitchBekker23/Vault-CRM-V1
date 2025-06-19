@@ -14,6 +14,9 @@ import {
   notifications,
   salesTransactions,
   transactionStatusLog,
+  stores,
+  salesPersons,
+  salesPersonStoreHistory,
   type User,
   type UpsertUser,
   type InventoryItem,
@@ -42,6 +45,10 @@ import {
   type InsertNotification,
   type SalesTransaction,
   type InsertSalesTransaction,
+  type Store,
+  type InsertStore,
+  type SalesPerson,
+  type InsertSalesPerson,
   type TransactionStatusLog,
   type InsertTransactionStatusLog,
 } from "@shared/schema";
@@ -1407,6 +1414,56 @@ export class DatabaseStorage implements IStorage {
       transactions: transactions as SalesTransaction[],
       total: totalResult[0]?.count || 0,
     };
+  }
+
+  // Store management
+  async createStore(storeData: any): Promise<any> {
+    const [store] = await db.insert(stores).values(storeData).returning();
+    return store;
+  }
+
+  async getAllStores(): Promise<any[]> {
+    return await db.select().from(stores).where(eq(stores.isActive, true));
+  }
+
+  async updateStore(id: number, storeData: any): Promise<any> {
+    const [store] = await db.update(stores).set(storeData).where(eq(stores.id, id)).returning();
+    return store;
+  }
+
+  // Sales person management
+  async createSalesPerson(personData: any): Promise<any> {
+    const [person] = await db.insert(salesPersons).values(personData).returning();
+    return person;
+  }
+
+  async getAllSalesPersons(): Promise<any[]> {
+    return await db.select().from(salesPersons).where(eq(salesPersons.isActive, true));
+  }
+
+  async updateSalesPerson(id: number, personData: any): Promise<any> {
+    const [person] = await db.update(salesPersons).set(personData).where(eq(salesPersons.id, id)).returning();
+    return person;
+  }
+
+  // Validate sales person and store names for CSV imports
+  async validateSalesData(salesPerson?: string, store?: string): Promise<{ validSalesPerson: boolean; validStore: boolean }> {
+    let validSalesPerson = true;
+    let validStore = true;
+
+    if (salesPerson) {
+      const persons = await db.select().from(salesPersons).where(eq(salesPersons.isActive, true));
+      const fullNames = persons.map(p => `${p.firstName} ${p.lastName}`);
+      validSalesPerson = fullNames.includes(salesPerson);
+    }
+
+    if (store) {
+      const storeRecords = await db.select().from(stores).where(eq(stores.isActive, true));
+      const storeNames = storeRecords.map(s => s.name);
+      validStore = storeNames.includes(store);
+    }
+
+    return { validSalesPerson, validStore };
   }
 
   async getSalesAnalytics(dateRange?: string): Promise<{
