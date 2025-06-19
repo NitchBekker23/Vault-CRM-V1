@@ -26,11 +26,11 @@ export default function SalesManagement() {
     currentStoreId: ""
   });
 
-  const { data: stores = [] } = useQuery({
+  const { data: stores = [] } = useQuery<any[]>({
     queryKey: ["/api/stores"],
   });
 
-  const { data: salesPersons = [] } = useQuery({
+  const { data: salesPersons = [] } = useQuery<any[]>({
     queryKey: ["/api/sales-persons"],
   });
 

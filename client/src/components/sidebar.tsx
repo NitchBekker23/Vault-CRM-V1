@@ -11,6 +11,7 @@ const navigation = [
   { name: "Wishlist", href: "/wishlist", icon: "fas fa-heart" },
   { name: "Clients", href: "/clients", icon: "fas fa-users" },
   { name: "Sales", href: "/sales", icon: "fas fa-dollar-sign" },
+  { name: "Sales Team", href: "/sales-management", icon: "fas fa-user-tie" },
   { name: "Analytics", href: "/analytics", icon: "fas fa-chart-bar" },
   { name: "Settings", href: "/settings", icon: "fas fa-cog" },
 ];
