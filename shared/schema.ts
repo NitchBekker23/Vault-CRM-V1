@@ -181,6 +181,12 @@ export const clients = pgTable("clients", {
   clientCategory: varchar("client_category").default("Regular"),
   totalSpend: numeric("total_spend", { precision: 12, scale: 2 }).default("0"),
   notes: text("notes"),
+  // Sales transaction tracking fields
+  birthday: timestamp("birthday"),
+  vipStatus: varchar("vip_status", { enum: ["regular", "vip", "premium"] }).default("regular"),
+  totalPurchases: integer("total_purchases").default(0),
+  lastPurchaseDate: timestamp("last_purchase_date"),
+  preferences: text("preferences"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   // Keep legacy fields for backward compatibility
@@ -203,7 +209,28 @@ export const clientCategories = pgTable("client_categories", {
   name: varchar("name").notNull().unique(),
 });
 
-// Sales tables
+// Enhanced sales transactions table
+export const salesTransactions = pgTable("sales_transactions", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id").references(() => clients.id).notNull(),
+  inventoryItemId: integer("inventory_item_id").references(() => inventoryItems.id).notNull(),
+  transactionType: varchar("transaction_type", { 
+    enum: ["sale", "credit", "exchange", "warranty"] 
+  }).default("sale").notNull(),
+  saleDate: timestamp("sale_date").notNull(),
+  retailPrice: decimal("retail_price", { precision: 10, scale: 2 }),
+  sellingPrice: decimal("selling_price", { precision: 10, scale: 2 }).notNull(),
+  profitMargin: decimal("profit_margin", { precision: 10, scale: 2 }),
+  originalTransactionId: integer("original_transaction_id"),
+  csvBatchId: varchar("csv_batch_id"),
+  source: varchar("source", { enum: ["manual", "csv_import", "pos_system"] }).default("manual"),
+  notes: text("notes"),
+  processedBy: varchar("processed_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Legacy sales table (keep for backward compatibility)
 export const sales = pgTable("sales", {
   id: serial("id").primaryKey(),
   clientId: integer("client_id").references(() => clients.id).notNull(),
@@ -222,7 +249,19 @@ export const saleItems = pgTable("sale_items", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Purchase history table
+// Transaction status log for audit trail
+export const transactionStatusLog = pgTable("transaction_status_log", {
+  id: serial("id").primaryKey(),
+  transactionId: integer("transaction_id").notNull(),
+  statusFrom: varchar("status_from"),
+  statusTo: varchar("status_to").notNull(),
+  changeReason: varchar("change_reason"),
+  changedBy: varchar("changed_by").references(() => users.id).notNull(),
+  changedAt: timestamp("changed_at").defaultNow(),
+  notes: text("notes"),
+});
+
+// Purchase history table (legacy - keep for compatibility)
 export const purchases = pgTable("purchases", {
   id: serial("id").primaryKey(),
   clientId: integer("client_id").references(() => clients.id).notNull(),
@@ -287,6 +326,34 @@ export const wishlistItemsRelations = relations(wishlistItems, ({ one }) => ({
 
 export const clientsRelations = relations(clients, ({ many }) => ({
   purchases: many(purchases),
+  salesTransactions: many(salesTransactions),
+}));
+
+export const salesTransactionsRelations = relations(salesTransactions, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [salesTransactions.clientId],
+    references: [clients.id],
+  }),
+  inventoryItem: one(inventoryItems, {
+    fields: [salesTransactions.inventoryItemId],
+    references: [inventoryItems.id],
+  }),
+  processor: one(users, {
+    fields: [salesTransactions.processedBy],
+    references: [users.id],
+  }),
+  statusLogs: many(transactionStatusLog),
+}));
+
+export const transactionStatusLogRelations = relations(transactionStatusLog, ({ one }) => ({
+  transaction: one(salesTransactions, {
+    fields: [transactionStatusLog.transactionId],
+    references: [salesTransactions.id],
+  }),
+  user: one(users, {
+    fields: [transactionStatusLog.changedBy],
+    references: [users.id],
+  }),
 }));
 
 export const purchasesRelations = relations(purchases, ({ one }) => ({
