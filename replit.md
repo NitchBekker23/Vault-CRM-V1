@@ -125,6 +125,8 @@ REPLIT_DOMAINS=[development]
   - Added credit/return functionality for inventory items moving back from client profiles
   - Built comprehensive sales management interface with transaction filtering and search
   - Integrated sales navigation into main application sidebar and routing system
+  - **CURRENCY UPDATE**: All pricing displayed in South African Rands (ZAR) instead of USD
+  - **CSV TEMPLATE**: Added downloadable CSV template for sales bulk import with proper field structure
 - June 18, 2025: Added sortable table columns for inventory management
   - Implemented clickable Price and Days in Stock column headers
   - Added ascending/descending sort functionality with visual indicators
