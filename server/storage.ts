@@ -1143,6 +1143,25 @@ export class DatabaseStorage implements IStorage {
                   continue;
                 }
 
+                // Validate sales person and store data
+                const validation = await this.validateSalesData(row.salesPerson, row.store);
+                if (row.salesPerson && !validation.validSalesPerson) {
+                  errors.push({
+                    row: rowNumber,
+                    error: `Invalid sales person: ${row.salesPerson}`,
+                    data: row
+                  });
+                  continue;
+                }
+                if (row.store && !validation.validStore) {
+                  errors.push({
+                    row: rowNumber,
+                    error: `Invalid store: ${row.store}`,
+                    data: row
+                  });
+                  continue;
+                }
+
                 // Check for duplicates
                 const existing = await this.findDuplicateTransaction(
                   client.id,
@@ -1168,6 +1187,9 @@ export class DatabaseStorage implements IStorage {
                   retailPrice: row.retailPrice ? parseFloat(row.retailPrice).toString() : null,
                   sellingPrice: parseFloat(row.sellingPrice).toString(),
                   profitMargin: row.profitMargin ? parseFloat(row.profitMargin).toString() : null,
+                  customerCode: row.customerCode || null,
+                  salesPerson: row.salesPerson || null,
+                  store: row.store || null,
                   csvBatchId: batchId,
                   source: 'csv_import',
                   notes: row.notes || null,
@@ -1267,6 +1289,25 @@ export class DatabaseStorage implements IStorage {
                   errors.push({
                     row: rowNumber,
                     error: "Invalid date format",
+                    data: row
+                  });
+                  continue;
+                }
+
+                // Validate sales person and store data
+                const validation = await this.validateSalesData(row.salesPerson, row.store);
+                if (row.salesPerson && !validation.validSalesPerson) {
+                  errors.push({
+                    row: rowNumber,
+                    error: `Invalid sales person: ${row.salesPerson}`,
+                    data: row
+                  });
+                  continue;
+                }
+                if (row.store && !validation.validStore) {
+                  errors.push({
+                    row: rowNumber,
+                    error: `Invalid store: ${row.store}`,
                     data: row
                   });
                   continue;
@@ -1446,21 +1487,29 @@ export class DatabaseStorage implements IStorage {
     return person;
   }
 
-  // Validate sales person and store names for CSV imports
+  // Validate sales person and store codes for CSV imports
   async validateSalesData(salesPerson?: string, store?: string): Promise<{ validSalesPerson: boolean; validStore: boolean }> {
     let validSalesPerson = true;
     let validStore = true;
 
     if (salesPerson) {
+      // Check if salesPerson is an employee ID (like AP, BW, etc.)
       const persons = await db.select().from(salesPersons).where(eq(salesPersons.isActive, true));
+      const employeeIds = persons.map(p => p.employeeId).filter(id => id !== null);
       const fullNames = persons.map(p => `${p.firstName} ${p.lastName}`);
-      validSalesPerson = fullNames.includes(salesPerson);
+      
+      // Accept either employee ID or full name
+      validSalesPerson = employeeIds.includes(salesPerson) || fullNames.includes(salesPerson);
     }
 
     if (store) {
+      // Check if store is a store code (like 001, 002, etc.) or store name
       const storeRecords = await db.select().from(stores).where(eq(stores.isActive, true));
+      const storeCodes = storeRecords.map(s => s.code);
       const storeNames = storeRecords.map(s => s.name);
-      validStore = storeNames.includes(store);
+      
+      // Accept either store code or store name
+      validStore = storeCodes.includes(store) || storeNames.includes(store);
     }
 
     return { validSalesPerson, validStore };
