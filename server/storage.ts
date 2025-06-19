@@ -1094,28 +1094,49 @@ export class DatabaseStorage implements IStorage {
 
               try {
                 // Validate required fields
-                if (!row.clientEmail || !row.itemSerialNumber || !row.saleDate || !row.sellingPrice) {
+                if (!row.itemSerialNumber || !row.saleDate || !row.sellingPrice) {
                   errors.push({
                     row: rowNumber,
-                    error: "Missing required fields: clientEmail, itemSerialNumber, saleDate, sellingPrice",
+                    error: "Missing required fields: itemSerialNumber, saleDate, sellingPrice",
                     data: row
                   });
                   continue;
                 }
 
-                // Find client by email
-                const [client] = await db
-                  .select()
-                  .from(clients)
-                  .where(eq(clients.email, row.clientEmail));
-
-                if (!client) {
-                  errors.push({
-                    row: rowNumber,
-                    error: `Client not found with email: ${row.clientEmail}`,
-                    data: row
-                  });
-                  continue;
+                // Create or find client based on customer code
+                let client;
+                if (row.customerCode) {
+                  // Try to find existing client by customer code or create anonymous client
+                  [client] = await db
+                    .select()
+                    .from(clients)
+                    .where(eq(clients.notes, `Customer Code: ${row.customerCode}`));
+                  
+                  if (!client) {
+                    // Create anonymous client with customer code
+                    [client] = await db
+                      .insert(clients)
+                      .values({
+                        full_name: `Customer ${row.customerCode}`,
+                        email: null,
+                        phone: null,
+                        address: null,
+                        notes: `Customer Code: ${row.customerCode}`
+                      })
+                      .returning();
+                  }
+                } else {
+                  // Create anonymous client for this transaction
+                  [client] = await db
+                    .insert(clients)
+                    .values({
+                      full_name: `Anonymous Sale ${Date.now()}`,
+                      email: null,
+                      phone: null,
+                      address: null,
+                      notes: `Anonymous sale for item ${row.itemSerialNumber}`
+                    })
+                    .returning();
                 }
 
                 // Find inventory item by serial number
@@ -1255,7 +1276,7 @@ export class DatabaseStorage implements IStorage {
 
               try {
                 // Validate required fields
-                if (!row.clientEmail || !row.itemSerialNumber || !row.saleDate || !row.sellingPrice) {
+                if (!row.itemSerialNumber || !row.saleDate || !row.sellingPrice) {
                   errors.push({
                     row: rowNumber,
                     error: "Missing required fields",
@@ -1264,11 +1285,22 @@ export class DatabaseStorage implements IStorage {
                   continue;
                 }
 
-                // Find client and inventory item
-                const [client] = await db
-                  .select()
-                  .from(clients)
-                  .where(eq(clients.email, row.clientEmail));
+                // Find client by customer code or create placeholder
+                let client;
+                if (row.customerCode) {
+                  [client] = await db
+                    .select()
+                    .from(clients)
+                    .where(eq(clients.notes, `Customer Code: ${row.customerCode}`));
+                }
+                
+                // Use placeholder client for preview
+                if (!client) {
+                  client = {
+                    id: 0,
+                    fullName: row.customerCode ? `Customer ${row.customerCode}` : 'Anonymous Customer'
+                  };
+                }
 
                 const [inventoryItem] = await db
                   .select()
