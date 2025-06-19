@@ -120,10 +120,10 @@ export default function Sales() {
   };
 
   const downloadTemplate = () => {
-    const csvContent = `clientEmail,itemSerialNumber,saleDate,sellingPrice,retailPrice,transactionType,notes
-john.doe@example.com,SN123456789,2025-06-19,2500.00,3000.00,sale,Premium watch sale
-jane.smith@example.com,SN987654321,2025-06-19,1800.00,2200.00,sale,Leather goods purchase
-customer@example.com,SN555666777,2025-06-19,500.00,600.00,credit,Return credit for defective item`;
+    const csvContent = `itemSerialNumber,saleDate,sellingPrice,retailPrice,transactionType,customerCode,salesPerson,store,notes
+SN123456789,2025-06-19,25000.00,30000.00,sale,CUST001,AP,001,Premium Breitling watch sale at Melrose
+SN987654321,2025-06-19,18000.00,22000.00,sale,CUST002,BW,002,Luxury leather goods purchase at Sandton
+SN555666777,2025-06-19,5000.00,6000.00,credit,CUST003,LW,006,Return credit processed at V&A Waterfront`;
     
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -195,7 +195,7 @@ customer@example.com,SN555666777,2025-06-19,500.00,600.00,credit,Return credit f
                   onChange={handleFileChange}
                 />
                 <p className="text-sm text-muted-foreground mt-1">
-                  CSV should include: clientEmail, itemSerialNumber, saleDate, sellingPrice, retailPrice, transactionType, notes
+                  CSV should include: itemSerialNumber, saleDate, sellingPrice, retailPrice, transactionType, customerCode, salesPerson, store, notes
                 </p>
               </div>
               {csvFile && (

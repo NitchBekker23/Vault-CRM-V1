@@ -103,29 +103,41 @@ export default function BulkSalesImportModal({ isOpen, onClose }: BulkSalesImpor
 
   const downloadTemplate = () => {
     const headers = [
-      "clientEmail",
-      "serialNumber", 
-      "salePrice",
+      "itemSerialNumber",
       "saleDate",
+      "sellingPrice",
+      "retailPrice",
+      "transactionType",
+      "customerCode",
+      "salesPerson",
+      "store",
       "notes"
     ];
     
     const sampleData = [
-      "customer@example.com",
-      "SN12345",
-      "1500.00",
-      "2024-06-09",
-      "Customer purchase notes"
+      "SN123456789",
+      "2025-06-19",
+      "25000.00",
+      "30000.00",
+      "sale",
+      "CUST001",
+      "AP",
+      "001",
+      "Premium Breitling watch sale at Melrose"
     ];
     
     const csvContent = [
       headers.join(","),
       sampleData.join(","),
       "# Additional rows for more sales...",
-      "# clientEmail: Customer's email address (must exist in clients)",
-      "# serialNumber: Serial number of sold item (must exist in inventory)",
-      "# salePrice: Sale price in ZAR (can differ from list price)",
+      "# itemSerialNumber: Serial number of sold item (must exist in inventory)",
       "# saleDate: Date of sale (YYYY-MM-DD format)",
+      "# sellingPrice: Final sale price in ZAR",
+      "# retailPrice: Original retail price in ZAR (optional)",
+      "# transactionType: sale, credit, exchange, warranty",
+      "# customerCode: Customer identifier (CUST001, CUST002, etc.)",
+      "# salesPerson: Employee ID (AP, BW, LW, etc.)",
+      "# store: Store code (001=Melrose, 002=Sandton, 003=Menlyn, 006=V&A, 099=HQ)",
       "# notes: Optional sale notes"
     ].join("\n");
     
