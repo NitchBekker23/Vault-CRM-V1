@@ -1,0 +1,2 @@
+itemSerialNumber,saleDate,sellingPrice,retailPrice,transactionType,clientId,customerCode,salesPerson,store,notes
+MB22345,2025-06-19,25000,30000,sale,,CUST001,AP,001,Test import with exact inventory serial

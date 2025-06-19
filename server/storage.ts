@@ -1080,17 +1080,21 @@ export class DatabaseStorage implements IStorage {
     console.log(`Batch ID: ${batchId}`);
     console.log(`CSV Buffer Size: ${csvBuffer.length} bytes`);
     
+    const csvString = csvBuffer.toString();
+    console.log(`CSV Content Preview:`, csvString.substring(0, 500));
+    
     const results: any[] = [];
     const errors: Array<{ row: number; error: string; data: any }> = [];
     const duplicates: Array<{ row: number; existing: SalesTransaction; data: any }> = [];
     let successful = 0;
 
     return new Promise((resolve, reject) => {
-      const stream = Readable.from(csvBuffer.toString());
+      const stream = Readable.from(csvString);
       
       stream
         .pipe(csv())
         .on('data', (data: any) => {
+          console.log(`Raw CSV row parsed:`, JSON.stringify(data, null, 2));
           results.push(data);
         })
         .on('end', async () => {
@@ -1118,13 +1122,21 @@ export class DatabaseStorage implements IStorage {
                   continue;
                 }
                 
-                // Validate required fields
+                // Validate required fields with detailed field checking
+                const fieldCheck = {
+                  itemSerialNumber: row.itemSerialNumber,
+                  saleDate: row.saleDate,
+                  sellingPrice: row.sellingPrice,
+                  hasItemSerialNumber: !!row.itemSerialNumber,
+                  hasSaleDate: !!row.saleDate,
+                  hasSellingPrice: !!row.sellingPrice,
+                  fieldCount: Object.keys(row).length,
+                  allFields: Object.keys(row)
+                };
+                console.log(`Field validation for row ${rowNumber}:`, fieldCheck);
+                
                 if (!row.itemSerialNumber || !row.saleDate || !row.sellingPrice) {
-                  console.error(`Row ${rowNumber} missing required fields:`, {
-                    hasItemSerialNumber: !!row.itemSerialNumber,
-                    hasSaleDate: !!row.saleDate,
-                    hasSellingPrice: !!row.sellingPrice
-                  });
+                  console.error(`Row ${rowNumber} missing required fields:`, fieldCheck);
                   errors.push({
                     row: rowNumber,
                     error: "Missing required fields: itemSerialNumber, saleDate, sellingPrice",
