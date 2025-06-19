@@ -796,7 +796,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Verify password against stored hash
-      const isValidPassword = await bcrypt.compare(password, user.password || '');
+      const isValidPassword = await bcrypt.compare(password, user.password_hash || '');
       if (!isValidPassword) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
