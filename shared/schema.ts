@@ -555,3 +555,19 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
 });
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
+
+// Sales Transaction Types
+export const insertSalesTransactionSchema = createInsertSchema(salesTransactions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertSalesTransaction = z.infer<typeof insertSalesTransactionSchema>;
+export type SalesTransaction = typeof salesTransactions.$inferSelect;
+
+export const insertTransactionStatusLogSchema = createInsertSchema(transactionStatusLog).omit({
+  id: true,
+  changedAt: true,
+});
+export type InsertTransactionStatusLog = z.infer<typeof insertTransactionStatusLogSchema>;
+export type TransactionStatusLog = typeof transactionStatusLog.$inferSelect;

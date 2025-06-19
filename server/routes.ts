@@ -2120,6 +2120,226 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Sales Transaction Management Routes
+
+  // Get all sales transactions with filtering
+  app.get("/api/sales-transactions", checkAuth, async (req: any, res) => {
+    try {
+      const page = req.query.page ? parseInt(req.query.page as string) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const search = req.query.search as string;
+      const transactionType = req.query.transactionType as string;
+      const dateRange = req.query.dateRange as string;
+
+      const result = await storage.getSalesTransactions(page, limit, search, transactionType, dateRange);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching sales transactions:", error);
+      res.status(500).json({ message: "Failed to fetch sales transactions" });
+    }
+  });
+
+  // Create manual sales transaction
+  app.post("/api/sales-transactions", checkAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const validatedData = insertSalesTransactionSchema.parse({
+        ...req.body,
+        processedBy: userId,
+      });
+
+      // Check for duplicate transaction
+      const existingTransaction = await storage.findDuplicateTransaction(
+        validatedData.clientId,
+        validatedData.inventoryItemId,
+        validatedData.saleDate
+      );
+
+      if (existingTransaction) {
+        return res.status(409).json({ 
+          message: "Duplicate transaction found", 
+          existingTransaction 
+        });
+      }
+
+      const transaction = await storage.createSalesTransaction(validatedData);
+      
+      // Update inventory item status to sold
+      await storage.updateInventoryItem(validatedData.inventoryItemId, {
+        status: "sold"
+      });
+
+      // Update client statistics
+      await storage.updateClientPurchaseStats(validatedData.clientId);
+
+      // Log activity
+      await storage.createActivity({
+        userId,
+        action: "created_sale",
+        entityType: "sales_transaction",
+        entityId: transaction.id,
+        description: `Created sale transaction for client ID ${validatedData.clientId}`,
+      });
+
+      res.status(201).json(transaction);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error creating sales transaction:", error);
+      res.status(500).json({ message: "Failed to create sales transaction" });
+    }
+  });
+
+  // CSV Sales Import with duplicate prevention
+  app.post("/api/sales-transactions/import-csv", checkAuth, csvUpload.single('file'), async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No CSV file provided" });
+      }
+
+      // Generate unique batch ID for this import
+      const batchId = `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const results = await storage.processSalesCSVImport(req.file.buffer, userId, batchId);
+
+      // Log bulk import activity
+      await storage.createActivity({
+        userId,
+        action: "bulk_sales_import",
+        entityType: "sales_transaction",
+        entityId: null,
+        description: `Imported ${results.successful} sales transactions, ${results.duplicates.length} duplicates found`,
+      });
+
+      res.json(results);
+    } catch (error) {
+      console.error("Error importing sales CSV:", error);
+      res.status(500).json({ 
+        message: "Failed to import sales CSV",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Preview CSV import conflicts before processing
+  app.post("/api/sales-transactions/preview-csv", checkAuth, csvUpload.single('file'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No CSV file provided" });
+      }
+
+      const preview = await storage.previewSalesCSVImport(req.file.buffer);
+      res.json(preview);
+    } catch (error) {
+      console.error("Error previewing sales CSV:", error);
+      res.status(500).json({ 
+        message: "Failed to preview sales CSV",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Process credit/return transaction
+  app.post("/api/sales-transactions/:id/credit", checkAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const transactionId = parseInt(req.params.id);
+      const { reason, notes } = req.body;
+
+      // Get original transaction
+      const originalTransaction = await storage.getSalesTransaction(transactionId);
+      if (!originalTransaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+
+      // Create credit transaction
+      const creditTransaction = await storage.createSalesTransaction({
+        clientId: originalTransaction.clientId,
+        inventoryItemId: originalTransaction.inventoryItemId,
+        transactionType: "credit",
+        saleDate: new Date(),
+        sellingPrice: originalTransaction.sellingPrice,
+        originalTransactionId: transactionId,
+        source: "manual",
+        notes: notes || `Credit for transaction #${transactionId}. Reason: ${reason}`,
+        processedBy: userId,
+      });
+
+      // Update inventory item status back to in_stock
+      await storage.updateInventoryItem(originalTransaction.inventoryItemId, {
+        status: "in_stock"
+      });
+
+      // Log status change
+      await storage.logTransactionStatusChange(
+        creditTransaction.id,
+        "sold",
+        "credited",
+        reason,
+        userId,
+        notes
+      );
+
+      // Update client statistics
+      await storage.updateClientPurchaseStats(originalTransaction.clientId);
+
+      // Log activity
+      await storage.createActivity({
+        userId,
+        action: "created_credit",
+        entityType: "sales_transaction",
+        entityId: creditTransaction.id,
+        description: `Created credit transaction for original sale #${transactionId}`,
+      });
+
+      res.status(201).json(creditTransaction);
+    } catch (error) {
+      console.error("Error processing credit transaction:", error);
+      res.status(500).json({ message: "Failed to process credit transaction" });
+    }
+  });
+
+  // Client purchase history
+  app.get("/api/clients/:id/purchase-history", checkAuth, async (req: any, res) => {
+    try {
+      const clientId = parseInt(req.params.id);
+      const page = req.query.page ? parseInt(req.query.page as string) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+
+      const result = await storage.getClientPurchaseHistory(clientId, page, limit);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching client purchase history:", error);
+      res.status(500).json({ message: "Failed to fetch client purchase history" });
+    }
+  });
+
+  // Sales analytics endpoint
+  app.get("/api/sales-analytics", checkAuth, async (req: any, res) => {
+    try {
+      const dateRange = req.query.dateRange as string;
+      const analytics = await storage.getSalesAnalytics(dateRange);
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching sales analytics:", error);
+      res.status(500).json({ message: "Failed to fetch sales analytics" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
