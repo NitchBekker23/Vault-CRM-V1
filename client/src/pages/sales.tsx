@@ -307,7 +307,7 @@ customer@example.com,SN555666777,2025-06-19,500.00,600.00,credit,Return credit f
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {analytics?.topClients?.slice(0, 5).map((item, index) => (
+                  {analytics?.topClients?.slice(0, 5).map((item: any, index: number) => (
                     <div key={item.client.id} className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-sm font-medium">
@@ -331,7 +331,7 @@ customer@example.com,SN555666777,2025-06-19,500.00,600.00,credit,Return credit f
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {analytics?.recentTransactions?.slice(0, 5).map((transaction) => (
+                  {analytics?.recentTransactions?.slice(0, 5).map((transaction: any) => (
                     <div key={transaction.id} className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <Badge className={getTransactionTypeColor(transaction.transactionType)}>
@@ -500,7 +500,7 @@ customer@example.com,SN555666777,2025-06-19,500.00,600.00,credit,Return credit f
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {analytics?.topClients?.map((item, index) => (
+                  {analytics?.topClients?.map((item: any, index: number) => (
                     <div key={item.client.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-bold">

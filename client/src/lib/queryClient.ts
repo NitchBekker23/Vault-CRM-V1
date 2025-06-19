@@ -8,19 +8,47 @@ async function throwIfResNotOk(res: Response) {
 }
 
 export async function apiRequest(
-  method: string,
-  url: string,
+  urlOrMethod: string,
+  urlOrData?: string | unknown,
   data?: unknown | undefined,
-): Promise<Response> {
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+): Promise<any> {
+  let method: string;
+  let url: string;
+  let body: unknown;
 
-  await throwIfResNotOk(res);
-  return res;
+  // Handle both legacy single parameter usage and new method-first usage
+  if (typeof urlOrData === 'string') {
+    // New usage: apiRequest(method, url, data)
+    method = urlOrMethod;
+    url = urlOrData;
+    body = data;
+  } else {
+    // Legacy usage: apiRequest(url) - default to GET
+    method = 'GET';
+    url = urlOrMethod;
+    body = urlOrData;
+  }
+
+  console.log(`[API Request] ${method} ${url}`, body ? { body } : '');
+
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: body ? { "Content-Type": "application/json" } : {},
+      body: body ? JSON.stringify(body) : undefined,
+      credentials: "include",
+    });
+
+    console.log(`[API Response] ${method} ${url} - Status: ${res.status}`);
+    
+    await throwIfResNotOk(res);
+    const result = await res.json();
+    console.log(`[API Success] ${method} ${url}`, result);
+    return result;
+  } catch (error) {
+    console.error(`[API Error] ${method} ${url}`, error);
+    throw error;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

@@ -1445,19 +1445,23 @@ export class DatabaseStorage implements IStorage {
       .from(salesTransactions)
       .where(dateCondition);
 
-    // Get top clients
-    const topClientsData = await db
-      .select({
-        client: clients,
-        totalSpent: sql<number>`COALESCE(SUM(CASE WHEN ${salesTransactions.transactionType} = 'sale' THEN ${salesTransactions.sellingPrice} WHEN ${salesTransactions.transactionType} = 'credit' THEN -${salesTransactions.sellingPrice} ELSE 0 END), 0)`,
-        transactionCount: sql<number>`COUNT(CASE WHEN ${salesTransactions.transactionType} = 'sale' THEN 1 END)`
-      })
-      .from(salesTransactions)
-      .innerJoin(clients, eq(salesTransactions.clientId, clients.id))
-      .where(dateCondition)
-      .groupBy(clients.id)
-      .orderBy(sql`totalSpent DESC`)
-      .limit(5);
+    // Get top clients with a simpler query
+    const topClientsQuery = `
+      SELECT 
+        c.*,
+        COALESCE(SUM(CASE WHEN st.transaction_type = 'sale' THEN st.selling_price WHEN st.transaction_type = 'credit' THEN -st.selling_price ELSE 0 END), 0) as total_spent,
+        COUNT(CASE WHEN st.transaction_type = 'sale' THEN 1 END) as transaction_count
+      FROM sales_transactions st
+      INNER JOIN clients c ON st.client_id = c.id
+      ${dateCondition ? 'WHERE st.sale_date >= $1' : ''}
+      GROUP BY c.id
+      ORDER BY total_spent DESC
+      LIMIT 5
+    `;
+
+    const topClientsData = dateCondition 
+      ? await db.execute(sql.raw(topClientsQuery, [dateCondition]))
+      : await db.execute(sql.raw(topClientsQuery.replace('WHERE st.sale_date >= $1', '')));
 
     // Get recent transactions
     const recentTransactions = await db
