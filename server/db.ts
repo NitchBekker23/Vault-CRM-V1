@@ -1,23 +1,16 @@
-import { createClient } from '@supabase/supabase-js';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 import * as schema from "@shared/schema";
 
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error(
-    "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set for Teams environment",
-  );
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL must be set");
 }
 
-// Use Supabase client with service role key for full access
-const supabase = createClient(
-  process.env.SUPABASE_URL, 
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
+// Create PostgreSQL connection
+const client = postgres(process.env.DATABASE_URL, {
+  prepare: false,
+  ssl: 'require'
+});
 
-// Export Supabase client as db for compatibility
-export const db = supabase;
+// Create Drizzle database instance
+export const db = drizzle(client, { schema });

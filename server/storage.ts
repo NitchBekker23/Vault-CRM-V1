@@ -202,9 +202,8 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   async testConnection(): Promise<void> {
     try {
-      // Test Supabase connection
-      const { data, error } = await db.from('users').select('count').limit(1);
-      if (error) throw error;
+      // Test Drizzle connection using correct v0.39.1 syntax
+      const result = await db.select().from(users).limit(1);
       console.log('Database connection test successful');
     } catch (error) {
       console.error('Database connection test failed:', error);
@@ -214,9 +213,8 @@ export class DatabaseStorage implements IStorage {
 
   async getUser(id: string): Promise<User | undefined> {
     try {
-      const { data: users, error } = await db.from('users').select('*').eq('id', id).single();
-      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows found
-      return users || undefined;
+      const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+      return result[0] || undefined;
     } catch (error) {
       console.error('Error fetching user:', error);
       throw error;
@@ -225,21 +223,18 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     try {
-      const { data: users, error } = await db.from('users').select('*').eq('email', email);
-      if (error) throw error;
-      
-      const user = users && users.length > 0 ? users[0] : undefined;
+      const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      const user = result[0];
       if (!user) return undefined;
       
-      // Map snake_case database fields to camelCase for compatibility
       return {
-        id: user.id.toString(),
+        id: user.id,
         email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
+        firstName: user.firstName,
+        lastName: user.lastName,
         company: user.company,
-        phoneNumber: user.phone_number,
-        password: user.password, // For legacy compatibility
+        phoneNumber: user.phoneNumber,
+        password: user.password,
         password_hash: user.password_hash, // Keep both for password verification
         profileImageUrl: user.profile_image_url,
         role: user.role,
