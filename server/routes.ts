@@ -185,6 +185,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Login endpoint with email/password
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+      
+      // Find user by email
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
+      // Check if user is approved
+      if (user.status !== 'approved') {
+        return res.status(401).json({ message: "Account not approved" });
+      }
+      
+      // Verify password
+      const isValidPassword = await bcrypt.compare(password, user.password || '');
+      if (!isValidPassword) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
+      // Create session
+      (req.session as any).userId = user.id;
+      (req.session as any).authenticated = true;
+      (req.session as any).userEmail = user.email;
+      
+      // Return user data without password
+      const { password: _, ...userWithoutPassword } = user;
+      res.json({ 
+        message: "Login successful",
+        user: userWithoutPassword
+      });
+    } catch (error) {
+      console.error("Error in login:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
   // Logout endpoint
   app.post("/api/auth/logout", (req, res) => {
     req.session.destroy((err: any) => {
@@ -255,14 +298,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Simple admin bypass for testing
       if (adminKey === "admin123temp") {
-        // Direct Supabase query to bypass storage layer issues
-        const { data: users, error } = await db.from('users').select('*').eq('email', 'nitchbekker@gmail.com');
-        if (error) {
-          console.error("Database error:", error);
-          return res.status(500).json({ message: "Admin login failed" });
-        }
-        
-        const user = users && users.length > 0 ? users[0] : null;
+        // Use storage layer to get user
+        const user = await storage.getUserByEmail('nitchbekker@gmail.com');
         if (!user) {
           return res.status(404).json({ message: "Admin user not found" });
         }
@@ -277,8 +314,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           user: {
             id: user.id.toString(),
             email: user.email,
-            firstName: user.first_name,
-            lastName: user.last_name,
+            firstName: user.firstName,
+            lastName: user.lastName,
             company: user.company,
             role: user.role,
             status: user.status
@@ -796,23 +833,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email and password are required" });
       }
       
-      // Direct Supabase query to bypass storage layer issues
-      const { data: users, error } = await db
-        .from('users')
-        .select('*')
-        .eq('email', email);
-      if (error) {
-        console.error("Database error:", error);
-        return res.status(500).json({ message: "Login failed" });
-      }
-      
-      const user = users && users.length > 0 ? users[0] : null;
+      // Use storage layer to get user
+      const user = await storage.getUserByEmail(email);
       if (!user) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
       
       // Verify password against stored hash
-      const isValidPassword = await bcrypt.compare(password, user.password_hash || '');
+      const isValidPassword = await bcrypt.compare(password, user.password || '');
       if (!isValidPassword) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
@@ -832,8 +860,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user: {
           id: user.id.toString(),
           email: user.email,
-          firstName: user.first_name,
-          lastName: user.last_name,
+          firstName: user.firstName,
+          lastName: user.lastName,
           company: user.company,
           role: user.role,
           status: user.status

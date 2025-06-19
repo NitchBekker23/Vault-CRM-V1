@@ -115,6 +115,14 @@ REPLIT_DOMAINS=[development]
 ```
 
 ## Recent Changes
+- June 19, 2025: Restored authentication system with new PostgreSQL database
+  - **AUTHENTICATION FULLY RESTORED**: Fixed database connection issues by switching from broken Supabase to new Neon PostgreSQL
+  - Created fresh PostgreSQL database with complete schema migration using Drizzle push
+  - Fixed authentication code that was using incorrect Supabase syntax instead of Drizzle ORM
+  - Implemented dual authentication system: email/password login and admin key login (admin123temp)
+  - Created default admin user (nitchbekker@gmail.com / admin123) with owner role
+  - **CONFIRMED WORKING**: Both login methods tested and functional, session management restored
+  - Application running on port 5000 with full database connectivity and user authentication
 - June 19, 2025: Completed Teams migration with full authentication system restoration
   - **TEAMS MIGRATION COMPLETE**: Successfully migrated to private Teams account with working authentication
   - Fixed DATABASE_URL to use Supabase connection string with service role key for admin operations
