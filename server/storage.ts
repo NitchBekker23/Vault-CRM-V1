@@ -1106,17 +1106,32 @@ export class DatabaseStorage implements IStorage {
                   continue;
                 }
 
-                // Create or find client based on customer code
+                // Find or create client (prioritize clientId, then customerCode)
                 let client;
-                if (row.customerCode) {
-                  // Try to find existing client by customer code or create anonymous client
+                if (row.clientId) {
+                  // Look up existing client by ID
+                  [client] = await db
+                    .select()
+                    .from(clients)
+                    .where(eq(clients.id, parseInt(row.clientId)));
+                  
+                  if (!client) {
+                    errors.push({
+                      row: rowNumber,
+                      error: `Client not found with ID: ${row.clientId}`,
+                      data: row
+                    });
+                    continue;
+                  }
+                } else if (row.customerCode) {
+                  // Try to find existing client by customer code or create new one
                   [client] = await db
                     .select()
                     .from(clients)
                     .where(eq(clients.notes, `Customer Code: ${row.customerCode}`));
                   
                   if (!client) {
-                    // Create anonymous client with customer code
+                    // Create client with customer code
                     [client] = await db
                       .insert(clients)
                       .values({

@@ -120,10 +120,10 @@ export default function Sales() {
   };
 
   const downloadTemplate = () => {
-    const csvContent = `itemSerialNumber,saleDate,sellingPrice,retailPrice,transactionType,customerCode,salesPerson,store,notes
-SN123456789,2025-06-19,25000.00,30000.00,sale,CUST001,AP,001,Premium Breitling watch sale at Melrose
-SN987654321,2025-06-19,18000.00,22000.00,sale,CUST002,BW,002,Luxury leather goods purchase at Sandton
-SN555666777,2025-06-19,5000.00,6000.00,credit,CUST003,LW,006,Return credit processed at V&A Waterfront`;
+    const csvContent = `itemSerialNumber,saleDate,sellingPrice,retailPrice,transactionType,clientId,customerCode,salesPerson,store,notes
+SN123456789,2025-06-19,25000.00,30000.00,sale,1,CUST001,AP,001,Premium Breitling watch sale at Melrose
+SN987654321,2025-06-19,18000.00,22000.00,sale,2,CUST002,BW,002,Luxury leather goods purchase at Sandton
+SN555666777,2025-06-19,5000.00,6000.00,credit,3,CUST003,LW,006,Return credit processed at V&A Waterfront`;
     
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -195,7 +195,7 @@ SN555666777,2025-06-19,5000.00,6000.00,credit,CUST003,LW,006,Return credit proce
                   onChange={handleFileChange}
                 />
                 <p className="text-sm text-muted-foreground mt-1">
-                  CSV should include: itemSerialNumber, saleDate, sellingPrice, retailPrice, transactionType, customerCode, salesPerson, store, notes
+                  CSV should include: itemSerialNumber, saleDate, sellingPrice, retailPrice, transactionType, clientId, customerCode, salesPerson, store, notes
                 </p>
               </div>
               {csvFile && (
