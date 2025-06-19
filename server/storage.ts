@@ -12,6 +12,8 @@ import {
   accountSetupTokens,
   passwordResetTokens,
   notifications,
+  salesTransactions,
+  transactionStatusLog,
   type User,
   type UpsertUser,
   type InventoryItem,
@@ -38,6 +40,10 @@ import {
   type InsertPasswordResetToken,
   type Notification,
   type InsertNotification,
+  type SalesTransaction,
+  type InsertSalesTransaction,
+  type TransactionStatusLog,
+  type InsertTransactionStatusLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, ilike, or, gte, lt, inArray } from "drizzle-orm";
@@ -139,6 +145,49 @@ export interface IStorage {
   markNotificationRead(id: number, userId: string): Promise<void>;
   markAllNotificationsRead(userId: string): Promise<void>;
   deleteNotification(id: number, userId: string): Promise<void>;
+
+  // Sales Transaction operations
+  getSalesTransactions(
+    page?: number,
+    limit?: number,
+    search?: string,
+    transactionType?: string,
+    dateRange?: string
+  ): Promise<{ transactions: SalesTransaction[]; total: number }>;
+  getSalesTransaction(id: number): Promise<SalesTransaction | undefined>;
+  createSalesTransaction(transaction: InsertSalesTransaction): Promise<SalesTransaction>;
+  findDuplicateTransaction(clientId: number, inventoryItemId: number, saleDate: Date): Promise<SalesTransaction | undefined>;
+  processSalesCSVImport(csvBuffer: Buffer, userId: string, batchId: string): Promise<{
+    successful: number;
+    errors: Array<{ row: number; error: string; data: any }>;
+    duplicates: Array<{ row: number; existing: SalesTransaction; data: any }>;
+  }>;
+  previewSalesCSVImport(csvBuffer: Buffer): Promise<{
+    valid: Array<any>;
+    duplicates: Array<{ row: number; existing: SalesTransaction; data: any }>;
+    errors: Array<{ row: number; error: string; data: any }>;
+  }>;
+  updateClientPurchaseStats(clientId: number): Promise<void>;
+  logTransactionStatusChange(
+    transactionId: number,
+    statusFrom: string,
+    statusTo: string,
+    reason: string,
+    changedBy: string,
+    notes?: string
+  ): Promise<TransactionStatusLog>;
+  getClientPurchaseHistory(
+    clientId: number,
+    page?: number,
+    limit?: number
+  ): Promise<{ transactions: SalesTransaction[]; total: number }>;
+  getSalesAnalytics(dateRange?: string): Promise<{
+    totalSales: number;
+    totalRevenue: number;
+    totalProfit: number;
+    topClients: Array<{ client: Client; totalSpent: number; transactionCount: number }>;
+    recentTransactions: SalesTransaction[];
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -871,6 +920,564 @@ export class DatabaseStorage implements IStorage {
           eq(notifications.userId, userId)
         )
       );
+  }
+
+  // Sales Transaction Methods
+
+  async getSalesTransactions(
+    page: number = 1,
+    limit: number = 10,
+    search?: string,
+    transactionType?: string,
+    dateRange?: string
+  ): Promise<{ transactions: SalesTransaction[]; total: number }> {
+    const offset = (page - 1) * limit;
+    
+    let whereConditions = [];
+    
+    if (search) {
+      whereConditions.push(
+        or(
+          ilike(clients.fullName, `%${search}%`),
+          ilike(inventoryItems.name, `%${search}%`),
+          ilike(inventoryItems.serialNumber, `%${search}%`)
+        )
+      );
+    }
+
+    if (transactionType && transactionType !== 'all') {
+      whereConditions.push(eq(salesTransactions.transactionType, transactionType));
+    }
+
+    if (dateRange && dateRange !== 'all') {
+      const now = new Date();
+      let startDate: Date;
+      
+      switch (dateRange) {
+        case '7days':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case '30days':
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case '90days':
+          startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          startDate = new Date(0);
+      }
+      whereConditions.push(gte(salesTransactions.saleDate, startDate));
+    }
+
+    const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+
+    const [transactions, totalResult] = await Promise.all([
+      db
+        .select({
+          id: salesTransactions.id,
+          clientId: salesTransactions.clientId,
+          inventoryItemId: salesTransactions.inventoryItemId,
+          transactionType: salesTransactions.transactionType,
+          saleDate: salesTransactions.saleDate,
+          retailPrice: salesTransactions.retailPrice,
+          sellingPrice: salesTransactions.sellingPrice,
+          profitMargin: salesTransactions.profitMargin,
+          originalTransactionId: salesTransactions.originalTransactionId,
+          csvBatchId: salesTransactions.csvBatchId,
+          source: salesTransactions.source,
+          notes: salesTransactions.notes,
+          processedBy: salesTransactions.processedBy,
+          createdAt: salesTransactions.createdAt,
+          updatedAt: salesTransactions.updatedAt,
+          clientName: clients.fullName,
+          itemName: inventoryItems.name,
+          itemSerialNumber: inventoryItems.serialNumber,
+        })
+        .from(salesTransactions)
+        .leftJoin(clients, eq(salesTransactions.clientId, clients.id))
+        .leftJoin(inventoryItems, eq(salesTransactions.inventoryItemId, inventoryItems.id))
+        .where(whereClause)
+        .orderBy(desc(salesTransactions.saleDate))
+        .limit(limit)
+        .offset(offset),
+      
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(salesTransactions)
+        .leftJoin(clients, eq(salesTransactions.clientId, clients.id))
+        .leftJoin(inventoryItems, eq(salesTransactions.inventoryItemId, inventoryItems.id))
+        .where(whereClause)
+    ]);
+
+    return {
+      transactions: transactions as SalesTransaction[],
+      total: totalResult[0]?.count || 0,
+    };
+  }
+
+  async getSalesTransaction(id: number): Promise<SalesTransaction | undefined> {
+    const [transaction] = await db
+      .select()
+      .from(salesTransactions)
+      .where(eq(salesTransactions.id, id));
+    
+    return transaction;
+  }
+
+  async createSalesTransaction(transaction: InsertSalesTransaction): Promise<SalesTransaction> {
+    const [newTransaction] = await db
+      .insert(salesTransactions)
+      .values(transaction)
+      .returning();
+    
+    return newTransaction;
+  }
+
+  async findDuplicateTransaction(
+    clientId: number,
+    inventoryItemId: number,
+    saleDate: Date
+  ): Promise<SalesTransaction | undefined> {
+    const sameDayStart = new Date(saleDate);
+    sameDayStart.setHours(0, 0, 0, 0);
+    const sameDayEnd = new Date(saleDate);
+    sameDayEnd.setHours(23, 59, 59, 999);
+
+    const [existing] = await db
+      .select()
+      .from(salesTransactions)
+      .where(
+        and(
+          eq(salesTransactions.clientId, clientId),
+          eq(salesTransactions.inventoryItemId, inventoryItemId),
+          gte(salesTransactions.saleDate, sameDayStart),
+          lt(salesTransactions.saleDate, sameDayEnd)
+        )
+      );
+    
+    return existing;
+  }
+
+  async processSalesCSVImport(csvBuffer: Buffer, userId: string, batchId: string): Promise<{
+    successful: number;
+    errors: Array<{ row: number; error: string; data: any }>;
+    duplicates: Array<{ row: number; existing: SalesTransaction; data: any }>;
+  }> {
+    const csv = require('csv-parser');
+    const { Readable } = require('stream');
+    
+    const results: any[] = [];
+    const errors: Array<{ row: number; error: string; data: any }> = [];
+    const duplicates: Array<{ row: number; existing: SalesTransaction; data: any }> = [];
+    let successful = 0;
+
+    return new Promise((resolve, reject) => {
+      const stream = Readable.from(csvBuffer.toString());
+      
+      stream
+        .pipe(csv())
+        .on('data', (data: any) => {
+          results.push(data);
+        })
+        .on('end', async () => {
+          try {
+            for (let i = 0; i < results.length; i++) {
+              const row = results[i];
+              const rowNumber = i + 2; // +2 because CSV header is row 1, data starts at row 2
+
+              try {
+                // Validate required fields
+                if (!row.clientEmail || !row.itemSerialNumber || !row.saleDate || !row.sellingPrice) {
+                  errors.push({
+                    row: rowNumber,
+                    error: "Missing required fields: clientEmail, itemSerialNumber, saleDate, sellingPrice",
+                    data: row
+                  });
+                  continue;
+                }
+
+                // Find client by email
+                const [client] = await db
+                  .select()
+                  .from(clients)
+                  .where(eq(clients.email, row.clientEmail));
+
+                if (!client) {
+                  errors.push({
+                    row: rowNumber,
+                    error: `Client not found with email: ${row.clientEmail}`,
+                    data: row
+                  });
+                  continue;
+                }
+
+                // Find inventory item by serial number
+                const [inventoryItem] = await db
+                  .select()
+                  .from(inventoryItems)
+                  .where(eq(inventoryItems.serialNumber, row.itemSerialNumber));
+
+                if (!inventoryItem) {
+                  errors.push({
+                    row: rowNumber,
+                    error: `Inventory item not found with serial number: ${row.itemSerialNumber}`,
+                    data: row
+                  });
+                  continue;
+                }
+
+                const saleDate = new Date(row.saleDate);
+                if (isNaN(saleDate.getTime())) {
+                  errors.push({
+                    row: rowNumber,
+                    error: `Invalid sale date format: ${row.saleDate}`,
+                    data: row
+                  });
+                  continue;
+                }
+
+                // Check for duplicates
+                const existing = await this.findDuplicateTransaction(
+                  client.id,
+                  inventoryItem.id,
+                  saleDate
+                );
+
+                if (existing) {
+                  duplicates.push({
+                    row: rowNumber,
+                    existing,
+                    data: row
+                  });
+                  continue;
+                }
+
+                // Create transaction
+                const transactionData: InsertSalesTransaction = {
+                  clientId: client.id,
+                  inventoryItemId: inventoryItem.id,
+                  transactionType: (row.transactionType as any) || 'sale',
+                  saleDate,
+                  retailPrice: row.retailPrice ? parseFloat(row.retailPrice) : null,
+                  sellingPrice: parseFloat(row.sellingPrice),
+                  profitMargin: row.profitMargin ? parseFloat(row.profitMargin) : null,
+                  csvBatchId: batchId,
+                  source: 'csv_import',
+                  notes: row.notes || null,
+                  processedBy: userId,
+                };
+
+                await this.createSalesTransaction(transactionData);
+
+                // Update inventory item status
+                await this.updateInventoryItem(inventoryItem.id, {
+                  status: 'sold'
+                });
+
+                // Update client statistics
+                await this.updateClientPurchaseStats(client.id);
+
+                successful++;
+
+              } catch (error) {
+                errors.push({
+                  row: rowNumber,
+                  error: error instanceof Error ? error.message : 'Unknown error',
+                  data: row
+                });
+              }
+            }
+
+            resolve({ successful, errors, duplicates });
+          } catch (error) {
+            reject(error);
+          }
+        })
+        .on('error', reject);
+    });
+  }
+
+  async previewSalesCSVImport(csvBuffer: Buffer): Promise<{
+    valid: Array<any>;
+    duplicates: Array<{ row: number; existing: SalesTransaction; data: any }>;
+    errors: Array<{ row: number; error: string; data: any }>;
+  }> {
+    const csv = require('csv-parser');
+    const { Readable } = require('stream');
+    
+    const results: any[] = [];
+    const valid: any[] = [];
+    const errors: Array<{ row: number; error: string; data: any }> = [];
+    const duplicates: Array<{ row: number; existing: SalesTransaction; data: any }> = [];
+
+    return new Promise((resolve, reject) => {
+      const stream = Readable.from(csvBuffer.toString());
+      
+      stream
+        .pipe(csv())
+        .on('data', (data: any) => {
+          results.push(data);
+        })
+        .on('end', async () => {
+          try {
+            for (let i = 0; i < results.length; i++) {
+              const row = results[i];
+              const rowNumber = i + 2;
+
+              try {
+                // Validate required fields
+                if (!row.clientEmail || !row.itemSerialNumber || !row.saleDate || !row.sellingPrice) {
+                  errors.push({
+                    row: rowNumber,
+                    error: "Missing required fields",
+                    data: row
+                  });
+                  continue;
+                }
+
+                // Find client and inventory item
+                const [client] = await db
+                  .select()
+                  .from(clients)
+                  .where(eq(clients.email, row.clientEmail));
+
+                const [inventoryItem] = await db
+                  .select()
+                  .from(inventoryItems)
+                  .where(eq(inventoryItems.serialNumber, row.itemSerialNumber));
+
+                if (!client || !inventoryItem) {
+                  errors.push({
+                    row: rowNumber,
+                    error: !client ? "Client not found" : "Inventory item not found",
+                    data: row
+                  });
+                  continue;
+                }
+
+                const saleDate = new Date(row.saleDate);
+                if (isNaN(saleDate.getTime())) {
+                  errors.push({
+                    row: rowNumber,
+                    error: "Invalid date format",
+                    data: row
+                  });
+                  continue;
+                }
+
+                // Check for duplicates
+                const existing = await this.findDuplicateTransaction(
+                  client.id,
+                  inventoryItem.id,
+                  saleDate
+                );
+
+                if (existing) {
+                  duplicates.push({
+                    row: rowNumber,
+                    existing,
+                    data: row
+                  });
+                } else {
+                  valid.push({
+                    ...row,
+                    clientName: client.fullName,
+                    itemName: inventoryItem.name
+                  });
+                }
+
+              } catch (error) {
+                errors.push({
+                  row: rowNumber,
+                  error: error instanceof Error ? error.message : 'Unknown error',
+                  data: row
+                });
+              }
+            }
+
+            resolve({ valid, duplicates, errors });
+          } catch (error) {
+            reject(error);
+          }
+        })
+        .on('error', reject);
+    });
+  }
+
+  async updateClientPurchaseStats(clientId: number): Promise<void> {
+    const stats = await db
+      .select({
+        totalSpend: sql<number>`COALESCE(SUM(CASE WHEN ${salesTransactions.transactionType} = 'sale' THEN ${salesTransactions.sellingPrice} WHEN ${salesTransactions.transactionType} = 'credit' THEN -${salesTransactions.sellingPrice} ELSE 0 END), 0)`,
+        totalPurchases: sql<number>`COUNT(CASE WHEN ${salesTransactions.transactionType} = 'sale' THEN 1 END)`,
+        lastPurchaseDate: sql<Date>`MAX(CASE WHEN ${salesTransactions.transactionType} = 'sale' THEN ${salesTransactions.saleDate} END)`
+      })
+      .from(salesTransactions)
+      .where(eq(salesTransactions.clientId, clientId));
+
+    const { totalSpend, totalPurchases, lastPurchaseDate } = stats[0];
+
+    // Determine VIP status based on spending
+    let vipStatus: 'regular' | 'vip' | 'premium' = 'regular';
+    if (totalSpend >= 10000) {
+      vipStatus = 'premium';
+    } else if (totalSpend >= 5000) {
+      vipStatus = 'vip';
+    }
+
+    await db
+      .update(clients)
+      .set({
+        totalSpend: totalSpend.toString(),
+        totalPurchases,
+        lastPurchaseDate,
+        vipStatus,
+        updatedAt: new Date()
+      })
+      .where(eq(clients.id, clientId));
+  }
+
+  async logTransactionStatusChange(
+    transactionId: number,
+    statusFrom: string,
+    statusTo: string,
+    reason: string,
+    changedBy: string,
+    notes?: string
+  ): Promise<TransactionStatusLog> {
+    const [log] = await db
+      .insert(transactionStatusLog)
+      .values({
+        transactionId,
+        statusFrom,
+        statusTo,
+        changeReason: reason,
+        changedBy,
+        notes
+      })
+      .returning();
+
+    return log;
+  }
+
+  async getClientPurchaseHistory(
+    clientId: number,
+    page: number = 1,
+    limit: number = 10
+  ): Promise<{ transactions: SalesTransaction[]; total: number }> {
+    const offset = (page - 1) * limit;
+
+    const [transactions, totalResult] = await Promise.all([
+      db
+        .select({
+          id: salesTransactions.id,
+          clientId: salesTransactions.clientId,
+          inventoryItemId: salesTransactions.inventoryItemId,
+          transactionType: salesTransactions.transactionType,
+          saleDate: salesTransactions.saleDate,
+          retailPrice: salesTransactions.retailPrice,
+          sellingPrice: salesTransactions.sellingPrice,
+          profitMargin: salesTransactions.profitMargin,
+          originalTransactionId: salesTransactions.originalTransactionId,
+          csvBatchId: salesTransactions.csvBatchId,
+          source: salesTransactions.source,
+          notes: salesTransactions.notes,
+          processedBy: salesTransactions.processedBy,
+          createdAt: salesTransactions.createdAt,
+          updatedAt: salesTransactions.updatedAt,
+          itemName: inventoryItems.name,
+          itemSerialNumber: inventoryItems.serialNumber,
+        })
+        .from(salesTransactions)
+        .leftJoin(inventoryItems, eq(salesTransactions.inventoryItemId, inventoryItems.id))
+        .where(eq(salesTransactions.clientId, clientId))
+        .orderBy(desc(salesTransactions.saleDate))
+        .limit(limit)
+        .offset(offset),
+
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(salesTransactions)
+        .where(eq(salesTransactions.clientId, clientId))
+    ]);
+
+    return {
+      transactions: transactions as SalesTransaction[],
+      total: totalResult[0]?.count || 0,
+    };
+  }
+
+  async getSalesAnalytics(dateRange?: string): Promise<{
+    totalSales: number;
+    totalRevenue: number;
+    totalProfit: number;
+    topClients: Array<{ client: Client; totalSpent: number; transactionCount: number }>;
+    recentTransactions: SalesTransaction[];
+  }> {
+    let dateCondition = undefined;
+    
+    if (dateRange && dateRange !== 'all') {
+      const now = new Date();
+      let startDate: Date;
+      
+      switch (dateRange) {
+        case '7days':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case '30days':
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case '90days':
+          startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          startDate = new Date(0);
+      }
+      dateCondition = gte(salesTransactions.saleDate, startDate);
+    }
+
+    // Get overall stats
+    const [stats] = await db
+      .select({
+        totalSales: sql<number>`COUNT(CASE WHEN ${salesTransactions.transactionType} = 'sale' THEN 1 END)`,
+        totalRevenue: sql<number>`COALESCE(SUM(CASE WHEN ${salesTransactions.transactionType} = 'sale' THEN ${salesTransactions.sellingPrice} WHEN ${salesTransactions.transactionType} = 'credit' THEN -${salesTransactions.sellingPrice} ELSE 0 END), 0)`,
+        totalProfit: sql<number>`COALESCE(SUM(CASE WHEN ${salesTransactions.transactionType} = 'sale' THEN ${salesTransactions.profitMargin} WHEN ${salesTransactions.transactionType} = 'credit' THEN -${salesTransactions.profitMargin} ELSE 0 END), 0)`
+      })
+      .from(salesTransactions)
+      .where(dateCondition);
+
+    // Get top clients
+    const topClientsData = await db
+      .select({
+        client: clients,
+        totalSpent: sql<number>`COALESCE(SUM(CASE WHEN ${salesTransactions.transactionType} = 'sale' THEN ${salesTransactions.sellingPrice} WHEN ${salesTransactions.transactionType} = 'credit' THEN -${salesTransactions.sellingPrice} ELSE 0 END), 0)`,
+        transactionCount: sql<number>`COUNT(CASE WHEN ${salesTransactions.transactionType} = 'sale' THEN 1 END)`
+      })
+      .from(salesTransactions)
+      .innerJoin(clients, eq(salesTransactions.clientId, clients.id))
+      .where(dateCondition)
+      .groupBy(clients.id)
+      .orderBy(sql`totalSpent DESC`)
+      .limit(5);
+
+    // Get recent transactions
+    const recentTransactions = await db
+      .select()
+      .from(salesTransactions)
+      .where(dateCondition)
+      .orderBy(desc(salesTransactions.createdAt))
+      .limit(10);
+
+    return {
+      totalSales: stats.totalSales || 0,
+      totalRevenue: stats.totalRevenue || 0,
+      totalProfit: stats.totalProfit || 0,
+      topClients: topClientsData.map(item => ({
+        client: item.client,
+        totalSpent: item.totalSpent,
+        transactionCount: item.transactionCount
+      })),
+      recentTransactions: recentTransactions as SalesTransaction[],
+    };
   }
 }
 

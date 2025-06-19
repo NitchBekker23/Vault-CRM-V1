@@ -218,9 +218,9 @@ export const salesTransactions = pgTable("sales_transactions", {
     enum: ["sale", "credit", "exchange", "warranty"] 
   }).default("sale").notNull(),
   saleDate: timestamp("sale_date").notNull(),
-  retailPrice: decimal("retail_price", { precision: 10, scale: 2 }),
-  sellingPrice: decimal("selling_price", { precision: 10, scale: 2 }).notNull(),
-  profitMargin: decimal("profit_margin", { precision: 10, scale: 2 }),
+  retailPrice: numeric("retail_price", { precision: 10, scale: 2 }),
+  sellingPrice: numeric("selling_price", { precision: 10, scale: 2 }).notNull(),
+  profitMargin: numeric("profit_margin", { precision: 10, scale: 2 }),
   originalTransactionId: integer("original_transaction_id"),
   csvBatchId: varchar("csv_batch_id"),
   source: varchar("source", { enum: ["manual", "csv_import", "pos_system"] }).default("manual"),

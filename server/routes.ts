@@ -37,6 +37,7 @@ import {
   insertWishlistItemSchema,
   insertClientSchema,
   insertPurchaseSchema,
+  insertSalesTransactionSchema,
   inventoryItems,
 } from "@shared/schema";
 import { eq, desc, sql, and, ilike, or } from "drizzle-orm";
