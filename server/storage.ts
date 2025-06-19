@@ -946,7 +946,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     if (transactionType && transactionType !== 'all') {
-      whereConditions.push(eq(salesTransactions.transactionType, transactionType));
+      whereConditions.push(sql`${salesTransactions.transactionType} = ${transactionType}`);
     }
 
     if (dateRange && dateRange !== 'all') {
@@ -1158,9 +1158,9 @@ export class DatabaseStorage implements IStorage {
                   inventoryItemId: inventoryItem.id,
                   transactionType: (row.transactionType as any) || 'sale',
                   saleDate,
-                  retailPrice: row.retailPrice ? parseFloat(row.retailPrice) : null,
-                  sellingPrice: parseFloat(row.sellingPrice),
-                  profitMargin: row.profitMargin ? parseFloat(row.profitMargin) : null,
+                  retailPrice: row.retailPrice ? parseFloat(row.retailPrice).toString() : null,
+                  sellingPrice: parseFloat(row.sellingPrice).toString(),
+                  profitMargin: row.profitMargin ? parseFloat(row.profitMargin).toString() : null,
                   csvBatchId: batchId,
                   source: 'csv_import',
                   notes: row.notes || null,

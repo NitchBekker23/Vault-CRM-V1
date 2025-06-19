@@ -1,280 +1,505 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
-import Header from "@/components/header";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import SalesEntryModal from "@/components/sales-entry-modal";
-import BulkSalesImportModal from "@/components/bulk-sales-import-modal";
-import { format } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Upload, Plus, FileText, TrendingUp, Users, DollarSign, Package } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
-interface Sale {
+interface SalesTransaction {
   id: number;
   clientId: number;
+  inventoryItemId: number;
+  transactionType: 'sale' | 'credit' | 'exchange' | 'warranty';
   saleDate: string;
-  totalAmount: string;
+  retailPrice: string | null;
+  sellingPrice: string;
+  profitMargin: string | null;
+  source: string;
   notes: string | null;
-  createdAt: string;
-  client: {
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
-  saleItems: Array<{
-    id: number;
-    salePrice: string;
-    inventoryItem: {
-      name: string;
-      brand: string;
-      serialNumber: string;
-    };
+  clientName?: string;
+  itemName?: string;
+  itemSerialNumber?: string;
+}
+
+interface SalesAnalytics {
+  totalSales: number;
+  totalRevenue: number;
+  totalProfit: number;
+  topClients: Array<{
+    client: { id: number; fullName: string; email: string };
+    totalSpent: number;
+    transactionCount: number;
   }>;
+  recentTransactions: SalesTransaction[];
 }
 
 export default function Sales() {
-  const [search, setSearch] = useState("");
-  const [showSalesEntryModal, setShowSalesEntryModal] = useState(false);
-  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
-  
+  const [activeTab, setActiveTab] = useState("overview");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [transactionTypeFilter, setTransactionTypeFilter] = useState("all");
+  const [dateRangeFilter, setDateRangeFilter] = useState("all");
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [page, setPage] = useState(1);
   const { toast } = useToast();
-  const { isAuthenticated, isLoading } = useAuth();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
-    }
-  }, [isAuthenticated, isLoading, toast]);
-
-  const { data: salesData, isLoading: salesLoading } = useQuery<{
-    sales: Sale[];
-    total: number;
-  }>({
-    queryKey: ["/api/sales", { search: search.trim() || undefined }],
-    enabled: isAuthenticated,
+  // Sales analytics query
+  const { data: analytics, isLoading: analyticsLoading } = useQuery({
+    queryKey: ["/api/sales-analytics", dateRangeFilter],
+    queryFn: () => apiRequest(`/api/sales-analytics?dateRange=${dateRangeFilter}`),
   });
 
-  if (isLoading || !isAuthenticated) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  // Sales transactions query
+  const { data: transactionsData, isLoading: transactionsLoading } = useQuery({
+    queryKey: ["/api/sales-transactions", page, searchQuery, transactionTypeFilter, dateRangeFilter],
+    queryFn: () => apiRequest(`/api/sales-transactions?page=${page}&limit=20&search=${searchQuery}&transactionType=${transactionTypeFilter}&dateRange=${dateRangeFilter}`),
+  });
+
+  // CSV import mutation
+  const csvImportMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch('/api/sales-transactions/import-csv', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Import failed');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "CSV Import Complete",
+        description: `Successfully imported ${data.successful} transactions. ${data.duplicates.length} duplicates found, ${data.errors.length} errors.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/sales-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/sales-analytics"] });
+      setShowImportDialog(false);
+      setCsvFile(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Import Failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type === 'text/csv') {
+      setCsvFile(file);
+    } else {
+      toast({
+        title: "Invalid File",
+        description: "Please select a CSV file",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleImport = () => {
+    if (csvFile) {
+      csvImportMutation.mutate(csvFile);
+    }
+  };
+
+  const formatCurrency = (amount: string | number | null) => {
+    if (!amount) return "$0.00";
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(num);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const getTransactionTypeColor = (type: string) => {
+    switch (type) {
+      case 'sale':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+      case 'credit':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+      case 'exchange':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+      case 'warranty':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+    }
+  };
 
   return (
-    <>
-      <Header title="Sales Management" />
-      <div className="p-6 space-y-6">
-        {/* Sales Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-600">
-                Total Sales Today
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-slate-900">
-                {salesData?.sales.filter(sale => 
-                  format(new Date(sale.saleDate), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
-                ).length || 0}
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Sales Management</h1>
+        <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+          <DialogTrigger asChild>
+            <Button>
+              <Upload className="w-4 h-4 mr-2" />
+              Import Sales CSV
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Import Sales Transactions</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="csv-file">Select CSV File</Label>
+                <Input
+                  id="csv-file"
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileChange}
+                />
+                <p className="text-sm text-muted-foreground mt-1">
+                  CSV should include: clientEmail, itemSerialNumber, saleDate, sellingPrice
+                </p>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-600">
-                Revenue Today
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-slate-900">
-                R{salesData?.sales
-                  .filter(sale => 
-                    format(new Date(sale.saleDate), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
-                  )
-                  .reduce((sum, sale) => sum + parseFloat(sale.totalAmount), 0)
-                  .toFixed(2) || '0.00'}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-slate-600">
-                Total Sales This Month
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-slate-900">
-                {salesData?.sales.filter(sale => {
-                  const saleMonth = format(new Date(sale.saleDate), 'yyyy-MM');
-                  const currentMonth = format(new Date(), 'yyyy-MM');
-                  return saleMonth === currentMonth;
-                }).length || 0}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Sales Table */}
-        <Card>
-          <div className="px-6 py-4 border-b border-slate-200">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-900">Sales History</h3>
-              <div className="flex items-center space-x-3">
-                <div className="relative">
-                  <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
-                  <Input
-                    type="text"
-                    placeholder="Search sales..."
-                    className="pl-10"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
+              {csvFile && (
+                <div className="p-3 bg-muted rounded-md">
+                  <p className="text-sm font-medium">Selected: {csvFile.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Size: {(csvFile.size / 1024).toFixed(2)} KB
+                  </p>
                 </div>
-                <Button variant="outline" onClick={() => setShowBulkImportModal(true)}>
-                  <i className="fas fa-upload mr-2"></i>
-                  Bulk Import
+              )}
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleImport}
+                  disabled={!csvFile || csvImportMutation.isPending}
+                  className="flex-1"
+                >
+                  {csvImportMutation.isPending ? "Importing..." : "Import"}
                 </Button>
-                <Button onClick={() => setShowSalesEntryModal(true)}>
-                  <i className="fas fa-plus mr-2"></i>
-                  Record Sale
+                <Button variant="outline" onClick={() => setShowImportDialog(false)}>
+                  Cancel
                 </Button>
               </div>
             </div>
-          </div>
-          
-          <CardContent className="p-0">
-            {salesLoading ? (
-              <div className="p-6">
-                <div className="space-y-4">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="flex items-center space-x-4">
-                      <Skeleton className="h-4 w-1/6" />
-                      <Skeleton className="h-4 w-1/4" />
-                      <Skeleton className="h-4 w-1/6" />
-                      <Skeleton className="h-4 w-1/6" />
-                      <Skeleton className="h-4 w-1/6" />
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          {analyticsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[...Array(4)].map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-6">
+                    <div className="animate-pulse space-y-3">
+                      <div className="h-4 bg-muted rounded w-3/4"></div>
+                      <div className="h-8 bg-muted rounded w-1/2"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Total Sales</p>
+                      <p className="text-2xl font-bold">{analytics?.totalSales || 0}</p>
+                    </div>
+                    <Package className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
+                      <p className="text-2xl font-bold">{formatCurrency(analytics?.totalRevenue || 0)}</p>
+                    </div>
+                    <DollarSign className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Total Profit</p>
+                      <p className="text-2xl font-bold">{formatCurrency(analytics?.totalProfit || 0)}</p>
+                    </div>
+                    <TrendingUp className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Top Clients</p>
+                      <p className="text-2xl font-bold">{analytics?.topClients?.length || 0}</p>
+                    </div>
+                    <Users className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Top Clients</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {analytics?.topClients?.slice(0, 5).map((item, index) => (
+                    <div key={item.client.id} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-sm font-medium">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{item.client.fullName}</p>
+                          <p className="text-xs text-muted-foreground">{item.transactionCount} transactions</p>
+                        </div>
+                      </div>
+                      <p className="text-sm font-bold">{formatCurrency(item.totalSpent)}</p>
                     </div>
                   ))}
                 </div>
-              </div>
-            ) : salesData?.sales && salesData.sales.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Sale Date</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Items</TableHead>
-                      <TableHead>Total Amount</TableHead>
-                      <TableHead>Notes</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {salesData.sales.map((sale) => (
-                      <TableRow key={sale.id} className="hover:bg-slate-50">
-                        <TableCell className="text-slate-900">
-                          {format(new Date(sale.saleDate), 'MMM d, yyyy')}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Transactions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {analytics?.recentTransactions?.slice(0, 5).map((transaction) => (
+                    <div key={transaction.id} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <Badge className={getTransactionTypeColor(transaction.transactionType)}>
+                          {transaction.transactionType}
+                        </Badge>
+                        <div>
+                          <p className="text-sm font-medium">{transaction.itemName}</p>
+                          <p className="text-xs text-muted-foreground">{formatDate(transaction.saleDate)}</p>
+                        </div>
+                      </div>
+                      <p className="text-sm font-bold">{formatCurrency(transaction.sellingPrice)}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="transactions" className="space-y-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <Input
+                placeholder="Search transactions..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <Select value={transactionTypeFilter} onValueChange={setTransactionTypeFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Transaction Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="sale">Sale</SelectItem>
+                <SelectItem value="credit">Credit</SelectItem>
+                <SelectItem value="exchange">Exchange</SelectItem>
+                <SelectItem value="warranty">Warranty</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={dateRangeFilter} onValueChange={setDateRangeFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Date Range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="7days">Last 7 Days</SelectItem>
+                <SelectItem value="30days">Last 30 Days</SelectItem>
+                <SelectItem value="90days">Last 90 Days</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Item</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Source</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transactionsLoading ? (
+                    [...Array(5)].map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell><div className="h-4 bg-muted rounded w-16 animate-pulse"></div></TableCell>
+                        <TableCell><div className="h-4 bg-muted rounded w-24 animate-pulse"></div></TableCell>
+                        <TableCell><div className="h-4 bg-muted rounded w-32 animate-pulse"></div></TableCell>
+                        <TableCell><div className="h-4 bg-muted rounded w-20 animate-pulse"></div></TableCell>
+                        <TableCell><div className="h-4 bg-muted rounded w-16 animate-pulse"></div></TableCell>
+                        <TableCell><div className="h-4 bg-muted rounded w-12 animate-pulse"></div></TableCell>
+                      </TableRow>
+                    ))
+                  ) : transactionsData?.transactions?.length ? (
+                    transactionsData.transactions.map((transaction: SalesTransaction) => (
+                      <TableRow key={transaction.id}>
+                        <TableCell>
+                          <Badge className={getTransactionTypeColor(transaction.transactionType)}>
+                            {transaction.transactionType}
+                          </Badge>
                         </TableCell>
+                        <TableCell>{transaction.clientName || 'Unknown'}</TableCell>
                         <TableCell>
                           <div>
-                            <div className="font-medium text-slate-900">
-                              {sale.client.firstName} {sale.client.lastName}
-                            </div>
-                            <div className="text-sm text-slate-500">
-                              {sale.client.email}
-                            </div>
+                            <p className="font-medium">{transaction.itemName}</p>
+                            <p className="text-xs text-muted-foreground">{transaction.itemSerialNumber}</p>
                           </div>
                         </TableCell>
+                        <TableCell>{formatDate(transaction.saleDate)}</TableCell>
+                        <TableCell>{formatCurrency(transaction.sellingPrice)}</TableCell>
                         <TableCell>
-                          <div className="space-y-1">
-                            {sale.saleItems.map((item, index) => (
-                              <div key={item.id} className="text-sm">
-                                <div className="font-medium text-slate-900">
-                                  {item.inventoryItem.name}
-                                </div>
-                                <div className="text-slate-500">
-                                  {item.inventoryItem.brand} - {item.inventoryItem.serialNumber}
-                                  <span className="ml-2 text-green-600">
-                                    R{parseFloat(item.salePrice).toFixed(2)}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-medium text-green-600">
-                            R{parseFloat(sale.totalAmount).toFixed(2)}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-slate-600 max-w-xs">
-                          {sale.notes ? (
-                            <div className="truncate" title={sale.notes}>
-                              {sale.notes}
-                            </div>
-                          ) : (
-                            <span className="text-slate-400">No notes</span>
-                          )}
+                          <Badge variant="outline">
+                            {transaction.source.replace('_', ' ')}
+                          </Badge>
                         </TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <i className="fas fa-receipt text-4xl text-slate-300 mb-4"></i>
-                <h3 className="text-lg font-medium text-slate-900 mb-2">No sales recorded</h3>
-                <p className="text-slate-500 mb-4">Start by recording your first sale or importing sales data.</p>
-                <div className="flex justify-center space-x-3">
-                  <Button variant="outline" onClick={() => setShowBulkImportModal(true)}>
-                    <i className="fas fa-upload mr-2"></i>
-                    Bulk Import
-                  </Button>
-                  <Button onClick={() => setShowSalesEntryModal(true)}>
-                    <i className="fas fa-plus mr-2"></i>
-                    Record First Sale
-                  </Button>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                        <p className="text-lg font-medium">No transactions found</p>
+                        <p className="text-sm text-muted-foreground">Try adjusting your search criteria</p>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">Sales Analytics</h2>
+            <Select value={dateRangeFilter} onValueChange={setDateRangeFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Date Range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="7days">Last 7 Days</SelectItem>
+                <SelectItem value="30days">Last 30 Days</SelectItem>
+                <SelectItem value="90days">Last 90 Days</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Performance Metrics</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Total Sales</span>
+                  <span className="text-lg font-bold">{analytics?.totalSales || 0}</span>
                 </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Total Revenue</span>
+                  <span className="text-lg font-bold">{formatCurrency(analytics?.totalRevenue || 0)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Total Profit</span>
+                  <span className="text-lg font-bold text-green-600">{formatCurrency(analytics?.totalProfit || 0)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Average Sale</span>
+                  <span className="text-lg font-bold">
+                    {analytics?.totalSales && analytics?.totalRevenue 
+                      ? formatCurrency(analytics.totalRevenue / analytics.totalSales) 
+                      : "$0.00"}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
 
-      <SalesEntryModal 
-        isOpen={showSalesEntryModal} 
-        onClose={() => setShowSalesEntryModal(false)} 
-      />
-
-      <BulkSalesImportModal
-        isOpen={showBulkImportModal}
-        onClose={() => setShowBulkImportModal(false)}
-      />
-    </>
+            <Card>
+              <CardHeader>
+                <CardTitle>Top Performing Clients</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {analytics?.topClients?.map((item, index) => (
+                    <div key={item.client.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-bold">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <p className="font-medium">{item.client.fullName}</p>
+                          <p className="text-sm text-muted-foreground">{item.client.email}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold">{formatCurrency(item.totalSpent)}</p>
+                        <p className="text-sm text-muted-foreground">{item.transactionCount} transactions</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

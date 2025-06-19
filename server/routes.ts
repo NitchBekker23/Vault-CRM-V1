@@ -2218,7 +2218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         action: "bulk_sales_import",
         entityType: "sales_transaction",
-        entityId: null,
+        entityId: 0,
         description: `Imported ${results.successful} sales transactions, ${results.duplicates.length} duplicates found`,
       });
 

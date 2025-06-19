@@ -11,6 +11,7 @@ import Dashboard from "@/pages/dashboard";
 import Inventory from "@/pages/inventory";
 import Wishlist from "@/pages/wishlist";
 import Clients from "@/pages/clients";
+import Sales from "@/pages/sales";
 import Analytics from "@/pages/analytics";
 import Settings from "@/pages/settings";
 import BulkUpload from "@/pages/bulk-upload";
@@ -109,6 +110,7 @@ function Router() {
           <Route path="/inventory" component={Inventory} />
           <Route path="/wishlist" component={Wishlist} />
           <Route path="/clients" component={Clients} />
+          <Route path="/sales" component={Sales} />
           <Route path="/analytics" component={Analytics} />
           <Route path="/settings" component={Settings} />
           <Route path="/bulk-upload" component={BulkUpload} />
