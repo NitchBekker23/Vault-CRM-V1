@@ -209,6 +209,31 @@ export const clientCategories = pgTable("client_categories", {
   name: varchar("name").notNull().unique(),
 });
 
+// Stores table for sales tracking and analytics
+export const stores = pgTable("stores", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull().unique(),
+  code: varchar("code").unique(), // Store code/identifier
+  address: text("address"),
+  manager: varchar("manager"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Sales persons table for sales tracking and analytics
+export const salesPersons = pgTable("sales_persons", {
+  id: serial("id").primaryKey(),
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  employeeId: varchar("employee_id").unique(),
+  email: varchar("email").unique(),
+  storeId: integer("store_id").references(() => stores.id),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Enhanced sales transactions table
 export const salesTransactions = pgTable("sales_transactions", {
   id: serial("id").primaryKey(),
@@ -221,6 +246,9 @@ export const salesTransactions = pgTable("sales_transactions", {
   retailPrice: numeric("retail_price", { precision: 10, scale: 2 }),
   sellingPrice: numeric("selling_price", { precision: 10, scale: 2 }).notNull(),
   profitMargin: numeric("profit_margin", { precision: 10, scale: 2 }),
+  customerCode: varchar("customer_code"), // Customer's unique identifier
+  salesPerson: varchar("sales_person"), // Sales person attributed to this sale
+  store: varchar("store"), // Store where sale was made
   originalTransactionId: integer("original_transaction_id"),
   csvBatchId: varchar("csv_batch_id"),
   source: varchar("source", { enum: ["manual", "csv_import", "pos_system"] }).default("manual"),
@@ -390,6 +418,17 @@ export const saleItemsRelations = relations(saleItems, ({ one }) => ({
   }),
 }));
 
+export const storesRelations = relations(stores, ({ many }) => ({
+  salesPersons: many(salesPersons),
+}));
+
+export const salesPersonsRelations = relations(salesPersons, ({ one }) => ({
+  store: one(stores, {
+    fields: [salesPersons.storeId],
+    references: [stores.id],
+  }),
+}));
+
 export const activityLogRelations = relations(activityLog, ({ one }) => ({
   user: one(users, {
     fields: [activityLog.userId],
@@ -479,6 +518,12 @@ export const insertWishlistItemSchema = createInsertSchema(wishlistItems).omit({
 });
 export type InsertWishlistItem = z.infer<typeof insertWishlistItemSchema>;
 export type WishlistItem = typeof wishlistItems.$inferSelect;
+
+export type Store = typeof stores.$inferSelect;
+export type InsertStore = typeof stores.$inferInsert;
+
+export type SalesPerson = typeof salesPersons.$inferSelect;
+export type InsertSalesPerson = typeof salesPersons.$inferInsert;
 
 export const insertClientSchema = createInsertSchema(clients).omit({
   id: true,
