@@ -1,0 +1,1 @@
+postgresql://postgres:#Thevaultcrm2436@db.tepalkbwlyfknalwbmlg.supabase.co:5432/postgres?sslmode=require
