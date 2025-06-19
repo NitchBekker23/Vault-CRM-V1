@@ -115,6 +115,12 @@ REPLIT_DOMAINS=[development]
 ```
 
 ## Recent Changes
+- June 19, 2025: Migrated to private Teams account for enhanced security
+  - **TEAMS MIGRATION**: User upgraded to private Teams account for secure development environment
+  - Project ready for fork migration with complete database preservation
+  - Supabase database remains accessible with same connection string
+  - All environment variables and authentication configured for Teams domain
+  - Enhanced privacy and security for business-critical inventory management system
 - June 19, 2025: Completed CSV import system with flexible client allocation
   - **CLIENT ALLOCATION SYSTEM**: CSV imports create clients automatically from customer codes (CUST001, etc.)
   - Enhanced system to work without email requirements for practical daily use
