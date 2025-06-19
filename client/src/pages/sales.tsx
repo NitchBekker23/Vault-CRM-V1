@@ -266,7 +266,7 @@ customer@example.com,SN555666777,2025-06-19,500.00,600.00,credit,Return credit f
                       <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
                       <p className="text-2xl font-bold">{formatCurrency(analytics?.totalRevenue || 0)}</p>
                     </div>
-                    <DollarSign className="h-8 w-8 text-muted-foreground" />
+                    <TrendingUp className="h-8 w-8 text-muted-foreground" />
                   </div>
                 </CardContent>
               </Card>
