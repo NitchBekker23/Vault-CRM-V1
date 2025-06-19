@@ -1,0 +1,2 @@
+itemSerialNumber,saleDate,sellingPrice,retailPrice,transactionType,customerCode,salesPerson,store,notes
+SN123456789,2025-06-19,25000.00,30000.00,sale,CUST001,AP,001,Test sale at Melrose store

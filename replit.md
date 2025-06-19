@@ -115,6 +115,12 @@ REPLIT_DOMAINS=[development]
 ```
 
 ## Recent Changes
+- June 19, 2025: Completed CSV import system with flexible client allocation
+  - **CLIENT ALLOCATION SYSTEM**: CSV imports create clients automatically from customer codes (CUST001, etc.)
+  - Enhanced system to work without email requirements for practical daily use
+  - Store and sales person allocation fully functional with authentic business data
+  - Currency displays correctly in South African Rands throughout system
+  - System ready for testing with real sales data from your stores
 - June 19, 2025: Completed authentic business data integration and CSV validation system
   - **AUTHENTIC DATA INTEGRATION**: Populated system with real store and sales person data from Excel files
   - Added 5 authentic stores: HQ (099), Melrose (001), Menlyn (003), Breitling V&A (006), Breitling Sandton (002)
