@@ -139,10 +139,7 @@ customer@example.com,SN555666777,2025-06-19,500.00,600.00,credit,Return credit f
   const formatCurrency = (amount: string | number | null) => {
     if (!amount) return "R0.00";
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return new Intl.NumberFormat('en-ZA', {
-      style: 'currency',
-      currency: 'ZAR',
-    }).format(num);
+    return `R${num.toFixed(2)}`;
   };
 
   const formatDate = (dateString: string) => {
