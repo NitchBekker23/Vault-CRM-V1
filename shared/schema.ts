@@ -174,6 +174,7 @@ export const wishlistItems = pgTable("wishlist_items", {
 // Enhanced client profiles table
 export const clients = pgTable("clients", {
   id: serial("id").primaryKey(),
+  customerNumber: varchar("customer_number").unique(),
   fullName: varchar("full_name").notNull(),
   email: varchar("email").unique(),
   phoneNumber: varchar("phone_number"),

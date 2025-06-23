@@ -1959,6 +1959,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Client bulk upload endpoint
+  app.post("/api/clients/bulk-upload", checkAuth, csvUpload.single('file'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const csvData = req.file.buffer.toString('utf-8');
+      const results: any[] = [];
+      let successCount = 0;
+      let skippedCount = 0;
+      const errors: string[] = [];
+
+      // Parse CSV data
+      const rows = csvData.split('\n').map((row: string) => row.split(',').map((cell: string) => cell.trim()));
+      const headers = rows[0];
+      
+      // Expected headers for client import
+      const expectedHeaders = ['customerNumber', 'fullName', 'email', 'phoneNumber', 'location', 'clientCategory', 'birthday', 'vipStatus', 'preferences', 'notes'];
+      
+      console.log(`[Client Bulk Upload] Processing ${rows.length - 1} client records`);
+
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (row.length < 2 || !row[0]) continue; // Skip empty rows
+
+        try {
+          const clientData: any = {};
+          
+          // Map CSV columns to client fields
+          headers.forEach((header: string, index: number) => {
+            const cleanHeader = header.replace(/['"]/g, '').trim();
+            const value = row[index] ? row[index].replace(/['"]/g, '').trim() : '';
+            
+            switch (cleanHeader) {
+              case 'customerNumber':
+                clientData.customerNumber = value;
+                break;
+              case 'fullName':
+                clientData.fullName = value;
+                break;
+              case 'email':
+                clientData.email = value || null;
+                break;
+              case 'phoneNumber':
+                clientData.phoneNumber = value || null;
+                break;
+              case 'location':
+                clientData.location = value || null;
+                break;
+              case 'clientCategory':
+                clientData.clientCategory = value || 'Regular';
+                break;
+              case 'birthday':
+                clientData.birthday = value ? value : null;
+                break;
+              case 'vipStatus':
+                clientData.vipStatus = value || 'regular';
+                break;
+              case 'preferences':
+                clientData.preferences = value || null;
+                break;
+              case 'notes':
+                clientData.notes = value || null;
+                break;
+            }
+          });
+
+          // Validate required fields
+          if (!clientData.fullName) {
+            errors.push(`Row ${i + 1}: Full name is required`);
+            continue;
+          }
+
+          // Check for duplicate customer number
+          if (clientData.customerNumber) {
+            const existingClient = await storage.getClientByCustomerNumber(clientData.customerNumber);
+            if (existingClient) {
+              skippedCount++;
+              console.log(`[Client Import] Skipping duplicate customer number: ${clientData.customerNumber}`);
+              continue;
+            }
+          }
+
+          // Validate and create client
+          const validatedData = insertClientSchema.parse(clientData);
+          const newClient = await storage.createClient(validatedData);
+          
+          successCount++;
+          console.log(`[Client Import] Created client: ${newClient.fullName} (${clientData.customerNumber || 'No customer number'})`);
+
+        } catch (error) {
+          console.error(`[Client Import] Error processing row ${i + 1}:`, error);
+          if (error instanceof z.ZodError) {
+            errors.push(`Row ${i + 1}: ${error.errors.map(e => e.message).join(', ')}`);
+          } else {
+            errors.push(`Row ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          }
+        }
+      }
+
+      console.log(`[Client Bulk Upload] Completed: ${successCount} successful, ${skippedCount} skipped, ${errors.length} errors`);
+
+      res.json({
+        message: "Bulk upload completed",
+        successCount,
+        skippedCount,
+        errorCount: errors.length,
+        errors: errors.slice(0, 10) // Limit errors in response
+      });
+
+    } catch (error) {
+      console.error("Error in client bulk upload:", error);
+      res.status(500).json({ message: "Failed to process bulk upload" });
+    }
+  });
+
   // Purchase routes
   app.get("/api/purchases", isAuthenticated, async (req, res) => {
     try {

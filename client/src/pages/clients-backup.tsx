@@ -69,7 +69,7 @@ export default function Clients() {
     enabled: isAuthenticated && !isLoading,
   });
 
-  const filteredClients = (clientsData as any)?.clients?.filter((client: Client) => {
+  const filteredClients = clientsData?.clients?.filter((client: Client) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (

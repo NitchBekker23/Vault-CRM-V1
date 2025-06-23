@@ -479,6 +479,14 @@ export class DatabaseStorage implements IStorage {
     return client;
   }
 
+  async getClientByCustomerNumber(customerNumber: string): Promise<Client | undefined> {
+    const [client] = await db
+      .select()
+      .from(clients)
+      .where(eq(clients.customerNumber, customerNumber));
+    return client;
+  }
+
   async createClient(client: InsertClient): Promise<Client> {
     const [newClient] = await db
       .insert(clients)
