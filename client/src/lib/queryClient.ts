@@ -42,6 +42,14 @@ export async function apiRequest(
     console.log(`[API Response] ${method} ${url} - Status: ${res.status}`);
     
     await throwIfResNotOk(res);
+    
+    // Handle empty responses (like 204 No Content)
+    const contentType = res.headers.get('content-type');
+    if (res.status === 204 || !contentType?.includes('application/json')) {
+      console.log(`[API Success] ${method} ${url} - No content`);
+      return null;
+    }
+    
     const result = await res.json();
     console.log(`[API Success] ${method} ${url}`, result);
     return result;
