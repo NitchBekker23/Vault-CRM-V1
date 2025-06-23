@@ -57,10 +57,7 @@ export default function ClientProfileModal({ clientId, isOpen, onClose }: Client
   // Update client mutation
   const updateClientMutation = useMutation({
     mutationFn: async (updatedData: Partial<Client>) => {
-      return apiRequest(`/api/clients/${clientId}`, {
-        method: "PATCH",
-        body: JSON.stringify(updatedData),
-      });
+      return apiRequest("PATCH", `/api/clients/${clientId}`, updatedData);
     },
     onSuccess: () => {
       toast({
