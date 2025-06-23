@@ -79,6 +79,7 @@ export default function Clients() {
       client.fullName?.toLowerCase().includes(query) ||
       client.email?.toLowerCase().includes(query) ||
       client.phoneNumber?.toLowerCase().includes(query) ||
+      client.customerNumber?.toLowerCase().includes(query) ||
       client.location?.toLowerCase().includes(query)
     );
   }) || [];
@@ -335,7 +336,7 @@ export default function Clients() {
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
                   <Input
                     type="text"
-                    placeholder="Search clients..."
+                    placeholder="Search by name, email, phone, or customer number..."
                     className="pl-10"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -474,6 +475,7 @@ export default function Clients() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Client</TableHead>
+                      <TableHead>Customer #</TableHead>
                       <TableHead>Contact</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Purchases</TableHead>
@@ -495,6 +497,17 @@ export default function Clients() {
                               </p>
                               <p className="text-sm text-muted-foreground">{client.location || "No location"}</p>
                             </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-mono text-sm">
+                            {client.customerNumber ? (
+                              <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-md font-medium">
+                                {client.customerNumber}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">No number</span>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
