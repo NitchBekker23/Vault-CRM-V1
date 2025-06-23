@@ -115,6 +115,13 @@ REPLIT_DOMAINS=[development]
 ```
 
 ## Recent Changes
+- June 23, 2025: Fixed inventory image display inconsistency between preview and dedicated page views
+  - **IMAGE DISPLAY BUG FIX**: Resolved issue where inventory table showed placeholder icons instead of actual product images
+  - Modified inventory API endpoint to properly load images using imageOptimizer.getItemImages() for each item
+  - Enhanced API response to include complete image data for both legacy imageUrls and new image system
+  - Fixed discrepancy between preview window (showing generic icons) and dedicated page (showing correct images)
+  - All inventory views now consistently display authentic product images with proper fallback handling
+  - Maintained performance by implementing efficient Promise.all for concurrent image loading
 - June 23, 2025: Completed and tested client delete functionality with comprehensive error handling
   - **SMART DELETE SYSTEM**: Added row-by-row client deletion with red trash icon buttons in client table
   - **FOREIGN KEY PROTECTION**: System prevents deletion of clients with existing sales transactions to maintain data integrity

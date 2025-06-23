@@ -1251,7 +1251,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dateRange = req.query.dateRange as string;
 
       const result = await storage.getInventoryItems(page, limit, search, category, status, dateRange);
-      res.json(result);
+      
+      // Ensure images are properly populated for each item
+      const itemsWithImages = await Promise.all(
+        result.items.map(async (item) => {
+          try {
+            const images = await imageOptimizer.getItemImages(item.id);
+            return {
+              ...item,
+              imageUrls: images.length > 0 ? images : item.imageUrls || []
+            };
+          } catch (error) {
+            console.error(`Error loading images for item ${item.id}:`, error);
+            return {
+              ...item,
+              imageUrls: item.imageUrls || []
+            };
+          }
+        })
+      );
+
+      res.json({
+        ...result,
+        items: itemsWithImages
+      });
     } catch (error) {
       console.error("Error fetching inventory:", error);
       res.status(500).json({ message: "Failed to fetch inventory" });
