@@ -1,0 +1,4 @@
+itemSerialNumber,saleDate,sellingPrice,customerCode,salesPerson,store,transactionType,retailPrice,profitMargin,notes
+17,2025-06-20,95000,CUST004,AP,001,sale,100000,45000,Day Date olive green sold to premium customer
+16,2025-06-21,4800,CUST005,BW,002,sale,5000,2300,Tudor Chrono discounted sale
+15,2025-06-22,1900,CUST006,LW,003,sale,2000,900,DateJust sold to regular client

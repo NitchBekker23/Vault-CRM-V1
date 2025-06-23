@@ -1,0 +1,4 @@
+itemSerialNumber,saleDate,sellingPrice,customerCode,salesPerson,store,transactionType,retailPrice,profitMargin,notes
+14,2025-06-20,9500,CUST007,AP,001,sale,10000,4500,Sea-Dweller sold to new premium customer
+13,2025-06-21,430,CUST008,BW,002,sale,450,150,Custom leather portfolio to business client
+12,2025-06-22,720,CUST009,LW,003,sale,750,100,Montblanc Meisterstück fountain pen gift

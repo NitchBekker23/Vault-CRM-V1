@@ -1166,27 +1166,12 @@ export class DatabaseStorage implements IStorage {
                   continue;
                 }
 
-                // Find or create client (prioritize clientId, then customerCode)
+                // Find or create client (prioritize customerCode for auto-creation, fallback to clientId)
                 console.log(`Looking up client - clientId: ${row.clientId}, customerCode: ${row.customerCode}`);
                 let client;
-                if (row.clientId) {
-                  console.log(`Searching for client with ID: ${row.clientId}`);
-                  [client] = await db
-                    .select()
-                    .from(clients)
-                    .where(eq(clients.id, parseInt(row.clientId)));
-                  
-                  if (!client) {
-                    console.error(`Client not found with ID: ${row.clientId}`);
-                    errors.push({
-                      row: rowNumber,
-                      error: `Client not found with ID: ${row.clientId}`,
-                      data: row
-                    });
-                    continue;
-                  }
-                  console.log(`Found existing client:`, { id: client.id, fullName: client.fullName });
-                } else if (row.customerCode) {
+                
+                // First try to find by customer code if provided
+                if (row.customerCode) {
                   console.log(`Searching for client with customer code: ${row.customerCode}`);
                   [client] = await db
                     .select()
@@ -1208,6 +1193,29 @@ export class DatabaseStorage implements IStorage {
                     console.log(`Created new client:`, { id: client.id, fullName: client.fullName });
                   } else {
                     console.log(`Found existing client for customer code:`, { id: client.id, fullName: client.fullName });
+                  }
+                } else if (row.clientId) {
+                  console.log(`Searching for client with ID: ${row.clientId}`);
+                  [client] = await db
+                    .select()
+                    .from(clients)
+                    .where(eq(clients.id, parseInt(row.clientId)));
+                  
+                  if (!client) {
+                    console.log(`Client ID ${row.clientId} not found, creating new client with ID reference`);
+                    [client] = await db
+                      .insert(clients)
+                      .values({
+                        fullName: `Client ${row.clientId}`,
+                        firstName: `Client`,
+                        lastName: `${row.clientId}`,
+                        email: `client${row.clientId}@customer.vault.com`,
+                        notes: `Auto-created for CSV import - Original Client ID: ${row.clientId}`
+                      })
+                      .returning();
+                    console.log(`Created new client for ID reference:`, { id: client.id, fullName: client.fullName });
+                  } else {
+                    console.log(`Found existing client:`, { id: client.id, fullName: client.fullName });
                   }
                 } else {
                   console.log(`Creating anonymous client for item: ${row.itemSerialNumber}`);
@@ -1234,14 +1242,30 @@ export class DatabaseStorage implements IStorage {
 
                 if (!inventoryItem) {
                   console.error(`Inventory item not found with serial: ${row.itemSerialNumber}`);
+                  
+                  // Check if we have all items in the database
+                  const allItems = await db.select({ serialNumber: inventoryItems.serialNumber, name: inventoryItems.name }).from(inventoryItems);
+                  console.log(`Available inventory items:`, allItems.map(item => `${item.serialNumber} (${item.name})`).join(', '));
+                  
                   errors.push({
                     row: rowNumber,
-                    error: `Inventory item not found with serial number: ${row.itemSerialNumber}`,
+                    error: `Inventory item not found with serial number: ${row.itemSerialNumber}. Available items: ${allItems.map(item => item.serialNumber).join(', ')}`,
                     data: row
                   });
                   continue;
                 }
                 console.log(`Found inventory item:`, { id: inventoryItem.id, name: inventoryItem.name, status: inventoryItem.status });
+                
+                // Check if item is already sold
+                if (inventoryItem.status === 'sold') {
+                  console.warn(`Item ${inventoryItem.serialNumber} is already marked as sold`);
+                  errors.push({
+                    row: rowNumber,
+                    error: `Item ${inventoryItem.serialNumber} is already sold and cannot be sold again`,
+                    data: row
+                  });
+                  continue;
+                }
 
                 console.log(`Validating sale date: ${row.saleDate}`);
                 const saleDate = new Date(row.saleDate);
@@ -1320,11 +1344,27 @@ export class DatabaseStorage implements IStorage {
                 console.log(`Creating sales transaction...`);
                 await this.createSalesTransaction(transactionData);
 
-                // Update inventory item status
-                console.log(`Updating inventory item status to 'sold'...`);
+                // Update inventory item status and create status change log
+                console.log(`Updating inventory item status from '${inventoryItem.status}' to 'sold'...`);
                 await this.updateInventoryItem(inventoryItem.id, {
                   status: 'sold'
                 });
+                
+                // Create status change audit log entry
+                try {
+                  await db.insert(transactionStatusLog).values({
+                    transactionId: 0, // Will be updated after transaction creation
+                    statusFrom: inventoryItem.status,
+                    statusTo: 'sold',
+                    changeReason: 'CSV Import Sale',
+                    changedBy: userId,
+                    notes: `Item sold to ${client.fullName} via CSV import batch ${batchId}`
+                  });
+                  console.log(`Status change logged for item ${inventoryItem.serialNumber}`);
+                } catch (logError) {
+                  console.warn(`Failed to create status log:`, logError);
+                  // Don't fail the main transaction for logging issues
+                }
 
                 // Update client statistics
                 console.log(`Updating client purchase stats...`);
@@ -1496,35 +1536,44 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateClientPurchaseStats(clientId: number): Promise<void> {
-    const stats = await db
-      .select({
-        totalSpend: sql<number>`COALESCE(SUM(CASE WHEN ${salesTransactions.transactionType} = 'sale' THEN ${salesTransactions.sellingPrice} WHEN ${salesTransactions.transactionType} = 'credit' THEN -${salesTransactions.sellingPrice} ELSE 0 END), 0)`,
-        totalPurchases: sql<number>`COUNT(CASE WHEN ${salesTransactions.transactionType} = 'sale' THEN 1 END)`,
-        lastPurchaseDate: sql<Date>`MAX(CASE WHEN ${salesTransactions.transactionType} = 'sale' THEN ${salesTransactions.saleDate} END)`
-      })
-      .from(salesTransactions)
-      .where(eq(salesTransactions.clientId, clientId));
+    try {
+      // Get the latest purchase statistics for this client
+      const [statsResult] = await db
+        .select({
+          totalSpend: sql<number>`COALESCE(SUM(CASE WHEN ${salesTransactions.transactionType} = 'sale' THEN CAST(${salesTransactions.sellingPrice} AS DECIMAL) WHEN ${salesTransactions.transactionType} = 'credit' THEN -CAST(${salesTransactions.sellingPrice} AS DECIMAL) ELSE 0 END), 0)`,
+          totalPurchases: sql<number>`COUNT(CASE WHEN ${salesTransactions.transactionType} = 'sale' THEN 1 END)`,
+          lastPurchaseDate: sql<string>`MAX(CASE WHEN ${salesTransactions.transactionType} = 'sale' THEN ${salesTransactions.saleDate}::text END)`
+        })
+        .from(salesTransactions)
+        .where(eq(salesTransactions.clientId, clientId));
 
-    const { totalSpend, totalPurchases, lastPurchaseDate } = stats[0];
+      const { totalSpend, totalPurchases, lastPurchaseDate } = statsResult || { totalSpend: 0, totalPurchases: 0, lastPurchaseDate: null };
 
-    // Determine VIP status based on spending
-    let vipStatus: 'regular' | 'vip' | 'premium' = 'regular';
-    if (totalSpend >= 10000) {
-      vipStatus = 'premium';
-    } else if (totalSpend >= 5000) {
-      vipStatus = 'vip';
+      // Determine VIP status based on spending
+      let vipStatus: 'regular' | 'vip' | 'premium' = 'regular';
+      if (totalSpend >= 10000) {
+        vipStatus = 'premium';
+      } else if (totalSpend >= 5000) {
+        vipStatus = 'vip';
+      }
+
+      // Update the client with calculated stats
+      await db
+        .update(clients)
+        .set({
+          totalSpend: totalSpend.toString(),
+          totalPurchases,
+          lastPurchaseDate: lastPurchaseDate ? new Date(lastPurchaseDate) : null,
+          vipStatus,
+          updatedAt: new Date()
+        })
+        .where(eq(clients.id, clientId));
+
+      console.log(`Updated client ${clientId} stats: ${totalPurchases} purchases, R${totalSpend} total, VIP: ${vipStatus}`);
+    } catch (error) {
+      console.error(`Failed to update client ${clientId} stats:`, error);
+      // Don't throw error to prevent transaction failure
     }
-
-    await db
-      .update(clients)
-      .set({
-        totalSpend: totalSpend.toString(),
-        totalPurchases,
-        lastPurchaseDate,
-        vipStatus,
-        updatedAt: new Date()
-      })
-      .where(eq(clients.id, clientId));
   }
 
   async logTransactionStatusChange(

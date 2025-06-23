@@ -1,0 +1,4 @@
+itemSerialNumber,saleDate,sellingPrice,customerCode,salesPerson,store,transactionType,retailPrice,profitMargin,notes
+20,2025-06-20,115000,CUST001,AP,001,sale,120000,515000,Breitling Navitimer sale to regular customer
+19,2025-06-21,950,CUST002,BW,002,sale,999,490,Rolex perfume gift item
+18,2025-06-22,95000,CUST003,LW,003,sale,100000,45000,Air King sold at slight discount
