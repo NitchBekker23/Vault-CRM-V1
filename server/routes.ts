@@ -1206,7 +1206,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No image file provided" });
       }
 
-      const userId = getUserId(req);
+      // Use the userId set by checkAuth middleware
+      const userId = req.currentUserId || req.session?.userId;
       if (!userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
