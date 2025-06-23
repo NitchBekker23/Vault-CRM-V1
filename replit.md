@@ -115,6 +115,14 @@ REPLIT_DOMAINS=[development]
 ```
 
 ## Recent Changes
+- June 23, 2025: Completed client delete functionality with proper foreign key constraint handling
+  - **SMART DELETE SYSTEM**: Added row-by-row client deletion with red trash icon buttons in client table
+  - **FOREIGN KEY PROTECTION**: System prevents deletion of clients with existing sales transactions to maintain data integrity
+  - **CLEAR ERROR MESSAGES**: Shows user-friendly messages when deletion fails due to associated transactions
+  - **CONFIRMATION DIALOGS**: Delete confirmation shows client name to prevent accidental deletions
+  - **PROPER ERROR HANDLING**: Enhanced both server-side and client-side error handling for foreign key constraints
+  - **DATABASE INTEGRITY**: Maintains referential integrity while providing clear feedback to users
+  - Delete functionality complements existing bulk upload and client management features
 - June 23, 2025: Built comprehensive client profile management system
   - **COMPREHENSIVE CLIENT PROFILES**: Created detailed client profile modal with tabbed interface for profile, purchase history, and analytics
   - **VIP STATUS SYSTEM**: Visual VIP status indicators (Regular/VIP/Premium) with color-coded badges throughout client interface

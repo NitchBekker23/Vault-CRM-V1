@@ -118,10 +118,31 @@ export default function Clients() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      let title = "Failed to Delete Client";
+      let description = "An error occurred";
+      
+      if (error instanceof Error) {
+        // Check if it's a foreign key constraint error
+        if (error.message.includes("has sales transaction")) {
+          title = "Cannot Delete Client";
+          description = error.message;
+        } else {
+          description = error.message;
+        }
+      }
+      
+      // Handle API error responses
+      if (error?.response?.data?.message) {
+        description = error.response.data.message;
+        if (error.response.data.hasTransactions) {
+          title = "Cannot Delete Client";
+        }
+      }
+      
       toast({
-        title: "Failed to Delete Client",
-        description: error instanceof Error ? error.message : "An error occurred",
+        title,
+        description,
         variant: "destructive",
       });
     },

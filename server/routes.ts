@@ -32,6 +32,7 @@ import {
   users,
   images,
   clients,
+  salesTransactions,
   insertAccountRequestSchema,
   insertTwoFactorCodeSchema,
   insertInventoryItemSchema,
@@ -1971,9 +1972,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Client not found" });
       }
 
-      // Delete the client
-      await storage.deleteClient(id);
-      res.status(204).send();
+      // Try to delete the client and handle foreign key constraint
+      try {
+        await storage.deleteClient(id);
+        res.status(204).send();
+      } catch (deleteError: any) {
+        // Handle foreign key constraint violation
+        if (deleteError.code === '23503' && deleteError.constraint_name?.includes('sales_transactions')) {
+          return res.status(400).json({ 
+            message: "Cannot delete client with existing sales transactions. Please remove transactions first.",
+            hasTransactions: true
+          });
+        }
+        throw deleteError; // Re-throw if it's a different error
+      }
     } catch (error) {
       console.error("Error deleting client:", error);
       res.status(500).json({ message: "Failed to delete client" });
