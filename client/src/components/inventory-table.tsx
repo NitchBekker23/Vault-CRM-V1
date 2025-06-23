@@ -92,6 +92,12 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
       
       const response = await fetch(`/api/inventory?${params}`, {
         credentials: "include",
+        // Force cache bypass to ensure fresh image data
+        cache: "no-cache",
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
       });
       
       if (!response.ok) {
@@ -100,6 +106,11 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
       
       return response.json();
     },
+    // Force immediate refresh for image updates
+    staleTime: 0, // Always consider data stale
+    gcTime: 0, // Don't cache at all
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
 
   const deleteItemMutation = useMutation({
