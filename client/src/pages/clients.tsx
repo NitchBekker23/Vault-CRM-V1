@@ -25,6 +25,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import ClientProfileModal from "@/components/client-profile-modal";
+import BulkUploadResultsModal from "@/components/bulk-upload-results-modal";
 import { Client } from "@shared/schema";
 
 // Form schema for adding new clients
@@ -45,6 +46,8 @@ export default function Clients() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [showResultsModal, setShowResultsModal] = useState(false);
+  const [uploadResults, setUploadResults] = useState<any>(null);
   
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
@@ -205,10 +208,25 @@ export default function Clients() {
       
       const result = await response.json();
       
-      toast({
-        title: "Bulk Upload Successful",
-        description: `${result.successCount} clients imported successfully. ${result.skippedCount || 0} duplicates skipped.`,
-      });
+      // Store results for detailed modal
+      setUploadResults(result);
+      
+      // Show brief toast notification
+      if (result.errorCount > 0) {
+        toast({
+          title: "Upload Completed with Issues",
+          description: `${result.successCount} imported, ${result.skippedCount} skipped, ${result.errorCount} failed. Click to view details.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Bulk Upload Successful",
+          description: `${result.successCount} clients imported successfully${result.skippedCount > 0 ? `, ${result.skippedCount} duplicates skipped` : ''}`,
+        });
+      }
+      
+      // Show detailed results modal for any batch upload
+      setShowResultsModal(true);
       
       // Refresh client list
       queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
@@ -500,6 +518,16 @@ export default function Clients() {
             setShowProfileModal(false);
             setSelectedClientId(null);
           }}
+        />
+
+        {/* Bulk Upload Results Modal */}
+        <BulkUploadResultsModal
+          isOpen={showResultsModal}
+          onClose={() => {
+            setShowResultsModal(false);
+            setUploadResults(null);
+          }}
+          result={uploadResults}
         />
       </div>
     </>

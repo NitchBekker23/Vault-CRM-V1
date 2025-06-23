@@ -31,6 +31,7 @@ import {
 import {
   users,
   images,
+  clients,
   insertAccountRequestSchema,
   insertTwoFactorCodeSchema,
   insertInventoryItemSchema,
@@ -1971,91 +1972,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let successCount = 0;
       let skippedCount = 0;
       const errors: string[] = [];
+      const skippedClients: string[] = [];
+      const processedClients: string[] = [];
 
-      // Parse CSV data
-      const rows = csvData.split('\n').map((row: string) => row.split(',').map((cell: string) => cell.trim()));
-      const headers = rows[0];
+      // Parse CSV data - handle both comma and semicolon separators
+      const lines = csvData.split('\n').filter((line: string) => line.trim());
+      const separator = csvData.includes(';') ? ';' : ',';
+      const rows = lines.map((row: string) => 
+        row.split(separator).map((cell: string) => cell.replace(/^"|"$/g, '').trim())
+      );
+      const headers = rows[0].map((header: string) => header.toLowerCase().trim());
       
-      // Expected headers for client import
-      const expectedHeaders = ['customerNumber', 'fullName', 'email', 'phoneNumber', 'location', 'clientCategory', 'birthday', 'vipStatus', 'preferences', 'notes'];
-      
-      console.log(`[Client Bulk Upload] Processing ${rows.length - 1} client records`);
+      console.log(`[Client Bulk Upload] Processing ${rows.length - 1} client records with headers:`, headers);
+      console.log(`[Client Bulk Upload] Using separator: "${separator}"`);
 
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
-        if (row.length < 2 || !row[0]) continue; // Skip empty rows
+        if (row.length < 2 || !row.some((cell: string) => cell.trim())) continue; // Skip empty rows
 
         try {
           const clientData: any = {};
+          const rowIdentifier = `Row ${i + 1}`;
           
-          // Map CSV columns to client fields
+          // Map CSV columns to client fields with more flexible header matching
           headers.forEach((header: string, index: number) => {
-            const cleanHeader = header.replace(/['"]/g, '').trim();
-            const value = row[index] ? row[index].replace(/['"]/g, '').trim() : '';
+            const value = row[index] ? row[index].trim() : '';
             
-            switch (cleanHeader) {
-              case 'customerNumber':
-                clientData.customerNumber = value;
-                break;
-              case 'fullName':
-                clientData.fullName = value;
-                break;
-              case 'email':
-                clientData.email = value || null;
-                break;
-              case 'phoneNumber':
-                clientData.phoneNumber = value || null;
-                break;
-              case 'location':
-                clientData.location = value || null;
-                break;
-              case 'clientCategory':
-                clientData.clientCategory = value || 'Regular';
-                break;
-              case 'birthday':
-                clientData.birthday = value ? value : null;
-                break;
-              case 'vipStatus':
-                clientData.vipStatus = value || 'regular';
-                break;
-              case 'preferences':
-                clientData.preferences = value || null;
-                break;
-              case 'notes':
-                clientData.notes = value || null;
-                break;
+            // Handle various header formats and common variations
+            if (header.includes('customer') || header.includes('number') || header === 'customernumber') {
+              clientData.customerNumber = value || null;
+            } else if (header.includes('name') || header === 'fullname') {
+              clientData.fullName = value;
+            } else if (header.includes('email')) {
+              clientData.email = value || null;
+            } else if (header.includes('phone') || header.includes('mobile') || header.includes('cell')) {
+              clientData.phoneNumber = value || null;
+            } else if (header.includes('location') || header.includes('address') || header.includes('city')) {
+              clientData.location = value || null;
+            } else if (header.includes('category') || header.includes('type')) {
+              clientData.clientCategory = value || 'Regular';
+            } else if (header.includes('birthday') || header.includes('birth') || header.includes('dob')) {
+              clientData.birthday = value || null;
+            } else if (header.includes('vip') || header.includes('status')) {
+              clientData.vipStatus = value || 'regular';
+            } else if (header.includes('preference') || header.includes('interest')) {
+              clientData.preferences = value || null;
+            } else if (header.includes('note') || header.includes('comment')) {
+              clientData.notes = value || null;
             }
           });
 
           // Validate required fields
-          if (!clientData.fullName) {
-            errors.push(`Row ${i + 1}: Full name is required`);
+          if (!clientData.fullName || clientData.fullName.trim() === '') {
+            errors.push(`${rowIdentifier}: Full name is required (found: "${clientData.fullName || 'empty'}")`);
             continue;
           }
 
-          // Check for duplicate customer number
-          if (clientData.customerNumber) {
+          // Check for duplicate by customer number only if provided
+          if (clientData.customerNumber && clientData.customerNumber.trim() !== '') {
             const existingClient = await storage.getClientByCustomerNumber(clientData.customerNumber);
             if (existingClient) {
               skippedCount++;
+              skippedClients.push(`${rowIdentifier}: Customer ${clientData.customerNumber} (${clientData.fullName}) - already exists`);
               console.log(`[Client Import] Skipping duplicate customer number: ${clientData.customerNumber}`);
               continue;
             }
           }
+
+          // Check for duplicate by email if provided
+          if (clientData.email && clientData.email.trim() !== '') {
+            const existingClient = await db
+              .select()
+              .from(clients)
+              .where(eq(clients.email, clientData.email))
+              .limit(1);
+            if (existingClient.length > 0) {
+              skippedCount++;
+              skippedClients.push(`${rowIdentifier}: Email ${clientData.email} (${clientData.fullName}) - already exists`);
+              console.log(`[Client Import] Skipping duplicate email: ${clientData.email}`);
+              continue;
+            }
+          }
+
+          // Clean up empty strings to null for optional fields
+          Object.keys(clientData).forEach(key => {
+            if (clientData[key] === '' || clientData[key] === undefined) {
+              clientData[key] = null;
+            }
+          });
 
           // Validate and create client
           const validatedData = insertClientSchema.parse(clientData);
           const newClient = await storage.createClient(validatedData);
           
           successCount++;
-          console.log(`[Client Import] Created client: ${newClient.fullName} (${clientData.customerNumber || 'No customer number'})`);
+          processedClients.push(`${rowIdentifier}: ${newClient.fullName} (Customer: ${newClient.customerNumber || 'No number'})`);
+          console.log(`[Client Import] Created client: ${newClient.fullName} (${newClient.customerNumber || 'No customer number'})`);
 
         } catch (error) {
           console.error(`[Client Import] Error processing row ${i + 1}:`, error);
           if (error instanceof z.ZodError) {
-            errors.push(`Row ${i + 1}: ${error.errors.map(e => e.message).join(', ')}`);
+            const fieldErrors = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+            errors.push(`Row ${i + 1}: ${fieldErrors}`);
+          } else if (error instanceof Error) {
+            errors.push(`Row ${i + 1}: ${error.message}`);
           } else {
-            errors.push(`Row ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            errors.push(`Row ${i + 1}: Unknown error`);
           }
         }
       }
@@ -2067,7 +2089,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         successCount,
         skippedCount,
         errorCount: errors.length,
-        errors: errors.slice(0, 10) // Limit errors in response
+        totalProcessed: successCount + skippedCount + errors.length,
+        summary: {
+          successful: processedClients,
+          skipped: skippedClients,
+          errors: errors
+        },
+        // Legacy format for backwards compatibility
+        errors: errors.slice(0, 10)
       });
 
     } catch (error) {
