@@ -1306,15 +1306,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const item = await storage.createInventoryItem(validatedData);
       
-      // Log activity
-      const userId = req.user?.claims?.sub || req.user?.id;
-      await storage.createActivity({
-        userId,
-        action: "added_item",
-        entityType: "inventory_item",
-        entityId: item.id,
-        description: `Added ${item.name}`,
-      });
+      // Log activity with session-based authentication
+      const userId = req.currentUserId || req.session?.userId;
+      if (userId) {
+        await storage.createActivity({
+          userId,
+          action: "added_item",
+          entityType: "inventory_item",
+          entityId: item.id,
+          description: `Added ${item.name}`,
+        });
+      }
 
       res.status(201).json(item);
     } catch (error) {
@@ -1335,17 +1337,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedData = insertInventoryItemSchema.partial().parse(req.body);
 
+      // Auto-inherit images from existing SKUs if no images provided but SKU is present
+      if (validatedData.sku && validatedData.sku.trim() && (!validatedData.imageUrls || validatedData.imageUrls.length === 0)) {
+        console.log(`Update operation: Checking for existing SKU images for SKU: ${validatedData.sku.trim()}`);
+        const existingSkuItems = await storage.getInventoryItemsBySku(validatedData.sku.trim());
+        console.log(`Update operation: Found ${existingSkuItems.length} existing items with SKU: ${validatedData.sku.trim()}`);
+        
+        if (existingSkuItems.length > 0) {
+          const itemWithImages = existingSkuItems.find(item => 
+            item.id !== id && // Don't inherit from self
+            item.imageUrls && 
+            Array.isArray(item.imageUrls) && 
+            item.imageUrls.length > 0
+          );
+          
+          if (itemWithImages && itemWithImages.imageUrls && Array.isArray(itemWithImages.imageUrls)) {
+            validatedData.imageUrls = itemWithImages.imageUrls;
+            console.log(`Update operation: Inherited ${itemWithImages.imageUrls.length} images from existing SKU item: ${itemWithImages.name} (ID: ${itemWithImages.id})`);
+          } else {
+            console.log(`Update operation: No existing items with images found for SKU: ${validatedData.sku.trim()}`);
+          }
+        }
+      }
+
       const item = await storage.updateInventoryItem(id, validatedData);
       
-      // Log activity
-      const userId = req.user?.claims?.sub || req.user?.id;
-      await storage.createActivity({
-        userId,
-        action: "updated_item",
-        entityType: "inventory_item",
-        entityId: item.id,
-        description: `Updated ${item.name}`,
-      });
+      // Log activity with proper authentication
+      const userId = req.currentUserId || req.session?.userId;
+      if (userId) {
+        try {
+          await storage.createActivity({
+            userId,
+            action: "updated_item",
+            entityType: "inventory_item",
+            entityId: item.id,
+            description: `Updated ${item.name}`,
+          });
+        } catch (activityError: any) {
+          console.log("Activity logging failed:", activityError.message);
+          // Don't fail the main operation if activity logging fails
+        }
+      }
 
       res.json(item);
     } catch (error) {
@@ -1370,8 +1402,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.deleteInventoryItem(id);
       
-      // Log activity
-      const userId = getUserId(req);
+      // Log activity with session-based authentication
+      const userId = req.currentUserId || req.session?.userId;
       if (userId) {
         await storage.createActivity({
           userId,

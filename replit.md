@@ -122,6 +122,8 @@ REPLIT_DOMAINS=[development]
   - Imported 44 inventory items: Rolex watches, Montblanc pens, Tudor pieces, Breitling watches, and custom items
   - Restored 5 authentic stores: HQ (099), Melrose (001), Menlyn (003), Breitling V&A (006), Breitling Sandton (002)
   - Restored 20 sales staff members with proper store assignments and employee IDs
+  - **IMAGE UPLOAD SYSTEM FULLY RESTORED**: Fixed authentication issues preventing image uploads and linking
+  - **SKU IMAGE INHERITANCE WORKING**: Automatic image sharing between items with same SKU reduces storage needs
   - **SYSTEM FULLY OPERATIONAL**: All data accessible through UI, authentication working, ready for daily operations
   - Login credentials: nitchbekker@gmail.com / admin123 (owner role)
 - June 19, 2025: Restored authentication system with new PostgreSQL database
