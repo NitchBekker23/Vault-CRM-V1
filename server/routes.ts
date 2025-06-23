@@ -1884,7 +1884,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Client routes
-  app.get("/api/clients", isAuthenticated, async (req, res) => {
+  app.get("/api/clients", checkAuth, async (req: any, res) => {
     try {
       const page = req.query.page ? parseInt(req.query.page as string) : 1;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
@@ -1897,7 +1897,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/clients/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/clients/:id", checkAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const client = await storage.getClient(id);
@@ -1913,7 +1913,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/clients", isAuthenticated, async (req, res) => {
+  app.post("/api/clients", checkAuth, async (req: any, res) => {
     try {
       const validatedData = insertClientSchema.parse(req.body);
       const client = await storage.createClient(validatedData);
@@ -1927,7 +1927,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/clients/:id", isAuthenticated, async (req, res) => {
+  app.put("/api/clients/:id", checkAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const validatedData = insertClientSchema.partial().parse(req.body);
@@ -1943,7 +1943,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/clients/:id", isAuthenticated, async (req, res) => {
+  app.patch("/api/clients/:id", checkAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const validatedData = insertClientSchema.partial().parse(req.body);
