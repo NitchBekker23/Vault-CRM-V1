@@ -2,16 +2,19 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from "@shared/schema";
 
-// Prioritize Neon PostgreSQL credentials over DATABASE_URL
+// Connect to the database with your existing data
 let databaseUrl: string;
 
-if (process.env.PGHOST && process.env.PGUSER && process.env.PGPASSWORD && process.env.PGDATABASE) {
+// First check for the original working DATABASE_URL that has your data
+if (process.env.DATABASE_URL) {
+  databaseUrl = process.env.DATABASE_URL;
+  console.log('Using DATABASE_URL which should contain your existing data');
+} else if (process.env.PGHOST && process.env.PGUSER && process.env.PGPASSWORD && process.env.PGDATABASE) {
   const { PGHOST, PGPORT = '5432', PGUSER, PGPASSWORD, PGDATABASE } = process.env;
   databaseUrl = `postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}?sslmode=require`;
-  console.log('Using Neon PostgreSQL credentials from PG environment variables');
+  console.log('Using PostgreSQL environment variables');
 } else {
-  databaseUrl = process.env.DATABASE_URL || '';
-  console.log('Falling back to DATABASE_URL');
+  throw new Error('No database connection available');
 }
 
 if (!databaseUrl) {

@@ -1,5 +1,5 @@
-import { db } from './server/db.js';
-import { stores, salesPersons, salesPersonStoreHistory } from './shared/schema.js';
+import { db } from './server/db.ts';
+import { stores, salesPersons, salesPersonStoreHistory } from './shared/schema.ts';
 
 async function populateBusinessData() {
   console.log('Populating business data...');
