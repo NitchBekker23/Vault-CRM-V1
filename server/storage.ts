@@ -53,7 +53,7 @@ import {
   type InsertTransactionStatusLog,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, and, ilike, or, gte, lt, inArray } from "drizzle-orm";
+import { eq, desc, sql, and, ilike, or, gte, lt, inArray, not } from "drizzle-orm";
 import csv from "csv-parser";
 import { Readable } from "stream";
 
@@ -278,6 +278,15 @@ export class DatabaseStorage implements IStorage {
     
     let whereConditions = [];
     
+    // By default, exclude sold items from inventory view
+    // Only show sold items if explicitly requested via status filter
+    if (status) {
+      whereConditions.push(eq(inventoryItems.status, status));
+    } else {
+      // Default: show all items except sold ones
+      whereConditions.push(not(eq(inventoryItems.status, 'sold')));
+    }
+    
     if (search) {
       whereConditions.push(
         or(
@@ -290,10 +299,6 @@ export class DatabaseStorage implements IStorage {
     
     if (category) {
       whereConditions.push(eq(inventoryItems.category, category));
-    }
-    
-    if (status) {
-      whereConditions.push(eq(inventoryItems.status, status));
     }
 
     if (dateRange) {
