@@ -1960,6 +1960,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete client endpoint
+  app.delete("/api/clients/:id", checkAuth, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Check if client exists
+      const client = await storage.getClient(id);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      // Delete the client
+      await storage.deleteClient(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting client:", error);
+      res.status(500).json({ message: "Failed to delete client" });
+    }
+  });
+
   // Client bulk upload endpoint
   app.post("/api/clients/bulk-upload", checkAuth, csvUpload.single('file'), async (req: any, res) => {
     try {

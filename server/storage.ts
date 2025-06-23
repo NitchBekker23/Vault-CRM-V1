@@ -124,6 +124,7 @@ export interface IStorage {
   getClient(id: number): Promise<Client | undefined>;
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: number, client: Partial<InsertClient>): Promise<Client>;
+  deleteClient(id: number): Promise<void>;
 
   // Purchase operations
   getPurchases(clientId?: number): Promise<Purchase[]>;
@@ -502,6 +503,12 @@ export class DatabaseStorage implements IStorage {
       .where(eq(clients.id, id))
       .returning();
     return updatedClient;
+  }
+
+  async deleteClient(id: number): Promise<void> {
+    await db
+      .delete(clients)
+      .where(eq(clients.id, id));
   }
 
   async getPurchases(clientId?: number): Promise<Purchase[]> {

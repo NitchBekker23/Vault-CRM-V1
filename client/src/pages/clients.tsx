@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { User, Eye, Edit, ShoppingBag, Star, Plus, Search, Download, Upload } from "lucide-react";
+import { User, Eye, Edit, ShoppingBag, Star, Plus, Search, Download, Upload, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -106,6 +106,27 @@ export default function Clients() {
     },
   });
 
+  // Delete client mutation
+  const deleteClientMutation = useMutation({
+    mutationFn: async (clientId: number) => {
+      return apiRequest("DELETE", `/api/clients/${clientId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Client Deleted",
+        description: "Client has been removed successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Delete Client",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    },
+  });
+
   useEffect(() => {
     if (error && isUnauthorizedError(error as Error)) {
       toast({
@@ -123,6 +144,12 @@ export default function Clients() {
   const handleViewProfile = (clientId: number) => {
     setSelectedClientId(clientId);
     setShowProfileModal(true);
+  };
+
+  const handleDeleteClient = (clientId: number, clientName: string) => {
+    if (window.confirm(`Are you sure you want to delete ${clientName}? This action cannot be undone.`)) {
+      deleteClientMutation.mutate(clientId);
+    }
   };
 
   const handleAddClient = (data: AddClientForm) => {
@@ -475,14 +502,25 @@ export default function Clients() {
                           </span>
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleViewProfile(client.id)}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewProfile(client.id)}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteClient(client.id, client.fullName || `${client.firstName} ${client.lastName}`)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              disabled={deleteClientMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
