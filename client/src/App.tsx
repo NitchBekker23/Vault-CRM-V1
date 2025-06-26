@@ -28,6 +28,7 @@ const RequestAccount = lazy(() => import("@/pages/request-account"));
 const SetupAccount = lazy(() => import("@/pages/setup-account"));
 const TwoFactorLogin = lazy(() => import("@/pages/two-factor-login"));
 const TestLogin = lazy(() => import("@/pages/test-login"));
+const Performance = lazy(() => import("@/pages/performance"));
 const Register = lazy(() => import("@/pages/register"));
 const ForgotPassword = lazy(() => import("@/pages/forgot-password"));
 const ResetPassword = lazy(() => import("@/pages/reset-password"));
@@ -145,6 +146,7 @@ function Router() {
             <Route path="/sales" component={Sales} />
             <Route path="/sales-management" component={SalesManagement} />
             <Route path="/analytics" component={Analytics} />
+            <Route path="/performance" component={Performance} />
             <Route path="/settings" component={Settings} />
             <Route path="/bulk-upload" component={BulkUpload} />
             <Route path="/user-management" component={UserManagement} />

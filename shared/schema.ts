@@ -217,6 +217,8 @@ export const stores = pgTable("stores", {
   code: varchar("code").unique(), // Store code/identifier
   address: text("address"),
   manager: varchar("manager"),
+  monthlyTarget: numeric("monthly_target", { precision: 12, scale: 2 }).default("0"),
+  region: varchar("region"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -230,10 +232,49 @@ export const salesPersons = pgTable("sales_persons", {
   employeeId: varchar("employee_id").unique(),
   email: varchar("email").unique(),
   currentStoreId: integer("current_store_id").references(() => stores.id), // Current assignment
+  monthlyTarget: numeric("monthly_target", { precision: 12, scale: 2 }).default("0"),
+  commissionRate: numeric("commission_rate", { precision: 5, scale: 2 }).default("0"), // Percentage
+  hireDate: timestamp("hire_date"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Store performance tracking table
+export const storePerformance = pgTable("store_performance", {
+  id: serial("id").primaryKey(),
+  storeId: integer("store_id").references(() => stores.id).notNull(),
+  month: integer("month").notNull(), // 1-12
+  year: integer("year").notNull(),
+  totalSales: integer("total_sales").default(0),
+  totalRevenue: numeric("total_revenue", { precision: 12, scale: 2 }).default("0"),
+  totalProfit: numeric("total_profit", { precision: 12, scale: 2 }).default("0"),
+  targetAchievement: numeric("target_achievement", { precision: 5, scale: 2 }).default("0"), // Percentage
+  topSellingCategory: varchar("top_selling_category"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_store_performance_month_year").on(table.storeId, table.month, table.year),
+]);
+
+// Sales person performance tracking table
+export const salesPersonPerformance = pgTable("sales_person_performance", {
+  id: serial("id").primaryKey(),
+  salesPersonId: integer("sales_person_id").references(() => salesPersons.id).notNull(),
+  storeId: integer("store_id").references(() => stores.id).notNull(),
+  month: integer("month").notNull(), // 1-12
+  year: integer("year").notNull(),
+  totalSales: integer("total_sales").default(0),
+  totalRevenue: numeric("total_revenue", { precision: 12, scale: 2 }).default("0"),
+  totalProfit: numeric("total_profit", { precision: 12, scale: 2 }).default("0"),
+  commission: numeric("commission", { precision: 10, scale: 2 }).default("0"),
+  targetAchievement: numeric("target_achievement", { precision: 5, scale: 2 }).default("0"), // Percentage
+  ranking: integer("ranking"), // Store ranking for the month
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_salesperson_performance_month_year").on(table.salesPersonId, table.month, table.year),
+]);
 
 // Track sales person store assignment history
 export const salesPersonStoreHistory = pgTable("sales_person_store_history", {
@@ -432,11 +473,32 @@ export const saleItemsRelations = relations(saleItems, ({ one }) => ({
 
 export const storesRelations = relations(stores, ({ many }) => ({
   salesPersons: many(salesPersons),
+  storePerformance: many(storePerformance),
+  salesPersonPerformance: many(salesPersonPerformance),
 }));
 
-export const salesPersonsRelations = relations(salesPersons, ({ one }) => ({
+export const salesPersonsRelations = relations(salesPersons, ({ one, many }) => ({
   store: one(stores, {
     fields: [salesPersons.currentStoreId],
+    references: [stores.id],
+  }),
+  performance: many(salesPersonPerformance),
+}));
+
+export const storePerformanceRelations = relations(storePerformance, ({ one }) => ({
+  store: one(stores, {
+    fields: [storePerformance.storeId],
+    references: [stores.id],
+  }),
+}));
+
+export const salesPersonPerformanceRelations = relations(salesPersonPerformance, ({ one }) => ({
+  salesPerson: one(salesPersons, {
+    fields: [salesPersonPerformance.salesPersonId],
+    references: [salesPersons.id],
+  }),
+  store: one(stores, {
+    fields: [salesPersonPerformance.storeId],
     references: [stores.id],
   }),
 }));

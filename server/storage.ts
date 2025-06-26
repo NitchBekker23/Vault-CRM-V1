@@ -17,6 +17,8 @@ import {
   stores,
   salesPersons,
   salesPersonStoreHistory,
+  storePerformance,
+  salesPersonPerformance,
   type User,
   type UpsertUser,
   type InventoryItem,
@@ -1768,6 +1770,166 @@ export class DatabaseStorage implements IStorage {
   async updateSalesPerson(id: number, personData: any): Promise<any> {
     const [person] = await db.update(salesPersons).set(personData).where(eq(salesPersons.id, id)).returning();
     return person;
+  }
+
+  // Performance tracking methods
+  async getStorePerformance(storeId?: number, month?: number, year?: number): Promise<any[]> {
+    try {
+      const results = await db.execute(sql`
+        SELECT 
+          sp.store_id,
+          s.name as store_name,
+          s.code as store_code,
+          sp.total_sales,
+          sp.total_revenue,
+          sp.total_profit,
+          sp.month,
+          sp.year
+        FROM store_performance sp
+        JOIN stores s ON sp.store_id = s.id
+        WHERE 1=1
+        ${storeId ? sql`AND sp.store_id = ${storeId}` : sql``}
+        ${month ? sql`AND sp.month = ${month}` : sql``}
+        ${year ? sql`AND sp.year = ${year}` : sql``}
+        ORDER BY sp.year DESC, sp.month DESC
+      `);
+      
+      return results;
+    } catch (error) {
+      console.error('Error fetching store performance:', error);
+      return [];
+    }
+  }
+
+  async getSalesPersonPerformance(salesPersonId?: number, month?: number, year?: number): Promise<any[]> {
+    try {
+      const results = await db.execute(sql`
+        SELECT 
+          spp.sales_person_id,
+          sp.first_name,
+          sp.last_name,
+          sp.employee_id,
+          s.name as store_name,
+          spp.total_sales,
+          spp.total_revenue,
+          spp.total_profit,
+          spp.commission,
+          spp.month,
+          spp.year
+        FROM sales_person_performance spp
+        JOIN sales_persons sp ON spp.sales_person_id = sp.id
+        JOIN stores s ON spp.store_id = s.id
+        WHERE 1=1
+        ${salesPersonId ? sql`AND spp.sales_person_id = ${salesPersonId}` : sql``}
+        ${month ? sql`AND spp.month = ${month}` : sql``}
+        ${year ? sql`AND spp.year = ${year}` : sql``}
+        ORDER BY spp.year DESC, spp.month DESC
+      `);
+      
+      return results;
+    } catch (error) {
+      console.error('Error fetching sales person performance:', error);
+      return [];
+    }
+  }
+
+  async updatePerformanceMetrics(month: number, year: number): Promise<void> {
+    try {
+      console.log(`Updating performance metrics for ${month}/${year}...`);
+
+      // Get all stores and sales persons
+      const allStores = await this.getAllStores();
+      const allSalesPersons = await this.getAllSalesPersons();
+
+      // Calculate store performance
+      for (const store of allStores) {
+        const storeStats = await db
+          .select({
+            totalSales: sql<number>`COUNT(*)`,
+            totalRevenue: sql<number>`COALESCE(SUM(CAST(${salesTransactions.sellingPrice} AS DECIMAL)), 0)`,
+            totalProfit: sql<number>`COALESCE(SUM(CAST(${salesTransactions.profitMargin} AS DECIMAL)), 0)`
+          })
+          .from(salesTransactions)
+          .where(and(
+            eq(salesTransactions.store, store.code || store.name),
+            sql`EXTRACT(MONTH FROM ${salesTransactions.saleDate}) = ${month}`,
+            sql`EXTRACT(YEAR FROM ${salesTransactions.saleDate}) = ${year}`,
+            eq(salesTransactions.transactionType, 'sale')
+          ));
+
+        const stats = storeStats[0];
+        const targetAchievement = 0; // Default to 0 since we don't have monthly targets yet
+
+        // Upsert store performance
+        await db.insert(storePerformance).values({
+          storeId: store.id,
+          month,
+          year,
+          totalSales: Number(stats.totalSales),
+          totalRevenue: stats.totalRevenue.toString(),
+          totalProfit: stats.totalProfit.toString(),
+          targetAchievement: targetAchievement.toString()
+        }).onConflictDoUpdate({
+          target: [storePerformance.storeId, storePerformance.month, storePerformance.year],
+          set: {
+            totalSales: Number(stats.totalSales),
+            totalRevenue: stats.totalRevenue.toString(),
+            totalProfit: stats.totalProfit.toString(),
+            targetAchievement: targetAchievement.toString(),
+            updatedAt: new Date()
+          }
+        });
+      }
+
+      // Calculate sales person performance
+      for (const salesPerson of allSalesPersons) {
+        const salesPersonStats = await db
+          .select({
+            totalSales: sql<number>`COUNT(*)`,
+            totalRevenue: sql<number>`COALESCE(SUM(CAST(${salesTransactions.sellingPrice} AS DECIMAL)), 0)`,
+            totalProfit: sql<number>`COALESCE(SUM(CAST(${salesTransactions.profitMargin} AS DECIMAL)), 0)`
+          })
+          .from(salesTransactions)
+          .where(and(
+            eq(salesTransactions.salesPerson, salesPerson.employeeId || `${salesPerson.firstName} ${salesPerson.lastName}`),
+            sql`EXTRACT(MONTH FROM ${salesTransactions.saleDate}) = ${month}`,
+            sql`EXTRACT(YEAR FROM ${salesTransactions.saleDate}) = ${year}`,
+            eq(salesTransactions.transactionType, 'sale')
+          ));
+
+        const stats = salesPersonStats[0];
+        const commission = Number(stats.totalRevenue) * (Number(salesPerson.commissionRate) / 100);
+        const targetAchievement = salesPerson.monthlyTarget > 0 ? 
+          (Number(stats.totalRevenue) / Number(salesPerson.monthlyTarget)) * 100 : 0;
+
+        // Upsert sales person performance
+        await db.insert(salesPersonPerformance).values({
+          salesPersonId: salesPerson.id,
+          storeId: salesPerson.currentStoreId || 1,
+          month,
+          year,
+          totalSales: Number(stats.totalSales),
+          totalRevenue: stats.totalRevenue.toString(),
+          totalProfit: stats.totalProfit.toString(),
+          commission: commission.toString(),
+          targetAchievement: targetAchievement.toString()
+        }).onConflictDoUpdate({
+          target: [salesPersonPerformance.salesPersonId, salesPersonPerformance.month, salesPersonPerformance.year],
+          set: {
+            totalSales: Number(stats.totalSales),
+            totalRevenue: stats.totalRevenue.toString(),
+            totalProfit: stats.totalProfit.toString(),
+            commission: commission.toString(),
+            targetAchievement: targetAchievement.toString(),
+            updatedAt: new Date()
+          }
+        });
+      }
+
+      console.log(`Performance metrics updated successfully for ${month}/${year}`);
+    } catch (error) {
+      console.error(`Error updating performance metrics:`, error);
+    }
   }
 
   // Validate sales person and store codes for CSV imports

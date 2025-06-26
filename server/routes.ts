@@ -2745,6 +2745,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Performance tracking routes
+  app.get("/api/performance/stores", checkAuth, async (req: any, res) => {
+    try {
+      const { storeId, month, year } = req.query;
+      const performance = await storage.getStorePerformance(
+        storeId ? parseInt(storeId) : undefined,
+        month ? parseInt(month) : undefined,
+        year ? parseInt(year) : undefined
+      );
+      res.json(performance);
+    } catch (error) {
+      console.error("Error fetching store performance:", error);
+      res.status(500).json({ message: "Failed to fetch store performance" });
+    }
+  });
+
+  app.get("/api/performance/sales-persons", checkAuth, async (req: any, res) => {
+    try {
+      const { salesPersonId, month, year } = req.query;
+      const performance = await storage.getSalesPersonPerformance(
+        salesPersonId ? parseInt(salesPersonId) : undefined,
+        month ? parseInt(month) : undefined,
+        year ? parseInt(year) : undefined
+      );
+      res.json(performance);
+    } catch (error) {
+      console.error("Error fetching sales person performance:", error);
+      res.status(500).json({ message: "Failed to fetch sales person performance" });
+    }
+  });
+
+  app.post("/api/performance/update", checkAuth, async (req: any, res) => {
+    try {
+      const { month, year } = req.body;
+      if (!month || !year) {
+        return res.status(400).json({ message: "Month and year are required" });
+      }
+      
+      await storage.updatePerformanceMetrics(parseInt(month), parseInt(year));
+      res.json({ success: true, message: `Performance metrics updated for ${month}/${year}` });
+    } catch (error) {
+      console.error("Error updating performance metrics:", error);
+      res.status(500).json({ message: "Failed to update performance metrics" });
+    }
+  });
+
+  // Performance dashboard with comprehensive metrics
+  app.get("/api/performance/dashboard", checkAuth, async (req: any, res) => {
+    try {
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth() + 1;
+      const currentYear = currentDate.getFullYear();
+
+      // Get current month performance for all stores
+      const storePerformance = await storage.getStorePerformance(undefined, currentMonth, currentYear);
+      
+      // Get current month performance for all sales persons
+      const salesPersonPerformance = await storage.getSalesPersonPerformance(undefined, currentMonth, currentYear);
+      
+      // Get top performing stores and sales persons
+      const topStores = storePerformance
+        .sort((a, b) => Number(b.performance.totalRevenue) - Number(a.performance.totalRevenue))
+        .slice(0, 5);
+        
+      const topSalesPersons = salesPersonPerformance
+        .sort((a, b) => Number(b.performance.totalRevenue) - Number(a.performance.totalRevenue))
+        .slice(0, 5);
+
+      res.json({
+        currentMonth,
+        currentYear,
+        storePerformance,
+        salesPersonPerformance,
+        topStores,
+        topSalesPersons,
+        summary: {
+          totalStores: storePerformance.length,
+          totalSalesPersons: salesPersonPerformance.length,
+          totalRevenue: storePerformance.reduce((sum, sp) => sum + Number(sp.performance.totalRevenue), 0),
+          totalProfit: storePerformance.reduce((sum, sp) => sum + Number(sp.performance.totalProfit), 0)
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching performance dashboard:", error);
+      res.status(500).json({ message: "Failed to fetch performance dashboard" });
+    }
+  });
+
   app.post("/api/sales-persons", checkAuth, async (req: any, res) => {
     try {
       const salesPerson = await storage.createSalesPerson(req.body);

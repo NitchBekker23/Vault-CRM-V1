@@ -13,6 +13,7 @@ const navigation = [
   { name: "Sales", href: "/sales", icon: "fas fa-dollar-sign" },
   { name: "Sales Team", href: "/sales-management", icon: "fas fa-user-tie" },
   { name: "Analytics", href: "/analytics", icon: "fas fa-chart-bar" },
+  { name: "Performance", href: "/performance", icon: "fas fa-trophy" },
   { name: "Settings", href: "/settings", icon: "fas fa-cog" },
 ];
 
