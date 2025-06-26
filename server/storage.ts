@@ -856,43 +856,58 @@ export class DatabaseStorage implements IStorage {
     wishlistRequests: number;
     salesThisMonth: number;
   }> {
-    const currentMonth = new Date();
-    currentMonth.setDate(1);
-    currentMonth.setHours(0, 0, 0, 0);
-    const currentMonthISO = currentMonth.toISOString();
+    try {
+      const currentMonth = new Date();
+      currentMonth.setDate(1);
+      currentMonth.setHours(0, 0, 0, 0);
 
-    const [totalInventoryResult, inStockResult, reservedResult, soldResult, wishlistResult, salesResult] = await Promise.all([
-      db.select({ count: sql<number>`count(*)` }).from(inventoryItems),
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(inventoryItems)
-        .where(eq(inventoryItems.status, "in_stock")),
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(inventoryItems)
-        .where(eq(inventoryItems.status, "reserved")),
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(inventoryItems)
-        .where(eq(inventoryItems.status, "sold")),
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(wishlistItems)
-        .where(eq(wishlistItems.status, "active")),
-      db
-        .select({ total: sql<number>`sum(purchase_price)` })
-        .from(purchases)
-        .where(sql`purchase_date >= ${currentMonthISO}`),
-    ]);
+      const [totalInventoryResult, inStockResult, reservedResult, soldResult, wishlistResult, salesResult] = await Promise.all([
+        db.select({ count: sql<number>`count(*)` }).from(inventoryItems),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(inventoryItems)
+          .where(eq(inventoryItems.status, "in_stock")),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(inventoryItems)
+          .where(eq(inventoryItems.status, "reserved")),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(inventoryItems)
+          .where(eq(inventoryItems.status, "sold")),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(wishlist)
+          .where(eq(wishlist.status, "active")),
+        db
+          .select({ total: sql<number>`COALESCE(sum(CAST(${salesTransactions.sellingPrice} AS DECIMAL)), 0)` })
+          .from(salesTransactions)
+          .where(and(
+            eq(salesTransactions.transactionType, "sale"),
+            gte(salesTransactions.saleDate, currentMonth)
+          )),
+      ]);
 
-    return {
-      totalInventory: Number(totalInventoryResult[0].count),
-      inStock: Number(inStockResult[0].count),
-      reserved: Number(reservedResult[0].count),
-      sold: Number(soldResult[0].count),
-      wishlistRequests: Number(wishlistResult[0].count),
-      salesThisMonth: Number(salesResult[0].total || 0),
-    };
+      return {
+        totalInventory: Number(totalInventoryResult[0]?.count || 0),
+        inStock: Number(inStockResult[0]?.count || 0),
+        reserved: Number(reservedResult[0]?.count || 0),
+        sold: Number(soldResult[0]?.count || 0),
+        wishlistRequests: Number(wishlistResult[0]?.count || 0),
+        salesThisMonth: Number(salesResult[0]?.total || 0),
+      };
+    } catch (error) {
+      console.error("Error fetching dashboard metrics:", error);
+      // Return safe defaults if queries fail
+      return {
+        totalInventory: 0,
+        inStock: 0,
+        reserved: 0,
+        sold: 0,
+        wishlistRequests: 0,
+        salesThisMonth: 0,
+      };
+    }
   }
 
   // Notification operations
