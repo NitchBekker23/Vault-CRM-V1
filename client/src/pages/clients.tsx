@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useDebounce } from "@/hooks/useDebounce";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import Header from "@/components/header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,6 +45,7 @@ type AddClientForm = z.infer<typeof addClientSchema>;
 export default function Clients() {
   // State management
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 300); // 300ms delay
   const [showAddModal, setShowAddModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
@@ -96,9 +98,9 @@ export default function Clients() {
   };
 
   const filteredClients = (clientsData as any)?.clients?.filter((client: any) => {
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    // Search filter - using debounced query for performance
+    if (debouncedSearchQuery) {
+      const query = debouncedSearchQuery.toLowerCase();
       const matchesSearch = (
         client.fullName?.toLowerCase().includes(query) ||
         client.firstName?.toLowerCase().includes(query) ||

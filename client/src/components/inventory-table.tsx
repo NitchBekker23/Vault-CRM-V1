@@ -106,11 +106,11 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
       
       return response.json();
     },
-    // Force immediate refresh for image updates
-    staleTime: 0, // Always consider data stale
-    gcTime: 0, // Don't cache at all
-    refetchOnMount: true,
-    refetchOnWindowFocus: true
+    // Smart cache strategy for optimal performance
+    staleTime: 5 * 60 * 1000, // 5 minutes fresh data
+    gcTime: 10 * 60 * 1000, // 10 minutes garbage collection
+    refetchOnMount: false, // Don't refetch if data is fresh
+    refetchOnWindowFocus: false
   });
 
   const deleteItemMutation = useMutation({
