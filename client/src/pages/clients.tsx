@@ -200,9 +200,7 @@ export default function Clients() {
   // Delete client mutation
   const deleteClientMutation = useMutation({
     mutationFn: async (clientId: number) => {
-      const response = await apiRequest(`/api/clients/${clientId}`, {
-        method: "DELETE",
-      });
+      const response = await apiRequest("DELETE", `/api/clients/${clientId}`);
       return response;
     },
     onSuccess: () => {

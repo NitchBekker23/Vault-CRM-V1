@@ -168,6 +168,7 @@ export interface IStorage {
   ): Promise<{ transactions: SalesTransaction[]; total: number }>;
   getSalesTransaction(id: number): Promise<SalesTransaction | undefined>;
   createSalesTransaction(transaction: InsertSalesTransaction): Promise<SalesTransaction>;
+  deleteSalesTransaction(id: number): Promise<void>;
   findDuplicateTransaction(clientId: number, inventoryItemId: number, saleDate: Date): Promise<SalesTransaction | undefined>;
   processSalesCSVImport(csvBuffer: Buffer, userId: string, batchId: string): Promise<{
     successful: number;
@@ -1069,14 +1070,7 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getSalesTransaction(id: number): Promise<SalesTransaction | undefined> {
-    const [transaction] = await db
-      .select()
-      .from(salesTransactions)
-      .where(eq(salesTransactions.id, id));
-    
-    return transaction;
-  }
+
 
   async createSalesTransaction(transaction: InsertSalesTransaction): Promise<SalesTransaction> {
     const [newTransaction] = await db
@@ -2078,12 +2072,12 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getSalesTransaction(id: number): Promise<SalesTransaction | null> {
+  async getSalesTransaction(id: number): Promise<SalesTransaction | undefined> {
     const [transaction] = await db
       .select()
       .from(salesTransactions)
       .where(eq(salesTransactions.id, id));
-    return transaction || null;
+    return transaction || undefined;
   }
 
   async deleteSalesTransaction(id: number): Promise<void> {

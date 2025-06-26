@@ -57,9 +57,7 @@ export default function Sales() {
   // Delete transaction mutation
   const deleteTransactionMutation = useMutation({
     mutationFn: async (transactionId: number) => {
-      const response = await apiRequest(`/api/sales-transactions/${transactionId}`, {
-        method: "DELETE",
-      });
+      const response = await apiRequest("DELETE", `/api/sales-transactions/${transactionId}`);
       return response;
     },
     onSuccess: () => {
