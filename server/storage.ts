@@ -877,8 +877,8 @@ export class DatabaseStorage implements IStorage {
           .where(eq(inventoryItems.status, "sold")),
         db
           .select({ count: sql<number>`count(*)` })
-          .from(wishlist)
-          .where(eq(wishlist.status, "active")),
+          .from(wishlistItems)
+          .where(eq(wishlistItems.status, "active")),
         db
           .select({ total: sql<number>`COALESCE(sum(CAST(${salesTransactions.sellingPrice} AS DECIMAL)), 0)` })
           .from(salesTransactions)
@@ -1202,71 +1202,79 @@ export class DatabaseStorage implements IStorage {
                   continue;
                 }
 
-                // Find or create client (prioritize customerCode for auto-creation, fallback to clientId)
-                console.log(`Looking up client - clientId: ${row.clientId}, customerCode: ${row.customerCode}`);
+                // Enhanced client lookup with multiple strategies
+                console.log(`Looking up client - clientId: ${row.clientId}, customerCode: ${row.customerCode}, customerName: ${row.customerName}`);
                 let client;
                 
-                // First try to find by customer code if provided
-                if (row.customerCode) {
-                  console.log(`Searching for client with customer code: ${row.customerCode}`);
-                  [client] = await db
-                    .select()
-                    .from(clients)
-                    .where(eq(clients.notes, `Customer Code: ${row.customerCode}`));
-                  
-                  if (!client) {
-                    console.log(`Creating new client for customer code: ${row.customerCode}`);
-                    [client] = await db
-                      .insert(clients)
-                      .values({
-                        fullName: `Customer ${row.customerCode}`,
-                        firstName: `Customer`,
-                        lastName: `${row.customerCode}`,
-                        email: `${row.customerCode.toLowerCase()}@customer.vault.com`,
-                        notes: `Customer Code: ${row.customerCode}`
-                      })
-                      .returning();
-                    console.log(`Created new client:`, { id: client.id, fullName: client.fullName });
-                  } else {
-                    console.log(`Found existing client for customer code:`, { id: client.id, fullName: client.fullName });
-                  }
-                } else if (row.clientId) {
+                // Strategy 1: Find by exact client ID if provided
+                if (row.clientId) {
                   console.log(`Searching for client with ID: ${row.clientId}`);
                   [client] = await db
                     .select()
                     .from(clients)
                     .where(eq(clients.id, parseInt(row.clientId)));
                   
-                  if (!client) {
-                    console.log(`Client ID ${row.clientId} not found, creating new client with ID reference`);
-                    [client] = await db
-                      .insert(clients)
-                      .values({
-                        fullName: `Client ${row.clientId}`,
-                        firstName: `Client`,
-                        lastName: `${row.clientId}`,
-                        email: `client${row.clientId}@customer.vault.com`,
-                        notes: `Auto-created for CSV import - Original Client ID: ${row.clientId}`
-                      })
-                      .returning();
-                    console.log(`Created new client for ID reference:`, { id: client.id, fullName: client.fullName });
-                  } else {
-                    console.log(`Found existing client:`, { id: client.id, fullName: client.fullName });
+                  if (client) {
+                    console.log(`Found existing client by ID:`, { id: client.id, fullName: client.fullName });
                   }
-                } else {
-                  console.log(`Creating anonymous client for item: ${row.itemSerialNumber}`);
-                  const timestamp = Date.now();
+                }
+                
+                // Strategy 2: Find by customer code in notes or customerNumber field
+                if (!client && row.customerCode) {
+                  console.log(`Searching for client with customer code: ${row.customerCode}`);
+                  
+                  // Try customerNumber field first
+                  [client] = await db
+                    .select()
+                    .from(clients)
+                    .where(eq(clients.customerNumber, row.customerCode));
+                  
+                  // If not found, try notes field
+                  if (!client) {
+                    [client] = await db
+                      .select()
+                      .from(clients)
+                      .where(sql`${clients.notes} LIKE ${`%Customer Code: ${row.customerCode}%`}`);
+                  }
+                  
+                  if (client) {
+                    console.log(`Found existing client by customer code:`, { id: client.id, fullName: client.fullName });
+                  }
+                }
+                
+                // Strategy 3: Find by name match if customerName provided
+                if (!client && row.customerName) {
+                  console.log(`Searching for client by name: ${row.customerName}`);
+                  [client] = await db
+                    .select()
+                    .from(clients)
+                    .where(or(
+                      eq(clients.fullName, row.customerName),
+                      sql`LOWER(${clients.fullName}) = LOWER(${row.customerName})`
+                    ));
+                  
+                  if (client) {
+                    console.log(`Found existing client by name:`, { id: client.id, fullName: client.fullName });
+                  }
+                }
+                
+                // Strategy 4: Create new client if none found
+                if (!client) {
+                  const newClientData = {
+                    fullName: row.customerName || `Customer ${row.customerCode || row.clientId || 'Unknown'}`,
+                    firstName: row.customerName ? row.customerName.split(' ')[0] : 'Customer',
+                    lastName: row.customerName ? row.customerName.split(' ').slice(1).join(' ') || '' : (row.customerCode || row.clientId || 'Unknown'),
+                    email: row.customerCode ? `${row.customerCode.toLowerCase()}@customer.vault.com` : `client${row.clientId || Date.now()}@customer.vault.com`,
+                    customerNumber: row.customerCode || null,
+                    notes: row.customerCode ? `Customer Code: ${row.customerCode}` : `Auto-created for CSV import - Original Client ID: ${row.clientId || 'N/A'}`
+                  };
+                  
+                  console.log(`Creating new client:`, newClientData);
                   [client] = await db
                     .insert(clients)
-                    .values({
-                      fullName: `Anonymous Sale ${timestamp}`,
-                      firstName: `Anonymous`,
-                      lastName: `Sale${timestamp}`,
-                      email: `anonymous.${timestamp}@sale.vault.com`,
-                      notes: `Anonymous sale for item ${row.itemSerialNumber}`
-                    })
+                    .values(newClientData)
                     .returning();
-                  console.log(`Created anonymous client:`, { id: client.id, fullName: client.fullName });
+                  console.log(`Created new client:`, { id: client.id, fullName: client.fullName });
                 }
 
                 // Find inventory item by serial number
@@ -1357,6 +1365,23 @@ export class DatabaseStorage implements IStorage {
                   continue;
                 }
 
+                // Calculate profit margin using cost price from inventory
+                let profitMargin = null;
+                let retailPrice = row.retailPrice ? parseFloat(row.retailPrice) : null;
+                const sellingPrice = parseFloat(row.sellingPrice);
+                
+                if (inventoryItem.costPrice && sellingPrice) {
+                  const costPrice = parseFloat(inventoryItem.costPrice);
+                  profitMargin = sellingPrice - costPrice;
+                  console.log(`Calculated profit margin: R${profitMargin} (selling: R${sellingPrice}, cost: R${costPrice})`);
+                }
+                
+                // Use inventory price as retail price if not provided in CSV
+                if (!retailPrice && inventoryItem.price) {
+                  retailPrice = parseFloat(inventoryItem.price);
+                  console.log(`Using inventory price as retail price: R${retailPrice}`);
+                }
+
                 // Create transaction
                 console.log(`Creating transaction data...`);
                 const transactionData: InsertSalesTransaction = {
@@ -1364,9 +1389,9 @@ export class DatabaseStorage implements IStorage {
                   inventoryItemId: inventoryItem.id,
                   transactionType: (row.transactionType as any) || 'sale',
                   saleDate,
-                  retailPrice: row.retailPrice ? parseFloat(row.retailPrice).toString() : null,
-                  sellingPrice: parseFloat(row.sellingPrice).toString(),
-                  profitMargin: row.profitMargin ? parseFloat(row.profitMargin).toString() : null,
+                  retailPrice: retailPrice ? retailPrice.toString() : null,
+                  sellingPrice: sellingPrice.toString(),
+                  profitMargin: profitMargin ? profitMargin.toString() : null,
                   customerCode: row.customerCode || null,
                   salesPerson: row.salesPerson || null,
                   store: row.store || null,
@@ -1378,33 +1403,46 @@ export class DatabaseStorage implements IStorage {
                 console.log(`Transaction data prepared:`, JSON.stringify(transactionData, null, 2));
 
                 console.log(`Creating sales transaction...`);
-                await this.createSalesTransaction(transactionData);
+                const [createdTransaction] = await db.insert(salesTransactions)
+                  .values(transactionData)
+                  .returning();
+                console.log(`Sales transaction created with ID: ${createdTransaction.id}`);
 
-                // Update inventory item status and create status change log
-                console.log(`Updating inventory item status from '${inventoryItem.status}' to 'sold'...`);
-                await this.updateInventoryItem(inventoryItem.id, {
-                  status: 'sold'
-                });
+                // Update inventory item status to sold
+                const originalStatus = inventoryItem.status;
+                console.log(`Updating inventory item status from '${originalStatus}' to 'sold'...`);
+                await db.update(inventoryItems)
+                  .set({ 
+                    status: 'sold',
+                    updatedAt: new Date()
+                  })
+                  .where(eq(inventoryItems.id, inventoryItem.id));
+                console.log(`Inventory item ${inventoryItem.serialNumber} status updated to 'sold'`);
                 
-                // Create status change audit log entry
+                // Create comprehensive status change audit log
                 try {
                   await db.insert(transactionStatusLog).values({
-                    transactionId: 0, // Will be updated after transaction creation
-                    statusFrom: inventoryItem.status,
+                    transactionId: createdTransaction.id,
+                    statusFrom: originalStatus,
                     statusTo: 'sold',
                     changeReason: 'CSV Import Sale',
                     changedBy: userId,
-                    notes: `Item sold to ${client.fullName} via CSV import batch ${batchId}`
+                    notes: `Item ${inventoryItem.serialNumber} sold to ${client.fullName} for R${sellingPrice} via CSV import batch ${batchId}. Store: ${row.store || 'N/A'}, Sales Person: ${row.salesPerson || 'N/A'}`
                   });
-                  console.log(`Status change logged for item ${inventoryItem.serialNumber}`);
+                  console.log(`Comprehensive status change logged for transaction ${createdTransaction.id}`);
                 } catch (logError) {
                   console.warn(`Failed to create status log:`, logError);
                   // Don't fail the main transaction for logging issues
                 }
 
-                // Update client statistics
-                console.log(`Updating client purchase stats...`);
-                await this.updateClientPurchaseStats(client.id);
+                // Update client purchase statistics with comprehensive data
+                console.log(`Updating client purchase stats for client ${client.id}...`);
+                try {
+                  await this.updateClientPurchaseStats(client.id);
+                  console.log(`Client purchase stats updated successfully`);
+                } catch (statsError) {
+                  console.warn(`Failed to update client stats:`, statsError);
+                }
 
                 successful++;
                 console.log(`Row ${rowNumber} processed successfully. Total successful: ${successful}`);
@@ -1423,6 +1461,23 @@ export class DatabaseStorage implements IStorage {
             console.log(`Total successful: ${successful}`);
             console.log(`Total errors: ${errors.length}`);
             console.log(`Total duplicates: ${duplicates.length}`);
+            
+            // After successful import, trigger dashboard refresh and system updates
+            if (successful > 0) {
+              console.log(`Triggering post-import system updates...`);
+              try {
+                // Refresh all affected client statistics
+                console.log(`Refreshing client statistics after sales import...`);
+                const updatedClients = await db.select().from(clients);
+                for (const clientRecord of updatedClients) {
+                  await this.updateClientPurchaseStats(clientRecord.id);
+                }
+                console.log(`All client statistics refreshed successfully`);
+              } catch (refreshError) {
+                console.warn(`Error refreshing client statistics:`, refreshError);
+              }
+            }
+            
             resolve({ successful, errors, duplicates });
           } catch (error) {
             console.error(`Critical error during CSV processing:`, error);
@@ -1796,7 +1851,7 @@ export class DatabaseStorage implements IStorage {
         dateCondition = gte(salesTransactions.saleDate, startDate);
       }
 
-      // Get overall stats with simplified queries
+      // Get comprehensive sales statistics
       const salesCount = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(salesTransactions)
@@ -1815,10 +1870,62 @@ export class DatabaseStorage implements IStorage {
           dateCondition
         ));
 
-      // Get recent transactions
-      const recentTransactions = await db
-        .select()
+      // Calculate total profit from profit margins stored in transactions
+      const profitResult = await db
+        .select({ 
+          profit: sql<number>`COALESCE(SUM(CAST(${salesTransactions.profitMargin} AS DECIMAL)), 0)` 
+        })
         .from(salesTransactions)
+        .where(and(
+          eq(salesTransactions.transactionType, 'sale'),
+          dateCondition,
+          sql`${salesTransactions.profitMargin} IS NOT NULL`
+        ));
+
+      // Get top clients with purchase data
+      const topClientsQuery = await db
+        .select({
+          clientId: salesTransactions.clientId,
+          totalSpent: sql<number>`SUM(CAST(${salesTransactions.sellingPrice} AS DECIMAL))`,
+          transactionCount: sql<number>`COUNT(*)`
+        })
+        .from(salesTransactions)
+        .where(and(
+          eq(salesTransactions.transactionType, 'sale'),
+          dateCondition
+        ))
+        .groupBy(salesTransactions.clientId)
+        .orderBy(sql`SUM(CAST(${salesTransactions.sellingPrice} AS DECIMAL)) DESC`)
+        .limit(5);
+
+      // Get client details for top clients
+      const topClients = [];
+      for (const clientStat of topClientsQuery) {
+        const [clientDetails] = await db
+          .select()
+          .from(clients)
+          .where(eq(clients.id, clientStat.clientId));
+        
+        if (clientDetails) {
+          topClients.push({
+            client: clientDetails as Client,
+            totalSpent: Number(clientStat.totalSpent),
+            transactionCount: Number(clientStat.transactionCount)
+          });
+        }
+      }
+
+      // Get recent transactions with client and item details
+      const recentTransactions = await db
+        .select({
+          transaction: salesTransactions,
+          clientName: clients.fullName,
+          itemName: inventoryItems.name,
+          itemSerial: inventoryItems.serialNumber
+        })
+        .from(salesTransactions)
+        .leftJoin(clients, eq(salesTransactions.clientId, clients.id))
+        .leftJoin(inventoryItems, eq(salesTransactions.inventoryItemId, inventoryItems.id))
         .where(dateCondition)
         .orderBy(desc(salesTransactions.createdAt))
         .limit(10);
@@ -1826,9 +1933,14 @@ export class DatabaseStorage implements IStorage {
       return {
         totalSales: salesCount[0]?.count || 0,
         totalRevenue: revenueResult[0]?.revenue || 0,
-        totalProfit: 0, // Will calculate when profit margin data is available
-        topClients: [], // Will populate when client data is linked
-        recentTransactions: recentTransactions as SalesTransaction[],
+        totalProfit: profitResult[0]?.profit || 0,
+        topClients,
+        recentTransactions: recentTransactions.map(row => ({
+          ...row.transaction,
+          clientName: row.clientName,
+          itemName: row.itemName,
+          itemSerialNumber: row.itemSerial
+        })) as SalesTransaction[],
       };
     } catch (error) {
       console.error('Error in getSalesAnalytics:', error);

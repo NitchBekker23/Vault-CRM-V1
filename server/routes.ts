@@ -2558,31 +2558,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate unique batch ID for this import
       const batchId = `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      console.log(`=== STARTING CSV IMPORT ROUTE ===`);
+      console.log(`=== STARTING ENHANCED CSV IMPORT ROUTE ===`);
       console.log(`File size: ${req.file.buffer.length} bytes`);
       console.log(`User ID: ${userId}`);
       console.log(`Batch ID: ${batchId}`);
       
       const results = await storage.processSalesCSVImport(req.file.buffer, userId, batchId);
       
-      console.log(`=== CSV IMPORT ROUTE COMPLETE ===`);
-      console.log(`Results:`, JSON.stringify(results, null, 2));
+      console.log(`=== ENHANCED CSV IMPORT ROUTE COMPLETE ===`);
+      console.log(`Successful transactions: ${results.successful}`);
+      console.log(`Failed transactions: ${results.errors.length}`);
+      console.log(`Duplicate transactions: ${results.duplicates.length}`);
+      
+      // Detailed error logging for debugging
+      if (results.errors.length > 0) {
+        console.log(`=== DETAILED ERROR ANALYSIS ===`);
+        results.errors.forEach((error, index) => {
+          console.log(`Error ${index + 1}:`, {
+            row: error.row,
+            error: error.error,
+            data: error.data
+          });
+        });
+      }
 
-      // Log bulk import activity
+      // Log comprehensive bulk import activity
       await storage.createActivity({
         userId,
-        action: "bulk_sales_import",
+        action: "enhanced_bulk_sales_import",
         entityType: "sales_transaction",
         entityId: 0,
-        description: `Imported ${results.successful} sales transactions, ${results.duplicates.length} duplicates found`,
+        description: `Enhanced CSV Import: ${results.successful} successful, ${results.errors.length} errors, ${results.duplicates.length} duplicates. Batch: ${batchId}`,
       });
 
-      res.json(results);
+      // After successful imports, refresh dashboard metrics
+      if (results.successful > 0) {
+        console.log(`Triggering dashboard refresh after ${results.successful} successful imports...`);
+      }
+
+      res.json({
+        ...results,
+        batchId,
+        summary: {
+          successful: results.successful,
+          errors: results.errors.length,
+          duplicates: results.duplicates.length,
+          totalProcessed: results.successful + results.errors.length + results.duplicates.length
+        }
+      });
     } catch (error) {
-      console.error("Error importing sales CSV:", error);
+      console.error("Critical error in enhanced CSV import:", error);
       res.status(500).json({ 
         message: "Failed to import sales CSV",
-        error: error instanceof Error ? error.message : "Unknown error"
+        error: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined
       });
     }
   });
