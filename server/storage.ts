@@ -859,6 +859,7 @@ export class DatabaseStorage implements IStorage {
     const currentMonth = new Date();
     currentMonth.setDate(1);
     currentMonth.setHours(0, 0, 0, 0);
+    const currentMonthISO = currentMonth.toISOString();
 
     const [totalInventoryResult, inStockResult, reservedResult, soldResult, wishlistResult, salesResult] = await Promise.all([
       db.select({ count: sql<number>`count(*)` }).from(inventoryItems),
@@ -881,7 +882,7 @@ export class DatabaseStorage implements IStorage {
       db
         .select({ total: sql<number>`sum(purchase_price)` })
         .from(purchases)
-        .where(sql`purchase_date >= ${currentMonth}`),
+        .where(sql`purchase_date >= ${currentMonthISO}`),
     ]);
 
     return {

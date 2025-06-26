@@ -1,36 +1,14 @@
 {
-  "high_priority": [
-    {
-      "file": "client/src/components/inventory-table.tsx",
-      "issue": "Overly aggressive cache invalidation causing performance issues",
-      "severity": "HIGH",
-      "description": "Cache is completely disabled, causing unnecessary API calls",
-      "fix": "Implement smart cache invalidation with selective refresh"
-    }
-  ],
+  "high_priority": [],
   "medium_priority": [
-    {
-      "file": "client/src/components/bulk-upload-modal.tsx",
-      "issue": "Missing error boundary for CSV upload failures",
-      "severity": "MEDIUM",
-      "description": "CSV upload errors can crash the entire component",
-      "fix": "Add React error boundary wrapper"
-    },
     {
       "file": "client/src/components/bulk-sales-import-modal.tsx",
       "issue": "Missing error boundary for CSV upload failures",
       "severity": "MEDIUM",
       "description": "CSV upload errors can crash the entire component",
       "fix": "Add React error boundary wrapper"
-    },
-    {
-      "file": "client/src/pages/clients.tsx",
-      "issue": "Search input not debounced",
-      "severity": "MEDIUM",
-      "description": "Search triggers on every keystroke, causing excessive API calls",
-      "fix": "Implement debounced search with 300ms delay"
     }
   ],
   "low_priority": [],
-  "total_issues": 4
+  "total_issues": 1
 }

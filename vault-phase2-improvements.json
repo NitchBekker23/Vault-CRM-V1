@@ -1,0 +1,80 @@
+{
+  "high_priority": [
+    {
+      "file": "server/routes.ts",
+      "issue": "Dashboard metrics database error - Date object serialization",
+      "severity": "HIGH",
+      "description": "ERR_INVALID_ARG_TYPE: Date object passed where string expected in PostgreSQL query",
+      "fix": "Convert Date objects to ISO strings before database queries",
+      "error_pattern": "The \"string\" argument must be of type string or an instance of Buffer"
+    }
+  ],
+  "medium_priority": [
+    {
+      "file": "client/src/components/inventory-table.tsx",
+      "issue": "Images missing loading strategy",
+      "severity": "MEDIUM",
+      "description": "No loading strategy specified for images",
+      "fix": "Add loading='lazy' attribute to non-critical images"
+    },
+    {
+      "file": "client/src/components/item-details-modal.tsx",
+      "issue": "Images missing loading strategy",
+      "severity": "MEDIUM",
+      "description": "No loading strategy specified for images",
+      "fix": "Add loading='lazy' attribute to non-critical images"
+    },
+    {
+      "file": "Multiple large components",
+      "issue": "Large component files detected",
+      "severity": "MEDIUM",
+      "description": "Large components increase bundle size: client/src/components/client-profile-modal.tsx (20.94KB), client/src/components/inventory-table.tsx (37.9KB), client/src/components/bulk-upload-modal.tsx (14.67KB)",
+      "fix": "Implement code splitting and lazy loading for large components"
+    },
+    {
+      "file": "client/src/App.tsx",
+      "issue": "No code splitting implemented",
+      "severity": "MEDIUM",
+      "description": "All components loaded synchronously, increasing initial bundle size",
+      "fix": "Implement React.lazy for non-critical route components"
+    },
+    {
+      "file": "client/src/components/item-details-modal.tsx",
+      "issue": "Missing comprehensive error handling",
+      "severity": "MEDIUM",
+      "description": "No try-catch blocks or error boundaries detected",
+      "fix": "Add error boundaries and try-catch for async operations"
+    },
+    {
+      "file": "client/src/pages/dashboard.tsx",
+      "issue": "Missing comprehensive error handling",
+      "severity": "MEDIUM",
+      "description": "No try-catch blocks or error boundaries detected",
+      "fix": "Add error boundaries and try-catch for async operations"
+    }
+  ],
+  "low_priority": [
+    {
+      "file": "server/index.ts",
+      "issue": "No performance monitoring middleware",
+      "severity": "LOW",
+      "description": "No request timing or performance metrics collection",
+      "fix": "Add express middleware for request timing and performance metrics"
+    },
+    {
+      "file": "client/src/main.tsx",
+      "issue": "No client-side performance monitoring",
+      "severity": "LOW",
+      "description": "No Web Vitals or performance metrics collection",
+      "fix": "Add Web Vitals monitoring for Core Web Vitals metrics"
+    },
+    {
+      "file": "server/index.ts",
+      "issue": "No response compression middleware",
+      "severity": "LOW",
+      "description": "API responses not compressed, increasing transfer size",
+      "fix": "Add compression middleware for gzip/deflate responses"
+    }
+  ],
+  "total_issues": 10
+}
