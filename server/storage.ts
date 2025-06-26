@@ -2077,6 +2077,20 @@ export class DatabaseStorage implements IStorage {
       };
     }
   }
+
+  async getSalesTransaction(id: number): Promise<SalesTransaction | null> {
+    const [transaction] = await db
+      .select()
+      .from(salesTransactions)
+      .where(eq(salesTransactions.id, id));
+    return transaction || null;
+  }
+
+  async deleteSalesTransaction(id: number): Promise<void> {
+    await db
+      .delete(salesTransactions)
+      .where(eq(salesTransactions.id, id));
+  }
 }
 
 export const storage = new DatabaseStorage();

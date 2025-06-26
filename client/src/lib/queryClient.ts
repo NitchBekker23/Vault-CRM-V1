@@ -34,8 +34,8 @@ export async function apiRequest(
   try {
     const res = await fetch(url, {
       method,
-      headers: body ? { "Content-Type": "application/json" } : {},
-      body: body ? JSON.stringify(body) : undefined,
+      headers: (body && method !== 'DELETE' && method !== 'GET') ? { "Content-Type": "application/json" } : {},
+      body: (body && method !== 'DELETE' && method !== 'GET') ? JSON.stringify(body) : undefined,
       credentials: "include",
     });
 

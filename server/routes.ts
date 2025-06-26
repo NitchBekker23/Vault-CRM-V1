@@ -2698,6 +2698,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete sales transaction
+  app.delete("/api/sales-transactions/:id", checkAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const transactionId = parseInt(req.params.id);
+      
+      // Get transaction details for logging
+      const transaction = await storage.getSalesTransaction(transactionId);
+      if (!transaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+
+      // Check if inventory item should be returned to stock
+      if (transaction.transactionType === 'sale') {
+        await storage.updateInventoryItem(transaction.inventoryItemId, {
+          status: "in_stock"
+        });
+      }
+
+      // Delete the transaction
+      await storage.deleteSalesTransaction(transactionId);
+
+      // Update client statistics
+      await storage.updateClientPurchaseStats(transaction.clientId);
+
+      // Log activity
+      await storage.createActivity({
+        userId,
+        action: "deleted_transaction",
+        entityType: "sales_transaction",
+        entityId: transactionId,
+        description: `Deleted transaction for ${transaction.sellingPrice}`
+      });
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
+      res.status(500).json({ message: "Failed to delete transaction" });
+    }
+  });
+
   // Client purchase history
   app.get("/api/clients/:id/purchase-history", checkAuth, async (req: any, res) => {
     try {

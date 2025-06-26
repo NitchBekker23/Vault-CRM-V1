@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, Plus, FileText, TrendingUp, Users, DollarSign, Package, Download } from "lucide-react";
+import { Upload, Plus, FileText, TrendingUp, Users, DollarSign, Package, Download, Trash2, Edit, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -48,9 +48,50 @@ export default function Sales() {
   const [dateRangeFilter, setDateRangeFilter] = useState("all");
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState<SalesTransaction | null>(null);
   const [page, setPage] = useState(1);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Delete transaction mutation
+  const deleteTransactionMutation = useMutation({
+    mutationFn: async (transactionId: number) => {
+      const response = await apiRequest(`/api/sales-transactions/${transactionId}`, {
+        method: "DELETE",
+      });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sales-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/sales-analytics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+      setShowDeleteConfirm(false);
+      setTransactionToDelete(null);
+      toast({
+        title: "Success",
+        description: "Transaction deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete transaction",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteTransaction = (transaction: SalesTransaction) => {
+    setTransactionToDelete(transaction);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteTransaction = () => {
+    if (transactionToDelete) {
+      deleteTransactionMutation.mutate(transactionToDelete.id);
+    }
+  };
 
   // Sales analytics query
   const { data: analytics, isLoading: analyticsLoading } = useQuery({
@@ -393,6 +434,7 @@ SN555666777,2025-06-19,5000.00,6000.00,credit,3,CUST003,LW,006,Return credit pro
                     <TableHead>Date</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Source</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -405,6 +447,7 @@ SN555666777,2025-06-19,5000.00,6000.00,credit,3,CUST003,LW,006,Return credit pro
                         <TableCell><div className="h-4 bg-muted rounded w-20 animate-pulse"></div></TableCell>
                         <TableCell><div className="h-4 bg-muted rounded w-16 animate-pulse"></div></TableCell>
                         <TableCell><div className="h-4 bg-muted rounded w-12 animate-pulse"></div></TableCell>
+                        <TableCell><div className="h-8 bg-muted rounded w-20 animate-pulse"></div></TableCell>
                       </TableRow>
                     ))
                   ) : transactionsData?.transactions?.length ? (
@@ -429,11 +472,21 @@ SN555666777,2025-06-19,5000.00,6000.00,credit,3,CUST003,LW,006,Return credit pro
                             {transaction.source.replace('_', ' ')}
                           </Badge>
                         </TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600 hover:text-red-700 hover:border-red-300"
+                            onClick={() => handleDeleteTransaction(transaction)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8">
+                      <TableCell colSpan={7} className="text-center py-8">
                         <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                         <p className="text-lg font-medium">No transactions found</p>
                         <p className="text-sm text-muted-foreground">Try adjusting your search criteria</p>
@@ -520,6 +573,44 @@ SN555666777,2025-06-19,5000.00,6000.00,credit,3,CUST003,LW,006,Return credit pro
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Delete Transaction Confirmation Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Transaction</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertTriangle className="h-8 w-8 text-red-500" />
+              <div>
+                <p className="font-medium">Are you sure you want to delete this transaction?</p>
+                <p className="text-sm text-muted-foreground">This action cannot be undone.</p>
+              </div>
+            </div>
+            {transactionToDelete && (
+              <div className="bg-muted p-3 rounded-lg space-y-2">
+                <p><span className="font-medium">Client:</span> {transactionToDelete.clientName}</p>
+                <p><span className="font-medium">Item:</span> {transactionToDelete.itemName}</p>
+                <p><span className="font-medium">Amount:</span> {formatCurrency(transactionToDelete.sellingPrice)}</p>
+                <p><span className="font-medium">Date:</span> {formatDate(transactionToDelete.saleDate)}</p>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDeleteTransaction} 
+              disabled={deleteTransactionMutation.isPending}
+            >
+              {deleteTransactionMutation.isPending ? "Deleting..." : "Delete Transaction"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
