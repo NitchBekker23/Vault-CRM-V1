@@ -31,11 +31,13 @@ interface SalesPersonPerformance {
 
 export default function Performance() {
   const { data: storePerformance, isLoading: storeLoading } = useQuery<StorePerformance[]>({
-    queryKey: ['/api/performance', 'stores'],
+    queryKey: ['/api/performance/stores?month=10&year=2025'],
+    retry: false,
   });
 
   const { data: salesPersonPerformance, isLoading: salesPersonLoading } = useQuery<SalesPersonPerformance[]>({
-    queryKey: ['/api/performance', 'sales-persons'],
+    queryKey: ['/api/performance/sales-persons?month=10&year=2025'],
+    retry: false,
   });
 
   const formatCurrency = (amount: string | number) => {

@@ -29,6 +29,9 @@ const SetupAccount = lazy(() => import("@/pages/setup-account"));
 const TwoFactorLogin = lazy(() => import("@/pages/two-factor-login"));
 const TestLogin = lazy(() => import("@/pages/test-login"));
 const Performance = lazy(() => import("@/pages/performance"));
+const PerformanceDemo = lazy(() => import("@/pages/performance-demo"));
+import PerformanceSimple from "@/pages/performance-simple";
+import PerformanceDirect from "@/pages/performance-direct";
 const Register = lazy(() => import("@/pages/register"));
 const ForgotPassword = lazy(() => import("@/pages/forgot-password"));
 const ResetPassword = lazy(() => import("@/pages/reset-password"));
@@ -84,6 +87,9 @@ function Router() {
         <Route path="/setup-account" component={SetupAccount} />
         <Route path="/2fa-login" component={TwoFactorLogin} />
         <Route path="/test-login" component={TestLogin} />
+        <Route path="/performance-demo" component={PerformanceDemo} />
+        <Route path="/performance-simple" component={PerformanceSimple} />
+        <Route path="/performance-direct" component={PerformanceDirect} />
         <Route path="/" component={Login} />
         <Route component={NotFound} />
       </Switch>
