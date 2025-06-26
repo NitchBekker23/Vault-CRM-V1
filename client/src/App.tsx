@@ -12,30 +12,30 @@ import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
 import Login from "@/pages/login";
 
-// Lazy load heavy components for better performance
-const Inventory = lazy(() => import("@/pages/inventory"));
-const Clients = lazy(() => import("@/pages/clients"));
-const Sales = lazy(() => import("@/pages/sales"));
-const SalesManagement = lazy(() => import("@/pages/sales-management"));
-const Analytics = lazy(() => import("@/pages/analytics"));
-const Settings = lazy(() => import("@/pages/settings"));
-const BulkUpload = lazy(() => import("@/pages/bulk-upload"));
-const UserManagement = lazy(() => import("@/pages/user-management"));
-const AdminUsers = lazy(() => import("@/pages/admin-users"));
-const UserProfile = lazy(() => import("@/pages/user-profile"));
-const Wishlist = lazy(() => import("@/pages/wishlist"));
-const RequestAccount = lazy(() => import("@/pages/request-account"));
-const SetupAccount = lazy(() => import("@/pages/setup-account"));
-const TwoFactorLogin = lazy(() => import("@/pages/two-factor-login"));
-const TestLogin = lazy(() => import("@/pages/test-login"));
-const Performance = lazy(() => import("@/pages/performance"));
-const PerformanceDemo = lazy(() => import("@/pages/performance-demo"));
+// Direct imports for consistent UI rendering
+import Inventory from "@/pages/inventory";
+import Clients from "@/pages/clients";
+import Sales from "@/pages/sales";
+import SalesManagement from "@/pages/sales-management";
+import Analytics from "@/pages/analytics";
+import Settings from "@/pages/settings";
+import BulkUpload from "@/pages/bulk-upload";
+import UserManagement from "@/pages/user-management";
+import AdminUsers from "@/pages/admin-users";
+import UserProfile from "@/pages/user-profile";
+import Wishlist from "@/pages/wishlist";
+import RequestAccount from "@/pages/request-account";
+import SetupAccount from "@/pages/setup-account";
+import TwoFactorLogin from "@/pages/two-factor-login";
+import TestLogin from "@/pages/test-login";
+import Performance from "@/pages/performance";
+import PerformanceDemo from "@/pages/performance-demo";
 import PerformanceSimple from "@/pages/performance-simple";
 import PerformanceDirect from "@/pages/performance-direct";
-const Register = lazy(() => import("@/pages/register"));
-const ForgotPassword = lazy(() => import("@/pages/forgot-password"));
-const ResetPassword = lazy(() => import("@/pages/reset-password"));
-const AdminLogin = lazy(() => import("@/pages/admin-login"));
+import Register from "@/pages/register";
+import ForgotPassword from "@/pages/forgot-password";
+import ResetPassword from "@/pages/reset-password";
+import AdminLogin from "@/pages/admin-login";
 import Sidebar from "@/components/sidebar";
 
 function Router() {
@@ -136,15 +136,7 @@ function Router() {
           ? 'ml-0 w-full min-w-0'
           : 'ml-64'
       }`}>
-        <Suspense fallback={
-          <div className="min-h-screen flex items-center justify-center">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p>Loading...</p>
-            </div>
-          </div>
-        }>
-          <Switch>
+        <Switch>
             <Route path="/" component={Dashboard} />
             <Route path="/inventory" component={Inventory} />
             <Route path="/wishlist" component={Wishlist} />
@@ -164,7 +156,6 @@ function Router() {
             )}
             <Route component={NotFound} />
           </Switch>
-        </Suspense>
       </main>
     </div>
   );

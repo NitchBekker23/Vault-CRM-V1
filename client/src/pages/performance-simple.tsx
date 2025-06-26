@@ -13,7 +13,7 @@ export default function PerformanceSimple() {
       total_sales: 1,
       total_revenue: "9999.95",
       total_profit: "4999.95",
-      month: 10,
+      month: 6,
       year: 2025
     },
     {
@@ -23,7 +23,7 @@ export default function PerformanceSimple() {
       total_sales: 1,
       total_revenue: "448.59",
       total_profit: "168.59",
-      month: 10,
+      month: 6,
       year: 2025
     }
   ];
@@ -38,8 +38,7 @@ export default function PerformanceSimple() {
       total_sales: 1,
       total_revenue: "9999.95",
       total_profit: "4999.95",
-      commission: "500.00",
-      month: 10,
+      month: 6,
       year: 2025
     },
     {
@@ -51,8 +50,7 @@ export default function PerformanceSimple() {
       total_sales: 1,
       total_revenue: "448.59",
       total_profit: "168.59",
-      commission: "22.43",
-      month: 10,
+      month: 6,
       year: 2025
     }
   ];
@@ -64,14 +62,14 @@ export default function PerformanceSimple() {
 
   const totalStoreRevenue = storePerformance.reduce((sum, store) => sum + parseFloat(store.total_revenue), 0);
   const totalStoreProfit = storePerformance.reduce((sum, store) => sum + parseFloat(store.total_profit), 0);
-  const totalCommissions = salesPersonPerformance.reduce((sum, person) => sum + parseFloat(person.commission), 0);
+  // Commission system removed as requested
 
   return (
     <div className="p-6 space-y-6 min-h-screen bg-slate-50">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Sales Performance Analytics</h1>
         <Badge variant="outline" className="text-sm">
-          October 2025 - Real Business Data
+          June 2025 - Real Business Data
         </Badge>
       </div>
 
@@ -109,15 +107,15 @@ export default function PerformanceSimple() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Commissions</CardTitle>
+            <CardTitle className="text-sm font-medium">Sales Team</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">
-              {formatCurrency(totalCommissions)}
+              {salesPersonPerformance.length}
             </div>
             <p className="text-xs text-muted-foreground">
-              5% commission rate
+              Active sales staff
             </p>
           </CardContent>
         </Card>
@@ -240,15 +238,9 @@ export default function PerformanceSimple() {
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Commission</p>
+                        <p className="text-sm text-muted-foreground">Performance</p>
                         <p className="text-lg font-semibold text-purple-600">
-                          {formatCurrency(person.commission)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Rate</p>
-                        <p className="text-lg font-semibold text-orange-600">
-                          {((parseFloat(person.commission) / parseFloat(person.total_revenue)) * 100).toFixed(1)}%
+                          {person.total_sales} Sales
                         </p>
                       </div>
                     </div>

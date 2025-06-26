@@ -24,19 +24,19 @@ interface SalesPersonPerformance {
   total_sales: number;
   total_revenue: string;
   total_profit: string;
-  commission: string;
+
   month: number;
   year: number;
 }
 
 export default function Performance() {
   const { data: storePerformance, isLoading: storeLoading } = useQuery<StorePerformance[]>({
-    queryKey: ['/api/performance/stores?month=10&year=2025'],
+    queryKey: ['/api/performance/stores?month=6&year=2025'],
     retry: false,
   });
 
   const { data: salesPersonPerformance, isLoading: salesPersonLoading } = useQuery<SalesPersonPerformance[]>({
-    queryKey: ['/api/performance/sales-persons?month=10&year=2025'],
+    queryKey: ['/api/performance/sales-persons?month=6&year=2025'],
     retry: false,
   });
 
@@ -47,14 +47,14 @@ export default function Performance() {
 
   const totalStoreRevenue = storePerformance?.reduce((sum, store) => sum + parseFloat(store.total_revenue), 0) || 0;
   const totalStoreProfit = storePerformance?.reduce((sum, store) => sum + parseFloat(store.total_profit), 0) || 0;
-  const totalCommissions = salesPersonPerformance?.reduce((sum, person) => sum + parseFloat(person.commission), 0) || 0;
+  // Commission system removed as requested
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Performance Analytics</h1>
         <Badge variant="outline" className="text-sm">
-          October 2025
+          June 2025
         </Badge>
       </div>
 
@@ -86,12 +86,12 @@ export default function Performance() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Commissions</CardTitle>
+            <CardTitle className="text-sm font-medium">Sales Team</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">
-              {formatCurrency(totalCommissions)}
+              {salesPersonPerformance?.length || 0}
             </div>
           </CardContent>
         </Card>
@@ -209,9 +209,9 @@ export default function Performance() {
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Commission</p>
+                          <p className="text-sm text-muted-foreground">Performance</p>
                           <p className="text-lg font-semibold text-purple-600">
-                            {formatCurrency(person.commission)}
+                            {person.total_sales} Sales
                           </p>
                         </div>
                       </div>
