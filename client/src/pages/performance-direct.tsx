@@ -12,7 +12,7 @@ function PerformanceDirect() {
       total_sales: 1,
       total_revenue: "9999.95",
       total_profit: "4999.95",
-      month: 10,
+      month: 6,
       year: 2025
     },
     {
@@ -22,7 +22,7 @@ function PerformanceDirect() {
       total_sales: 1,
       total_revenue: "448.59",
       total_profit: "168.59",
-      month: 10,
+      month: 6,
       year: 2025
     }
   ];
@@ -37,8 +37,7 @@ function PerformanceDirect() {
       total_sales: 1,
       total_revenue: "9999.95",
       total_profit: "4999.95",
-      commission: "500.00",
-      month: 10,
+      month: 6,
       year: 2025
     },
     {
@@ -50,27 +49,28 @@ function PerformanceDirect() {
       total_sales: 1,
       total_revenue: "448.59",
       total_profit: "168.59",
-      commission: "22.43",
-      month: 10,
+      month: 6,
       year: 2025
     }
   ];
 
-  const formatCurrency = (amount: string | number) => {
+  const formatCurrency = (amount: string | number | undefined) => {
+    if (amount === undefined || amount === null) return 'R0.00';
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+    if (isNaN(num)) return 'R0.00';
     return `R${num.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const totalStoreRevenue = storePerformance.reduce((sum, store) => sum + parseFloat(store.total_revenue), 0);
   const totalStoreProfit = storePerformance.reduce((sum, store) => sum + parseFloat(store.total_profit), 0);
-  const totalCommissions = salesPersonPerformance.reduce((sum, person) => sum + parseFloat(person.commission), 0);
+  // Commission system removed as requested
 
   return (
     <div className="p-6 space-y-6 min-h-screen bg-slate-50">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-slate-900">Sales Performance Analytics</h1>
         <Badge variant="outline" className="text-sm bg-green-50 border-green-200 text-green-800">
-          October 2025 - Live System Data
+          June 2025 - Live System Data
         </Badge>
       </div>
 
@@ -108,15 +108,15 @@ function PerformanceDirect() {
 
         <Card className="border-purple-200 bg-purple-50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-purple-800">Total Commissions</CardTitle>
+            <CardTitle className="text-sm font-medium text-purple-800">Sales Team</CardTitle>
             <Users className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-700">
-              {formatCurrency(totalCommissions)}
+              {salesPersonPerformance.length}
             </div>
             <p className="text-xs text-purple-600">
-              For 2 sales people
+              Active sales staff
             </p>
           </CardContent>
         </Card>
@@ -242,15 +242,9 @@ function PerformanceDirect() {
                     </p>
                   </div>
                   <div className="text-center p-3 bg-purple-50 rounded">
-                    <p className="text-sm font-medium text-purple-800">Commission</p>
+                    <p className="text-sm font-medium text-purple-800">Performance</p>
                     <p className="text-lg font-bold text-purple-700">
-                      {formatCurrency(person.commission)}
-                    </p>
-                  </div>
-                  <div className="text-center p-3 bg-orange-50 rounded">
-                    <p className="text-sm font-medium text-orange-800">Rate</p>
-                    <p className="text-lg font-bold text-orange-700">
-                      {((parseFloat(person.commission) / parseFloat(person.total_revenue)) * 100).toFixed(1)}%
+                      {person.total_sales} Sales
                     </p>
                   </div>
                 </div>

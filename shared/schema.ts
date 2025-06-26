@@ -217,7 +217,6 @@ export const stores = pgTable("stores", {
   code: varchar("code").unique(), // Store code/identifier
   address: text("address"),
   manager: varchar("manager"),
-  monthlyTarget: numeric("monthly_target", { precision: 12, scale: 2 }).default("0"),
   region: varchar("region"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
@@ -232,8 +231,6 @@ export const salesPersons = pgTable("sales_persons", {
   employeeId: varchar("employee_id").unique(),
   email: varchar("email").unique(),
   currentStoreId: integer("current_store_id").references(() => stores.id), // Current assignment
-  monthlyTarget: numeric("monthly_target", { precision: 12, scale: 2 }).default("0"),
-  commissionRate: numeric("commission_rate", { precision: 5, scale: 2 }).default("0"), // Percentage
   hireDate: timestamp("hire_date"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
@@ -267,7 +264,7 @@ export const salesPersonPerformance = pgTable("sales_person_performance", {
   totalSales: integer("total_sales").default(0),
   totalRevenue: numeric("total_revenue", { precision: 12, scale: 2 }).default("0"),
   totalProfit: numeric("total_profit", { precision: 12, scale: 2 }).default("0"),
-  commission: numeric("commission", { precision: 10, scale: 2 }).default("0"),
+
   targetAchievement: numeric("target_achievement", { precision: 5, scale: 2 }).default("0"), // Percentage
   ranking: integer("ranking"), // Store ranking for the month
   createdAt: timestamp("created_at").defaultNow(),
