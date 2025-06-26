@@ -5,35 +5,58 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile, useScreenSize } from "@/hooks/use-mobile";
+import { useWebVitals } from "@/hooks/useWebVitals";
+import { Suspense, lazy } from "react";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
-import Inventory from "@/pages/inventory";
-import Wishlist from "@/pages/wishlist";
-import Clients from "@/pages/clients";
-import Sales from "@/pages/sales";
-import SalesManagement from "@/pages/sales-management";
-import Analytics from "@/pages/analytics";
-import Settings from "@/pages/settings";
-import BulkUpload from "@/pages/bulk-upload";
-import UserManagement from "@/pages/user-management";
-import RequestAccount from "@/pages/request-account";
-import AdminUsers from "@/pages/admin-users";
-import UserProfile from "@/pages/user-profile";
-import SetupAccount from "@/pages/setup-account";
-import TwoFactorLogin from "@/pages/two-factor-login";
-import TestLogin from "@/pages/test-login";
 import Login from "@/pages/login";
-import Register from "@/pages/register";
-import ForgotPassword from "@/pages/forgot-password";
-import ResetPassword from "@/pages/reset-password";
-import AdminLogin from "@/pages/admin-login";
+
+// Lazy load heavy components for better performance
+const Inventory = lazy(() => import("@/pages/inventory"));
+const Clients = lazy(() => import("@/pages/clients"));
+const Sales = lazy(() => import("@/pages/sales"));
+const SalesManagement = lazy(() => import("@/pages/sales-management"));
+const Analytics = lazy(() => import("@/pages/analytics"));
+const Settings = lazy(() => import("@/pages/settings"));
+const BulkUpload = lazy(() => import("@/pages/bulk-upload"));
+const UserManagement = lazy(() => import("@/pages/user-management"));
+const AdminUsers = lazy(() => import("@/pages/admin-users"));
+const UserProfile = lazy(() => import("@/pages/user-profile"));
+const Wishlist = lazy(() => import("@/pages/wishlist"));
+const RequestAccount = lazy(() => import("@/pages/request-account"));
+const SetupAccount = lazy(() => import("@/pages/setup-account"));
+const TwoFactorLogin = lazy(() => import("@/pages/two-factor-login"));
+const TestLogin = lazy(() => import("@/pages/test-login"));
+const Register = lazy(() => import("@/pages/register"));
+const ForgotPassword = lazy(() => import("@/pages/forgot-password"));
+const ResetPassword = lazy(() => import("@/pages/reset-password"));
+const AdminLogin = lazy(() => import("@/pages/admin-login"));
 import Sidebar from "@/components/sidebar";
 
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const isMobile = useIsMobile();
   const screenSize = useScreenSize();
+
+  // Initialize Web Vitals monitoring for performance tracking
+  useWebVitals({
+    onFCP: (metric) => {
+      if (metric.value > 1800) {
+        console.warn('Poor First Contentful Paint performance detected');
+      }
+    },
+    onLCP: (metric) => {
+      if (metric.value > 2500) {
+        console.warn('Poor Largest Contentful Paint performance detected');
+      }
+    },
+    onTTFB: (metric) => {
+      if (metric.value > 800) {
+        console.warn('Poor Time to First Byte performance detected');
+      }
+    }
+  });
 
   // Loading state
   if (isLoading) {
@@ -106,25 +129,34 @@ function Router() {
           ? 'ml-0 w-full min-w-0'
           : 'ml-64'
       }`}>
-        <Switch>
-          <Route path="/" component={Dashboard} />
-          <Route path="/inventory" component={Inventory} />
-          <Route path="/wishlist" component={Wishlist} />
-          <Route path="/clients" component={Clients} />
-          <Route path="/sales" component={Sales} />
-          <Route path="/sales-management" component={SalesManagement} />
-          <Route path="/analytics" component={Analytics} />
-          <Route path="/settings" component={Settings} />
-          <Route path="/bulk-upload" component={BulkUpload} />
-          <Route path="/user-management" component={UserManagement} />
-          {((user as any)?.role === 'admin' || (user as any)?.role === 'owner' || (user as any)?.email === 'nitchbekker@gmail.com') && (
-            <>
-              <Route path="/admin/users" component={AdminUsers} />
-              <Route path="/admin/users/:userId" component={UserProfile} />
-            </>
-          )}
-          <Route component={NotFound} />
-        </Switch>
+        <Suspense fallback={
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p>Loading...</p>
+            </div>
+          </div>
+        }>
+          <Switch>
+            <Route path="/" component={Dashboard} />
+            <Route path="/inventory" component={Inventory} />
+            <Route path="/wishlist" component={Wishlist} />
+            <Route path="/clients" component={Clients} />
+            <Route path="/sales" component={Sales} />
+            <Route path="/sales-management" component={SalesManagement} />
+            <Route path="/analytics" component={Analytics} />
+            <Route path="/settings" component={Settings} />
+            <Route path="/bulk-upload" component={BulkUpload} />
+            <Route path="/user-management" component={UserManagement} />
+            {((user as any)?.role === 'admin' || (user as any)?.role === 'owner' || (user as any)?.email === 'nitchbekker@gmail.com') && (
+              <>
+                <Route path="/admin/users" component={AdminUsers} />
+                <Route path="/admin/users/:userId" component={UserProfile} />
+              </>
+            )}
+            <Route component={NotFound} />
+          </Switch>
+        </Suspense>
       </main>
     </div>
   );

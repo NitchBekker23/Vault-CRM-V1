@@ -4,6 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile, useScreenSize } from "@/hooks/use-mobile";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { LazyImage } from "@/components/lazy-image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -696,14 +697,11 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                                 onClick={() => handleViewDetails(item)}
                               >
                                 {item.imageUrls && item.imageUrls.length > 0 ? (
-                                  <img
+                                  <LazyImage
                                     src={item.imageUrls[0]}
                                     alt={item.name}
-                                    className="h-full w-full object-cover"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = 'none';
-                                      e.currentTarget.parentElement!.innerHTML = '<i class="fas fa-image text-slate-400"></i>';
-                                    }}
+                                    className="h-full w-full object-cover rounded-lg"
+                                    fallback="/api/placeholder/48/48"
                                   />
                                 ) : (
                                   <i className="fas fa-image text-slate-400"></i>
