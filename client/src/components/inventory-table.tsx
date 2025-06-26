@@ -454,6 +454,14 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                         <i className="fas fa-upload mr-2"></i>
                         Bulk Import
                       </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => window.open('/api/inventory/export', '_blank')}
+                        className="border-green-200 hover:border-green-300 hover:bg-green-50"
+                      >
+                        <i className="fas fa-download text-green-600 mr-2"></i>
+                        Export CSV
+                      </Button>
                       {allowBulkActions && selectedItems.size > 0 && (
                         <Button 
                           onClick={handleBulkDelete} 

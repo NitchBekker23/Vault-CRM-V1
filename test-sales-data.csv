@@ -1,0 +1,4 @@
+customerCode,itemSerial,salePrice,saleDate,salesPerson,store
+CUST001,20,45000,2025-06-26,AP,001
+CUST002,18,95000,2025-06-26,BW,002
+CUST003,12,8500,2025-06-26,LW,003

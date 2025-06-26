@@ -1240,6 +1240,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Export inventory to CSV
+  app.get("/api/inventory/export", checkAuth, async (req: any, res) => {
+    try {
+      const inventoryResult = await storage.getInventoryItems(1, 1000); // Get all items with high limit
+      const items = inventoryResult.items;
+      
+      // CSV headers
+      const headers = [
+        'Name', 'Brand', 'SKU', 'Serial Number', 'Category', 'Status', 
+        'Selling Price (ZAR)', 'Cost Price (ZAR)', 'Description', 'Notes', 
+        'Date Received', 'Days in Stock', 'Location', 'Condition'
+      ];
+      
+      // Convert items to CSV format
+      const csvRows = [headers.join(',')];
+      
+      for (const item of items) {
+        const daysInStock = item.dateReceived 
+          ? Math.floor((new Date().getTime() - new Date(item.dateReceived).getTime()) / (1000 * 60 * 60 * 24))
+          : 0;
+          
+        const row = [
+          `"${item.name || ''}"`,
+          `"${item.brand || ''}"`,
+          `"${item.sku || ''}"`,
+          `"${item.serialNumber || ''}"`,
+          `"${item.category || ''}"`,
+          `"${item.status || ''}"`,
+          `"${item.price || ''}"`,
+          `"${item.costPrice || ''}"`,
+          `"${(item.description || '').replace(/"/g, '""')}"`,
+          `"${(item.notes || '').replace(/"/g, '""')}"`,
+          `"${item.dateReceived ? new Date(item.dateReceived).toISOString().split('T')[0] : ''}"`,
+          `"${daysInStock}"`,
+          `"${item.location || ''}"`,
+          `"${item.condition || 'new'}"`
+        ];
+        csvRows.push(row.join(','));
+      }
+      
+      const csv = csvRows.join('\n');
+      const filename = `vault-inventory-${new Date().toISOString().split('T')[0]}.csv`;
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(csv);
+      
+    } catch (error) {
+      console.error("Error exporting inventory:", error);
+      res.status(500).json({ message: "Failed to export inventory" });
+    }
+  });
+
   // Inventory routes
   app.get("/api/inventory", async (req, res) => {
     try {
