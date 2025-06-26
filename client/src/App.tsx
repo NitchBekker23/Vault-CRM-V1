@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile, useScreenSize } from "@/hooks/use-mobile";
 import { useWebVitals } from "@/hooks/useWebVitals";
 import { Suspense, lazy } from "react";
+import { TableSkeleton, CardSkeleton } from "@/components/ui/loading-skeleton";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
@@ -137,17 +138,61 @@ function Router() {
           : 'ml-64'
       }`}>
         <Switch>
-            <Route path="/" component={Dashboard} />
-            <Route path="/inventory" component={Inventory} />
-            <Route path="/wishlist" component={Wishlist} />
-            <Route path="/clients" component={Clients} />
-            <Route path="/sales" component={Sales} />
-            <Route path="/sales-management" component={SalesManagement} />
-            <Route path="/analytics" component={Analytics} />
-            <Route path="/performance" component={Performance} />
-            <Route path="/settings" component={Settings} />
-            <Route path="/bulk-upload" component={BulkUpload} />
-            <Route path="/user-management" component={UserManagement} />
+            <Route path="/" component={() => (
+              <Suspense fallback={<CardSkeleton />}>
+                <Dashboard />
+              </Suspense>
+            )} />
+            <Route path="/inventory" component={() => (
+              <Suspense fallback={<TableSkeleton rows={8} />}>
+                <Inventory />
+              </Suspense>
+            )} />
+            <Route path="/wishlist" component={() => (
+              <Suspense fallback={<TableSkeleton rows={5} />}>
+                <Wishlist />
+              </Suspense>
+            )} />
+            <Route path="/clients" component={() => (
+              <Suspense fallback={<TableSkeleton rows={6} />}>
+                <Clients />
+              </Suspense>
+            )} />
+            <Route path="/sales" component={() => (
+              <Suspense fallback={<div className="p-6"><TableSkeleton rows={10} /></div>}>
+                <Sales />
+              </Suspense>
+            )} />
+            <Route path="/sales-management" component={() => (
+              <Suspense fallback={<TableSkeleton rows={7} />}>
+                <SalesManagement />
+              </Suspense>
+            )} />
+            <Route path="/analytics" component={() => (
+              <Suspense fallback={<div className="p-6 space-y-4"><CardSkeleton /><CardSkeleton /></div>}>
+                <Analytics />
+              </Suspense>
+            )} />
+            <Route path="/performance" component={() => (
+              <Suspense fallback={<div className="p-6 space-y-6"><CardSkeleton /><CardSkeleton /><CardSkeleton /></div>}>
+                <Performance />
+              </Suspense>
+            )} />
+            <Route path="/settings" component={() => (
+              <Suspense fallback={<CardSkeleton />}>
+                <Settings />
+              </Suspense>
+            )} />
+            <Route path="/bulk-upload" component={() => (
+              <Suspense fallback={<CardSkeleton />}>
+                <BulkUpload />
+              </Suspense>
+            )} />
+            <Route path="/user-management" component={() => (
+              <Suspense fallback={<TableSkeleton rows={4} />}>
+                <UserManagement />
+              </Suspense>
+            )} />
             {((user as any)?.role === 'admin' || (user as any)?.role === 'owner' || (user as any)?.email === 'nitchbekker@gmail.com') && (
               <>
                 <Route path="/admin/users" component={AdminUsers} />

@@ -98,7 +98,14 @@ export default function Sidebar() {
                     <li key={item.name}>
                       <Link 
                         href={item.href} 
-                        onClick={() => setIsOpen(false)}
+                        onClick={(e) => {
+                          setIsOpen(false);
+                          // Force navigation for preview pane compatibility
+                          if (typeof window !== 'undefined') {
+                            window.history.pushState({}, '', item.href);
+                            window.dispatchEvent(new PopStateEvent('popstate'));
+                          }
+                        }}
                         className={cn(
                           "flex items-center space-x-3 p-3 rounded-lg transition-colors",
                           location === item.href
@@ -122,7 +129,14 @@ export default function Sidebar() {
                       <li>
                         <Link 
                           href="/admin/users" 
-                          onClick={() => setIsOpen(false)}
+                          onClick={(e) => {
+                            setIsOpen(false);
+                            // Force navigation for preview pane compatibility
+                            if (typeof window !== 'undefined') {
+                              window.history.pushState({}, '', '/admin/users');
+                              window.dispatchEvent(new PopStateEvent('popstate'));
+                            }
+                          }}
                           className={cn(
                             "flex items-center space-x-3 p-3 rounded-lg transition-colors",
                             location === "/admin/users"
