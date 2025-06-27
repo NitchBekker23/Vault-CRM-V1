@@ -312,6 +312,8 @@ REPLIT_DOMAINS=[development]
 
 Preferred communication style: Simple, everyday language.
 
+**Development Methodology**: Use Kimi-Dev AI debugging tool when writing code - systematic analysis framework for identifying and resolving complex issues through structured debugging approach.
+
 ## Planned Development: Sales Management System (June 18, 2025)
 
 ### Vision
