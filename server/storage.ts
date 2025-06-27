@@ -1752,26 +1752,53 @@ export class DatabaseStorage implements IStorage {
   // Performance tracking methods
   async getStorePerformance(storeId?: number, month?: number, year?: number): Promise<any[]> {
     try {
-      const results = await db.execute(sql`
-        SELECT 
-          sp.store_id,
-          s.name as store_name,
-          s.code as store_code,
-          sp.total_sales,
-          sp.total_revenue,
-          sp.total_profit,
-          sp.month,
-          sp.year
-        FROM store_performance sp
-        JOIN stores s ON sp.store_id = s.id
-        WHERE 1=1
-        ${storeId ? sql`AND sp.store_id = ${storeId}` : sql``}
-        ${month ? sql`AND sp.month = ${month}` : sql``}
-        ${year ? sql`AND sp.year = ${year}` : sql``}
-        ORDER BY sp.year DESC, sp.month DESC
-      `);
-      
-      return results;
+      // Calculate performance directly from sales transactions for current sales data
+      const currentDate = new Date();
+      const targetMonth = month || 6; // June 2025 for current sales data
+      const targetYear = year || 2025;
+
+      console.log(`Fetching store performance for ${targetMonth}/${targetYear}`);
+
+      // First get all stores
+      const allStores = await db.select().from(stores).where(eq(stores.isActive, true));
+      console.log(`Found ${allStores.length} active stores`);
+
+      // Get sales data for each store
+      const performanceData = [];
+      for (const store of allStores) {
+        const salesData = await db
+          .select({
+            total_sales: sql<number>`COUNT(*)`,
+            total_revenue: sql<string>`COALESCE(SUM(CAST(${salesTransactions.sellingPrice} AS DECIMAL)), 0)`,
+            total_profit: sql<string>`COALESCE(SUM(CAST(${salesTransactions.profitMargin} AS DECIMAL)), 0)`
+          })
+          .from(salesTransactions)
+          .where(and(
+            or(
+              eq(salesTransactions.store, store.code || ''),
+              eq(salesTransactions.store, store.name)
+            ),
+            eq(salesTransactions.transactionType, 'sale'),
+            sql`EXTRACT(MONTH FROM ${salesTransactions.saleDate}) = ${targetMonth}`,
+            sql`EXTRACT(YEAR FROM ${salesTransactions.saleDate}) = ${targetYear}`
+          ));
+
+        const stats = salesData[0] || { total_sales: 0, total_revenue: '0', total_profit: '0' };
+        
+        performanceData.push({
+          store_id: store.id,
+          store_name: store.name,
+          store_code: store.code,
+          total_sales: Number(stats.total_sales),
+          total_revenue: stats.total_revenue,
+          total_profit: stats.total_profit,
+          month: targetMonth,
+          year: targetYear
+        });
+      }
+
+      console.log(`Store performance data:`, performanceData);
+      return performanceData;
     } catch (error) {
       console.error('Error fetching store performance:', error);
       return [];
@@ -1780,29 +1807,59 @@ export class DatabaseStorage implements IStorage {
 
   async getSalesPersonPerformance(salesPersonId?: number, month?: number, year?: number): Promise<any[]> {
     try {
-      const results = await db.execute(sql`
-        SELECT 
-          spp.sales_person_id,
-          sp.first_name,
-          sp.last_name,
-          sp.employee_id,
-          s.name as store_name,
-          spp.total_sales,
-          spp.total_revenue,
-          spp.total_profit,
-          spp.month,
-          spp.year
-        FROM sales_person_performance spp
-        JOIN sales_persons sp ON spp.sales_person_id = sp.id
-        JOIN stores s ON spp.store_id = s.id
-        WHERE 1=1
-        ${salesPersonId ? sql`AND spp.sales_person_id = ${salesPersonId}` : sql``}
-        ${month ? sql`AND spp.month = ${month}` : sql``}
-        ${year ? sql`AND spp.year = ${year}` : sql``}
-        ORDER BY spp.year DESC, spp.month DESC
-      `);
-      
-      return results;
+      // Calculate performance directly from sales transactions for current sales data
+      const targetMonth = month || 6; // June 2025 for current sales data
+      const targetYear = year || 2025;
+
+      console.log(`Fetching sales person performance for ${targetMonth}/${targetYear}`);
+
+      // First get all sales persons
+      const allSalesPersons = await db.select().from(salesPersons).where(eq(salesPersons.isActive, true));
+      console.log(`Found ${allSalesPersons.length} active sales persons`);
+
+      // Get sales data for each sales person
+      const performanceData = [];
+      for (const person of allSalesPersons) {
+        // Get store info
+        const store = person.currentStoreId ? 
+          await db.select().from(stores).where(eq(stores.id, person.currentStoreId)).limit(1) : 
+          [];
+        
+        const salesData = await db
+          .select({
+            total_sales: sql<number>`COUNT(*)`,
+            total_revenue: sql<string>`COALESCE(SUM(CAST(${salesTransactions.sellingPrice} AS DECIMAL)), 0)`,
+            total_profit: sql<string>`COALESCE(SUM(CAST(${salesTransactions.profitMargin} AS DECIMAL)), 0)`
+          })
+          .from(salesTransactions)
+          .where(and(
+            or(
+              eq(salesTransactions.salesPerson, person.employeeId || ''),
+              eq(salesTransactions.salesPerson, `${person.firstName} ${person.lastName}`)
+            ),
+            eq(salesTransactions.transactionType, 'sale'),
+            sql`EXTRACT(MONTH FROM ${salesTransactions.saleDate}) = ${targetMonth}`,
+            sql`EXTRACT(YEAR FROM ${salesTransactions.saleDate}) = ${targetYear}`
+          ));
+
+        const stats = salesData[0] || { total_sales: 0, total_revenue: '0', total_profit: '0' };
+        
+        performanceData.push({
+          sales_person_id: person.id,
+          first_name: person.firstName,
+          last_name: person.lastName,
+          employee_id: person.employeeId,
+          store_name: store[0]?.name || 'Unassigned',
+          total_sales: Number(stats.total_sales),
+          total_revenue: stats.total_revenue,
+          total_profit: stats.total_profit,
+          month: targetMonth,
+          year: targetYear
+        });
+      }
+
+      console.log(`Sales person performance data:`, performanceData);
+      return performanceData;
     } catch (error) {
       console.error('Error fetching sales person performance:', error);
       return [];
