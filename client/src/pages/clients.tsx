@@ -92,6 +92,8 @@ export default function Clients() {
     refetchIntervalInBackground: false
   });
 
+
+
   // Force immediate refresh when component mounts
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
@@ -137,7 +139,7 @@ export default function Clients() {
 
     // Purchase Range filter
     if (purchaseRangeFilter !== "all") {
-      const purchaseCount = client.purchaseCount || 0;
+      const purchaseCount = client.totalPurchases || 0;
       switch (purchaseRangeFilter) {
         case "0":
           if (purchaseCount !== 0) return false;
@@ -162,7 +164,7 @@ export default function Clients() {
     let bValue = b[sortField];
     
     // Handle numeric values
-    if (sortField === "purchaseCount" || sortField === "totalSpend") {
+    if (sortField === "totalPurchases" || sortField === "totalSpend") {
       aValue = parseFloat(aValue) || 0;
       bValue = parseFloat(bValue) || 0;
     }
@@ -577,11 +579,11 @@ Jane Smith,jane@example.com,+27987654321,Cape Town,Luxury timepieces,Regular cus
                       <TableHead>Status</TableHead>
                       <TableHead 
                         className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
-                        onClick={() => handleSort("purchaseCount")}
+                        onClick={() => handleSort("totalPurchases")}
                       >
                         <div className="flex items-center gap-1">
                           Purchases
-                          {sortField === "purchaseCount" && (
+                          {sortField === "totalPurchases" && (
                             sortDirection === "asc" ? 
                             <ChevronUp className="h-4 w-4" /> : 
                             <ChevronDown className="h-4 w-4" />
@@ -645,7 +647,7 @@ Jane Smith,jane@example.com,+27987654321,Cape Town,Luxury timepieces,Regular cus
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <ShoppingBag className="h-4 w-4 text-slate-400" />
-                            <span className="font-medium">{client.purchaseCount || 0}</span>
+                            <span className="font-medium">{client.totalPurchases || 0}</span>
                           </div>
                         </TableCell>
                         <TableCell>
