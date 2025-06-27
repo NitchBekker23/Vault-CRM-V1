@@ -82,13 +82,23 @@ export default function Clients() {
   });
 
   // Fetch clients data with real-time updates
-  const { data: clientsData, isLoading: isLoadingClients, error } = useQuery({
+  const { data: clientsData, isLoading: isLoadingClients, error, refetch } = useQuery({
     queryKey: ["/api/clients"],
     enabled: isAuthenticated && !isLoading,
-    staleTime: 30 * 1000, // 30 seconds fresh data
+    staleTime: 0, // Always fetch fresh data
+    cacheTime: 0, // Don't cache to ensure fresh data
     refetchOnMount: true,
-    refetchOnWindowFocus: true
+    refetchOnWindowFocus: true,
+    refetchInterval: 5 * 1000, // Auto-refresh every 5 seconds for immediate updates
+    refetchIntervalInBackground: false
   });
+
+  // Force refresh when component mounts or user returns to page
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      refetch();
+    }
+  }, [isAuthenticated, isLoading, refetch]);
 
   // Handle sorting functionality
   const handleSort = (field: string) => {

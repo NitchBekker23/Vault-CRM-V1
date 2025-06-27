@@ -1640,6 +1640,15 @@ export class DatabaseStorage implements IStorage {
         .where(eq(clients.id, clientId));
 
       console.log(`Updated client ${clientId} stats: ${totalPurchases} purchases, R${totalSpend} total, VIP: ${vipStatus}`);
+      
+      // Verify the update was successful
+      const [verifyResult] = await db
+        .select({ totalPurchases: clients.totalPurchases })
+        .from(clients)
+        .where(eq(clients.id, clientId));
+      
+      console.log(`Verification: Client ${clientId} now has ${verifyResult?.totalPurchases} purchases in database`);
+      
     } catch (error) {
       console.error(`Failed to update client ${clientId} stats:`, error);
       // Don't throw error to prevent transaction failure

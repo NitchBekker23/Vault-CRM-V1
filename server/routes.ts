@@ -2758,6 +2758,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Force refresh client statistics
+  app.post("/api/clients/refresh-stats", checkAuth, async (req: any, res) => {
+    try {
+      console.log("Manually refreshing all client statistics...");
+      const clientsResult = await storage.getClients();
+      for (const client of clientsResult.clients) {
+        await storage.updateClientPurchaseStats(client.id);
+      }
+      console.log("All client statistics refreshed successfully");
+      res.json({ message: "Client statistics refreshed", count: clientsResult.clients.length });
+    } catch (error) {
+      console.error("Error refreshing client statistics:", error);
+      res.status(500).json({ message: "Failed to refresh client statistics" });
+    }
+  });
+
   // Store management endpoints
   app.get("/api/stores", checkAuth, async (req: any, res) => {
     try {
