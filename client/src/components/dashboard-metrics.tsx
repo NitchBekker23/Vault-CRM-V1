@@ -15,6 +15,9 @@ interface Metrics {
 export default function DashboardMetrics() {
   const { data: metrics, isLoading } = useQuery<Metrics>({
     queryKey: ["/api/dashboard/metrics"],
+    staleTime: 30 * 1000, // 30 seconds fresh data
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
   const isMobile = useIsMobile();
 

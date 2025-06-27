@@ -81,10 +81,13 @@ export default function Clients() {
     },
   });
 
-  // Fetch clients data
+  // Fetch clients data with real-time updates
   const { data: clientsData, isLoading: isLoadingClients, error } = useQuery({
     queryKey: ["/api/clients"],
     enabled: isAuthenticated && !isLoading,
+    staleTime: 30 * 1000, // 30 seconds fresh data
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
 
   // Handle sorting functionality

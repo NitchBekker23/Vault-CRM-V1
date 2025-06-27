@@ -91,16 +91,22 @@ export default function Sales() {
     }
   };
 
-  // Sales analytics query
+  // Sales analytics query with real-time updates
   const { data: analytics, isLoading: analyticsLoading } = useQuery({
     queryKey: ["/api/sales-analytics", dateRangeFilter],
     queryFn: () => apiRequest(`/api/sales-analytics?dateRange=${dateRangeFilter}`),
+    staleTime: 30 * 1000, // 30 seconds fresh data
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
 
-  // Sales transactions query
+  // Sales transactions query with real-time updates
   const { data: transactionsData, isLoading: transactionsLoading } = useQuery({
     queryKey: ["/api/sales-transactions", page, searchQuery, transactionTypeFilter, dateRangeFilter],
     queryFn: () => apiRequest(`/api/sales-transactions?page=${page}&limit=20&search=${searchQuery}&transactionType=${transactionTypeFilter}&dateRange=${dateRangeFilter}`),
+    staleTime: 30 * 1000, // 30 seconds fresh data
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
 
   // CSV import mutation
@@ -125,8 +131,12 @@ export default function Sales() {
         title: "CSV Import Complete",
         description: `Successfully imported ${data.successful} transactions. ${data.duplicates.length} duplicates found, ${data.errors.length} errors.`,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/sales-transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/sales-analytics"] });
+      // Force immediate refresh of all related data with refetch
+      queryClient.invalidateQueries({ queryKey: ["/api/sales-transactions"], refetchType: "all" });
+      queryClient.invalidateQueries({ queryKey: ["/api/sales-analytics"], refetchType: "all" });
+      queryClient.invalidateQueries({ queryKey: ["/api/clients"], refetchType: "all" });
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"], refetchType: "all" });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"], refetchType: "all" });
       setShowImportDialog(false);
       setCsvFile(null);
     },

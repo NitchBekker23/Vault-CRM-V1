@@ -107,11 +107,11 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
       
       return response.json();
     },
-    // Smart cache strategy for optimal performance
-    staleTime: 5 * 60 * 1000, // 5 minutes fresh data
-    gcTime: 10 * 60 * 1000, // 10 minutes garbage collection
-    refetchOnMount: false, // Don't refetch if data is fresh
-    refetchOnWindowFocus: false
+    // Reduced cache time for real-time inventory updates
+    staleTime: 30 * 1000, // 30 seconds fresh data
+    gcTime: 2 * 60 * 1000, // 2 minutes garbage collection
+    refetchOnMount: true, // Always refetch to ensure fresh data
+    refetchOnWindowFocus: true // Refetch when user returns to page
   });
 
   const deleteItemMutation = useMutation({
