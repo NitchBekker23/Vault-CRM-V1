@@ -81,22 +81,22 @@ export default function Clients() {
     },
   });
 
-  // Fetch clients data with real-time updates
+  // Fetch clients data with real-time updates and cache busting
   const { data: clientsData, isLoading: isLoadingClients, error, refetch } = useQuery({
     queryKey: ["/api/clients"],
     enabled: isAuthenticated && !isLoading,
     staleTime: 0, // Always fetch fresh data
-    cacheTime: 0, // Don't cache to ensure fresh data
     refetchOnMount: true,
     refetchOnWindowFocus: true,
-    refetchInterval: 5 * 1000, // Auto-refresh every 5 seconds for immediate updates
+    refetchInterval: 3 * 1000, // Aggressive 3-second refresh
     refetchIntervalInBackground: false
   });
 
-  // Force refresh when component mounts or user returns to page
+  // Force immediate refresh when component mounts
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
-      refetch();
+      const timer = setTimeout(() => refetch(), 100); // Small delay to ensure auth is ready
+      return () => clearTimeout(timer);
     }
   }, [isAuthenticated, isLoading, refetch]);
 

@@ -1964,10 +1964,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Client routes
   app.get("/api/clients", checkAuth, async (req: any, res) => {
     try {
+      // Add no-cache headers to prevent 304 responses and ensure fresh data
+      res.set({
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'ETag': `"${Date.now()}"` // Unique ETag for cache busting
+      });
+
       const page = req.query.page ? parseInt(req.query.page as string) : 1;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
 
       const result = await storage.getClients(page, limit);
+      console.log(`Fresh client data retrieved: ${result.clients.length} clients, first client purchases: ${result.clients[0]?.totalPurchases || 'N/A'}`);
       res.json(result);
     } catch (error) {
       console.error("Error fetching clients:", error);
