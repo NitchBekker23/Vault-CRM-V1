@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Header from "@/components/header";
 import { useToast } from "@/hooks/use-toast";
@@ -53,6 +53,15 @@ const leadFormSchema = z.object({
   lastContactDate: z.string().optional(),
   nextFollowUp: z.string().optional(),
 });
+
+// Store locations data
+const STORE_LOCATIONS = [
+  { value: "HQ", label: "HQ - Head Office", code: "099" },
+  { value: "Melrose", label: "Melrose - Melrose Arch", code: "001" },
+  { value: "Menlyn", label: "Menlyn - Menlyn Park", code: "003" },
+  { value: "Breitling V&A", label: "Breitling V&A - V&A Waterfront", code: "006" },
+  { value: "Breitling Sandton", label: "Breitling Sandton - Sandton City", code: "002" },
+];
 
 // Utility function to parse and format SKU references
 const formatSkuReferences = (skuString?: string) => {
@@ -691,9 +700,20 @@ function AddLeadModal({ isOpen, onClose, onSubmit }: {
                 name="location"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Location</FormLabel>
+                    <FormLabel>Store Location</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select store location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STORE_LOCATIONS.map((store) => (
+                            <SelectItem key={store.value} value={store.value}>
+                              {store.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -731,7 +751,7 @@ function AddLeadModal({ isOpen, onClose, onSubmit }: {
               name="skuReferences"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>SKU References (Model Numbers)</FormLabel>
+                  <FormLabel>SKU References</FormLabel>
                   <FormControl>
                     <Input 
                       {...field} 
@@ -818,20 +838,40 @@ function EditLeadModal({
   const form = useForm<z.infer<typeof leadFormSchema>>({
     resolver: zodResolver(leadFormSchema),
     defaultValues: {
-      firstName: lead?.firstName || "",
-      lastName: lead?.lastName || "",
-      email: lead?.email || "",
-      phone: lead?.phone || "",
-      company: lead?.company || "",
-      position: lead?.position || "",
-      location: lead?.location || "",
-      leadSource: lead?.leadSource || "",
-      skuReferences: lead?.skuReferences || "",
-      notes: lead?.notes || "",
-      lastContactDate: lead?.lastContactDate ? lead.lastContactDate.split('T')[0] : "",
-      nextFollowUp: lead?.nextFollowUp ? lead.nextFollowUp.split('T')[0] : "",
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      company: "",
+      position: "",
+      location: "",
+      leadSource: "",
+      skuReferences: "",
+      notes: "",
+      lastContactDate: "",
+      nextFollowUp: "",
     },
   });
+
+  // Reset form when lead changes
+  useEffect(() => {
+    if (lead) {
+      form.reset({
+        firstName: lead.firstName || "",
+        lastName: lead.lastName || "",
+        email: lead.email || "",
+        phone: lead.phone || "",
+        company: lead.company || "",
+        position: lead.position || "",
+        location: lead.location || "",
+        leadSource: lead.leadSource || "",
+        skuReferences: lead.skuReferences || "",
+        notes: lead.notes || "",
+        lastContactDate: lead.lastContactDate ? lead.lastContactDate.split('T')[0] : "",
+        nextFollowUp: lead.nextFollowUp ? lead.nextFollowUp.split('T')[0] : "",
+      });
+    }
+  }, [lead, form]);
 
   const handleSubmit = (data: z.infer<typeof leadFormSchema>) => {
     if (lead) {
@@ -946,9 +986,20 @@ function EditLeadModal({
                 name="location"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Location</FormLabel>
+                    <FormLabel>Store Location</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select store location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STORE_LOCATIONS.map((store) => (
+                            <SelectItem key={store.value} value={store.value}>
+                              {store.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -986,7 +1037,7 @@ function EditLeadModal({
               name="skuReferences"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>SKU References (Model Numbers)</FormLabel>
+                  <FormLabel>SKU References</FormLabel>
                   <FormControl>
                     <Input 
                       {...field} 
