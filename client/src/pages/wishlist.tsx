@@ -146,6 +146,8 @@ export default function Wishlist() {
                   <SelectItem value="Omega">Omega</SelectItem>
                   <SelectItem value="Cartier">Cartier</SelectItem>
                   <SelectItem value="TAG Heuer">TAG Heuer</SelectItem>
+                  <SelectItem value="Panerai">Panerai</SelectItem>
+                  <SelectItem value="A. Lange & Söhne">A. Lange & Söhne</SelectItem>
                   <SelectItem value="Various">Various</SelectItem>
                   <SelectItem value="Other">Other</SelectItem>
                 </SelectContent>
