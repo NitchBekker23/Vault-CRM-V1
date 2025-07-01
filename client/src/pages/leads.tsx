@@ -84,6 +84,13 @@ export default function Leads() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  
+  // Advanced filter states
+  const [openClosedFilter, setOpenClosedFilter] = useState<string>("all"); // all, open, closed
+  const [dateFilter, setDateFilter] = useState<string>("all"); // all, appointment, created, nextContact, lastContact
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+  const [storeFilter, setStoreFilter] = useState<string>("all");
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
@@ -244,7 +251,7 @@ export default function Leads() {
     }).format(amount);
   };
 
-  const filteredLeads = leads.filter(lead => {
+  const filteredLeads = leads.filter((lead: Lead) => {
     const matchesSearch = 
       lead.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -253,7 +260,48 @@ export default function Leads() {
     
     const matchesStatus = statusFilter === "all" || lead.leadStatus === statusFilter;
     
-    return matchesSearch && matchesStatus;
+    // Open/Closed filter
+    const matchesOpenClosed = openClosedFilter === "all" || 
+      (openClosedFilter === "open" && lead.isOpen) ||
+      (openClosedFilter === "closed" && !lead.isOpen);
+    
+    // Store location filter
+    const matchesStore = storeFilter === "all" || lead.location === storeFilter;
+    
+    // Date filter
+    let matchesDate = true;
+    if (dateFilter !== "all" && (dateFrom || dateTo)) {
+      let targetDate: string | undefined;
+      
+      switch (dateFilter) {
+        case "created":
+          targetDate = lead.createdAt;
+          break;
+        case "lastContact":
+          targetDate = lead.lastContactDate;
+          break;
+        case "nextContact":
+          targetDate = lead.nextFollowUp;
+          break;
+        case "appointment":
+          // For appointment date, we might need to add this field to the Lead interface
+          targetDate = lead.nextFollowUp; // Using nextFollowUp as appointment date for now
+          break;
+      }
+      
+      if (targetDate) {
+        const date = new Date(targetDate);
+        const fromDate = dateFrom ? new Date(dateFrom) : null;
+        const toDate = dateTo ? new Date(dateTo) : null;
+        
+        if (fromDate && date < fromDate) matchesDate = false;
+        if (toDate && date > toDate) matchesDate = false;
+      } else {
+        matchesDate = false; // No date available for the selected filter
+      }
+    }
+    
+    return matchesSearch && matchesStatus && matchesOpenClosed && matchesStore && matchesDate;
   });
 
   if (isLoading) {
@@ -269,10 +317,11 @@ export default function Leads() {
       <Header title="Lead Management" />
       
       <div className="p-6 space-y-6">
-        {/* Header Actions */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-between">
-          <div className="flex flex-col sm:flex-row gap-4 flex-1">
-            <div className="relative flex-1 max-w-sm">
+        {/* Comprehensive Filter System */}
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border p-6 space-y-4">
+          {/* Top Row - Search and Primary Actions */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-between">
+            <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 placeholder="Search leads..."
@@ -282,23 +331,139 @@ export default function Leads() {
               />
             </div>
             
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            >
-              <option value="all">All Status</option>
-              <option value="new">New</option>
-              <option value="contacted">Contacted</option>
-              <option value="appointment">Appointment</option>
-              <option value="outcome">Outcome</option>
-            </select>
+            <Button onClick={() => setShowAddModal(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Lead
+            </Button>
           </div>
-          
-          <Button onClick={() => setShowAddModal(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Lead
-          </Button>
+
+          {/* Filter Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Open/Closed Filter */}
+            <div>
+              <Label htmlFor="openClosedFilter" className="text-sm font-medium">Ticket Status</Label>
+              <Select value={openClosedFilter} onValueChange={setOpenClosedFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Tickets" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Tickets</SelectItem>
+                  <SelectItem value="open">Open Tickets</SelectItem>
+                  <SelectItem value="closed">Closed Tickets</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Pipeline Status Filter */}
+            <div>
+              <Label htmlFor="statusFilter" className="text-sm font-medium">Pipeline Stage</Label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Stages" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Stages</SelectItem>
+                  <SelectItem value="new">New</SelectItem>
+                  <SelectItem value="contacted">Contacted</SelectItem>
+                  <SelectItem value="appointment">Appointment</SelectItem>
+                  <SelectItem value="outcome">Outcome</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Store Filter */}
+            <div>
+              <Label htmlFor="storeFilter" className="text-sm font-medium">Store Location</Label>
+              <Select value={storeFilter} onValueChange={setStoreFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Stores" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Stores</SelectItem>
+                  {STORE_LOCATIONS.map((store) => (
+                    <SelectItem key={store.value} value={store.value}>
+                      {store.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Date Filter Type */}
+            <div>
+              <Label htmlFor="dateFilter" className="text-sm font-medium">Date Filter</Label>
+              <Select value={dateFilter} onValueChange={setDateFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="No Date Filter" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">No Date Filter</SelectItem>
+                  <SelectItem value="created">Created Date</SelectItem>
+                  <SelectItem value="lastContact">Last Contact</SelectItem>
+                  <SelectItem value="nextContact">Next Contact</SelectItem>
+                  <SelectItem value="appointment">Appointment Date</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Clear Filters */}
+            <div className="flex items-end">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setSearchTerm("");
+                  setStatusFilter("all");
+                  setOpenClosedFilter("all");
+                  setStoreFilter("all");
+                  setDateFilter("all");
+                  setDateFrom("");
+                  setDateTo("");
+                }}
+                className="w-full"
+              >
+                Clear Filters
+              </Button>
+            </div>
+          </div>
+
+          {/* Date Range Row - Only show when date filter is active */}
+          {dateFilter !== "all" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t">
+              <div>
+                <Label htmlFor="dateFrom" className="text-sm font-medium">From Date</Label>
+                <Input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="dateTo" className="text-sm font-medium">To Date</Label>
+                <Input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Results Summary */}
+        <div className="flex justify-between items-center text-sm text-gray-600 dark:text-gray-400">
+          <span>
+            Showing {filteredLeads.length} of {leads.length} leads
+            {(searchTerm || statusFilter !== "all" || openClosedFilter !== "all" || storeFilter !== "all" || dateFilter !== "all") && (
+              <span className="ml-2 text-primary">• Filters active</span>
+            )}
+          </span>
+          {filteredLeads.length > 0 && (
+            <span>
+              {filteredLeads.filter((lead: Lead) => lead.isOpen).length} open, {filteredLeads.filter((lead: Lead) => !lead.isOpen).length} closed
+            </span>
+          )}
         </div>
 
         {/* Leads Grid */}
