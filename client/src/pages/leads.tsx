@@ -10,6 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Plus, Search, Phone, Mail, MapPin, Calendar, DollarSign, ArrowRight, CheckCircle, XCircle, Clock, Target } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -25,7 +30,7 @@ interface Lead {
   leadSource: string;
   leadStatus: 'new' | 'contacted' | 'appointment' | 'outcome';
   outcome?: 'won' | 'lost' | 'wishlist';
-  estimatedValue?: number;
+  skuReferences?: string; // JSON array of SKU model numbers
   notes?: string;
   isOpen: boolean;
   createdAt: string;
@@ -33,9 +38,27 @@ interface Lead {
   nextFollowUp?: string;
 }
 
+// Form schema for creating/editing leads
+const leadFormSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Valid email is required"),
+  phone: z.string().min(1, "Phone number is required"),
+  company: z.string().optional(),
+  position: z.string().optional(),
+  location: z.string().optional(),
+  leadSource: z.string().min(1, "Lead source is required"),
+  skuReferences: z.string().optional(),
+  notes: z.string().optional(),
+  lastContactDate: z.string().optional(),
+  nextFollowUp: z.string().optional(),
+});
+
 export default function Leads() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
@@ -85,6 +108,42 @@ export default function Leads() {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to update lead status", variant: "destructive" });
+    },
+  });
+
+  // Create lead mutation
+  const createLeadMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof leadFormSchema>) => {
+      const response = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to create lead");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      setShowAddModal(false);
+      toast({ title: "Success", description: "Lead created successfully" });
+    },
+  });
+
+  // Update lead mutation
+  const updateLeadMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<z.infer<typeof leadFormSchema>> }) => {
+      const response = await fetch(`/api/leads/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to update lead");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      setEditingLead(null);
+      toast({ title: "Success", description: "Lead updated successfully" });
     },
   });
 
@@ -211,7 +270,7 @@ export default function Leads() {
             </select>
           </div>
           
-          <Button>
+          <Button onClick={() => setShowAddModal(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Lead
           </Button>
@@ -220,7 +279,7 @@ export default function Leads() {
         {/* Leads Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredLeads.map((lead) => (
-            <Card key={lead.id} className="hover:shadow-lg transition-shadow">
+            <Card key={lead.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setEditingLead(lead)}>
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start">
                   <div>
@@ -263,10 +322,19 @@ export default function Leads() {
                   )}
                 </div>
                 
-                {lead.estimatedValue && (
-                  <div className="flex items-center text-sm font-medium text-green-600">
-                    <DollarSign className="h-4 w-4 mr-2" />
-                    {formatCurrency(lead.estimatedValue)}
+                {lead.skuReferences && (
+                  <div className="flex items-center text-sm font-medium text-blue-600">
+                    <Target className="h-4 w-4 mr-2" />
+                    {(() => {
+                      try {
+                        const skus = JSON.parse(lead.skuReferences);
+                        return Array.isArray(skus) 
+                          ? `SKUs: ${skus.slice(0, 2).join(', ')}${skus.length > 2 ? '...' : ''}`
+                          : `SKU: ${lead.skuReferences}`;
+                      } catch {
+                        return `SKU: ${lead.skuReferences}`;
+                      }
+                    })()}
                   </div>
                 )}
                 
@@ -331,12 +399,26 @@ export default function Leads() {
                 : "Get started by adding your first lead"
               }
             </p>
-            <Button>
+            <Button onClick={() => setShowAddModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add Your First Lead
             </Button>
           </div>
         )}
+
+        {/* Add Lead Modal */}
+        <AddLeadModal 
+          isOpen={showAddModal} 
+          onClose={() => setShowAddModal(false)}
+          onSubmit={(data) => createLeadMutation.mutate(data)}
+        />
+
+        {/* Edit Lead Modal */}
+        <EditLeadModal 
+          lead={editingLead} 
+          onClose={() => setEditingLead(null)}
+          onSubmit={(id, data) => updateLeadMutation.mutate({ id, data })}
+        />
       </div>
     </div>
   );
@@ -465,6 +547,509 @@ function OutcomeSelectionDialog({
             Set Outcome
           </Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Add Lead Modal Component
+function AddLeadModal({ isOpen, onClose, onSubmit }: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onSubmit: (data: any) => void; 
+}) {
+  const form = useForm<z.infer<typeof leadFormSchema>>({
+    resolver: zodResolver(leadFormSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      company: "",
+      position: "",
+      location: "",
+      leadSource: "",
+      skuReferences: "",
+      notes: "",
+      lastContactDate: "",
+      nextFollowUp: "",
+    },
+  });
+
+  const handleSubmit = (data: z.infer<typeof leadFormSchema>) => {
+    onSubmit(data);
+    form.reset();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Add New Lead</DialogTitle>
+          <DialogDescription>
+            Create a new lead and add them to your pipeline
+          </DialogDescription>
+        </DialogHeader>
+        
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First Name *</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name *</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email *</FormLabel>
+                    <FormControl>
+                      <Input type="email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone *</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="company"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Company</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="position"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Position</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Location</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="leadSource"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Lead Source *</FormLabel>
+                    <FormControl>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select source" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Website">Website</SelectItem>
+                          <SelectItem value="Referral">Referral</SelectItem>
+                          <SelectItem value="Cold Call">Cold Call</SelectItem>
+                          <SelectItem value="Social Media">Social Media</SelectItem>
+                          <SelectItem value="Trade Show">Trade Show</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="skuReferences"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>SKU References</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      placeholder="e.g., RX-001, TU-005, BR-123 (comma separated)" 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="lastContactDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Contact Date</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="nextFollowUp"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Next Follow Up</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      {...field} 
+                      placeholder="Any additional notes about this lead..."
+                      rows={4}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                Create Lead
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Edit Lead Modal Component
+function EditLeadModal({ 
+  lead, 
+  onClose, 
+  onSubmit 
+}: { 
+  lead: Lead | null; 
+  onClose: () => void; 
+  onSubmit: (id: number, data: any) => void; 
+}) {
+  const form = useForm<z.infer<typeof leadFormSchema>>({
+    resolver: zodResolver(leadFormSchema),
+    defaultValues: {
+      firstName: lead?.firstName || "",
+      lastName: lead?.lastName || "",
+      email: lead?.email || "",
+      phone: lead?.phone || "",
+      company: lead?.company || "",
+      position: lead?.position || "",
+      location: lead?.location || "",
+      leadSource: lead?.leadSource || "",
+      skuReferences: lead?.skuReferences || "",
+      notes: lead?.notes || "",
+      lastContactDate: lead?.lastContactDate ? lead.lastContactDate.split('T')[0] : "",
+      nextFollowUp: lead?.nextFollowUp ? lead.nextFollowUp.split('T')[0] : "",
+    },
+  });
+
+  const handleSubmit = (data: z.infer<typeof leadFormSchema>) => {
+    if (lead) {
+      onSubmit(lead.id, data);
+    }
+  };
+
+  if (!lead) return null;
+
+  return (
+    <Dialog open={!!lead} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit Lead</DialogTitle>
+          <DialogDescription>
+            Update information for {lead.firstName} {lead.lastName}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First Name *</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name *</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email *</FormLabel>
+                    <FormControl>
+                      <Input type="email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone *</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="company"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Company</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="position"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Position</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Location</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="leadSource"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Lead Source *</FormLabel>
+                    <FormControl>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select source" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Website">Website</SelectItem>
+                          <SelectItem value="Referral">Referral</SelectItem>
+                          <SelectItem value="Cold Call">Cold Call</SelectItem>
+                          <SelectItem value="Social Media">Social Media</SelectItem>
+                          <SelectItem value="Trade Show">Trade Show</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="skuReferences"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>SKU References</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      placeholder="e.g., RX-001, TU-005, BR-123 (comma separated)" 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="lastContactDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Contact Date</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="nextFollowUp"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Next Follow Up</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      {...field} 
+                      placeholder="Any additional notes about this lead..."
+                      rows={4}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                Update Lead
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

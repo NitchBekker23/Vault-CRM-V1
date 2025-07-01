@@ -545,7 +545,7 @@ export const leads = pgTable("leads", {
   outcome: varchar("outcome", { 
     enum: ["won", "lost", "wishlist"] 
   }),
-  estimatedValue: numeric("estimated_value", { precision: 10, scale: 2 }),
+  skuReferences: text("sku_references"), // JSON array of SKU model numbers
   notes: text("notes"),
   isOpen: boolean("is_open").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -746,7 +746,7 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
 }).extend({
   lastContactDate: z.string().nullable().optional().transform(val => val ? new Date(val) : null),
   nextFollowUp: z.string().nullable().optional().transform(val => val ? new Date(val) : null),
-  estimatedValue: z.string().nullable().optional(),
+  skuReferences: z.string().nullable().optional(),
 });
 export type InsertLead = z.infer<typeof insertLeadSchema>;
 export type Lead = typeof leads.$inferSelect;

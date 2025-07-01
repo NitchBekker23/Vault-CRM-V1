@@ -2245,6 +2245,21 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getLead(id: number): Promise<Lead | null> {
+    try {
+      const [lead] = await db
+        .select()
+        .from(leads)
+        .where(eq(leads.id, id))
+        .limit(1);
+      
+      return lead || null;
+    } catch (error) {
+      console.error('Error fetching lead:', error);
+      throw error;
+    }
+  }
+
   async createLead(leadData: InsertLead): Promise<Lead> {
     try {
       const [lead] = await db
@@ -2287,6 +2302,24 @@ export class DatabaseStorage implements IStorage {
       return lead;
     } catch (error) {
       console.error('Error updating lead status:', error);
+      throw error;
+    }
+  }
+
+  async updateLead(leadId: number, updateData: Partial<InsertLead>): Promise<Lead> {
+    try {
+      const [lead] = await db
+        .update(leads)
+        .set({ 
+          ...updateData,
+          updatedAt: new Date()
+        })
+        .where(eq(leads.id, leadId))
+        .returning();
+
+      return lead;
+    } catch (error) {
+      console.error('Error updating lead:', error);
       throw error;
     }
   }
