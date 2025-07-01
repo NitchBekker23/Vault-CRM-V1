@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Header from "@/components/header";
 import { useToast } from "@/hooks/use-toast";
@@ -94,21 +94,28 @@ export default function Leads() {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Keyboard shortcut to focus search (Ctrl/Cmd + K)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   console.log("[Leads] Component loading, searchTerm:", searchTerm, "statusFilter:", statusFilter);
 
   // Fetch leads from API
   const { data: leadsData, isLoading } = useQuery({
-    queryKey: ["leads", searchTerm, statusFilter],
+    queryKey: ["leads"], // Simplified query key since we're doing client-side filtering
     queryFn: async () => {
-      const params = new URLSearchParams({
-        page: "1",
-        limit: "100",
-        ...(searchTerm && { search: searchTerm }),
-        ...(statusFilter !== "all" && { status: statusFilter }),
-      });
-
-      const response = await fetch(`/api/leads?${params}`);
+      const response = await fetch(`/api/leads?page=1&limit=100`);
       if (!response.ok) {
         throw new Error("Failed to fetch leads");
       }
@@ -252,11 +259,25 @@ export default function Leads() {
   };
 
   const filteredLeads = leads.filter((lead: Lead) => {
-    const matchesSearch = 
-      lead.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.company?.toLowerCase().includes(searchTerm.toLowerCase());
+    // Enhanced search functionality
+    let matchesSearch = true;
+    if (searchTerm.trim()) {
+      const searchWords = searchTerm.toLowerCase().trim().split(/\s+/);
+      const searchableText = [
+        lead.firstName,
+        lead.lastName,
+        lead.email,
+        lead.company || '',
+        lead.position || '',
+        lead.phone,
+        lead.leadSource,
+        lead.notes || '',
+        lead.skuReferences || ''
+      ].join(' ').toLowerCase();
+      
+      // All search words must be found in the searchable text
+      matchesSearch = searchWords.every(word => searchableText.includes(word));
+    }
     
     const matchesStatus = statusFilter === "all" || lead.leadStatus === statusFilter;
     
@@ -324,11 +345,20 @@ export default function Leads() {
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Search leads..."
+                ref={searchInputRef}
+                placeholder="Search by name, email, company, phone, SKU... (Ctrl+K)"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 pr-10"
               />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <XCircle className="h-4 w-4" />
+                </button>
+              )}
             </div>
             
             <Button onClick={() => setShowAddModal(true)}>
