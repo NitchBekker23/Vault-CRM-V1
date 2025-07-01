@@ -121,10 +121,11 @@ export interface IStorage {
 
   // Wishlist operations
   getWishlistItems(
-    page?: number,
-    limit?: number,
-    userId?: string
-  ): Promise<{ items: WishlistItem[]; total: number }>;
+    search?: string,
+    status?: string,
+    category?: string,
+    brand?: string
+  ): Promise<WishlistItem[]>;
   createWishlistItem(item: InsertWishlistItem): Promise<WishlistItem>;
   updateWishlistItem(id: number, item: Partial<InsertWishlistItem>): Promise<WishlistItem>;
   deleteWishlistItem(id: number): Promise<void>;
@@ -232,15 +233,8 @@ export interface IStorage {
   deleteLead(leadId: number): Promise<void>;
   updateLead(leadId: number, updateData: Partial<InsertLead>): Promise<Lead>;
 
-  // Wishlist operations
-  getWishlistItems(
-    search?: string,
-    status?: string,
-    category?: string,
-    brand?: string
-  ): Promise<WishlistItem[]>;
+  // Additional wishlist operations
   updateWishlistItemStatus(id: number, status: string): Promise<WishlistItem>;
-  deleteWishlistItem(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {

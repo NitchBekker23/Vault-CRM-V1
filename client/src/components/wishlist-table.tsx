@@ -50,9 +50,9 @@ import { WishlistItem } from "@shared/schema";
 
 export default function WishlistTable() {
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
-  const [category, setCategory] = useState("");
-  const [brand, setBrand] = useState("");
+  const [status, setStatus] = useState("all");
+  const [category, setCategory] = useState("all");
+  const [brand, setBrand] = useState("all");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedItem, setSelectedItem] = useState<WishlistItem | null>(null);
 
@@ -67,9 +67,9 @@ export default function WishlistTable() {
     queryFn: async () => {
       const params = new URLSearchParams();
       if (search.trim()) params.append("search", search.trim());
-      if (status) params.append("status", status);
-      if (category) params.append("category", category);
-      if (brand) params.append("brand", brand);
+      if (status && status !== "all") params.append("status", status);
+      if (category && category !== "all") params.append("category", category);
+      if (brand && brand !== "all") params.append("brand", brand);
       
       const response = await fetch(`/api/wishlist?${params}`, {
         credentials: "include",
@@ -199,7 +199,7 @@ export default function WishlistTable() {
                   <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Statuses</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="fulfilled">Fulfilled</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
@@ -210,7 +210,7 @@ export default function WishlistTable() {
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
                   <SelectItem value="watches">Watches</SelectItem>
                   <SelectItem value="leather_goods">Leather Goods</SelectItem>
                   <SelectItem value="pens">Pens</SelectItem>
@@ -222,7 +222,7 @@ export default function WishlistTable() {
                   <SelectValue placeholder="All Brands" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Brands</SelectItem>
+                  <SelectItem value="all">All Brands</SelectItem>
                   <SelectItem value="Rolex">Rolex</SelectItem>
                   <SelectItem value="Montblanc">Montblanc</SelectItem>
                   <SelectItem value="Tudor">Tudor</SelectItem>

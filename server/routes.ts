@@ -1897,12 +1897,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Wishlist routes
   app.get("/api/wishlist", isAuthenticated, async (req, res) => {
     try {
-      const page = req.query.page ? parseInt(req.query.page as string) : 1;
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
-      const userId = req.query.userId as string;
+      const search = req.query.search as string || "";
+      const status = req.query.status as string || "";
+      const category = req.query.category as string || "";
+      const brand = req.query.brand as string || "";
 
-      const result = await storage.getWishlistItems(page, limit, userId);
-      res.json(result);
+      const items = await storage.getWishlistItems(search, status, category, brand);
+      res.json({ items });
     } catch (error) {
       console.error("Error fetching wishlist:", error);
       res.status(500).json({ message: "Failed to fetch wishlist" });
