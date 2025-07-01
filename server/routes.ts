@@ -40,6 +40,8 @@ import {
   insertClientSchema,
   insertPurchaseSchema,
   insertSalesTransactionSchema,
+  insertLeadSchema,
+  insertLeadActivityLogSchema,
   inventoryItems,
 } from "@shared/schema";
 import { eq, desc, sql, and, ilike, or } from "drizzle-orm";
@@ -2996,7 +2998,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Lead not found" });
       }
 
-      const updateData: any = { updatedAt: new Date() };
+      const updateData: any = {};
       
       if (status) {
         updateData.leadStatus = status;
@@ -3054,8 +3056,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { isOpen } = req.body;
 
       const updatedLead = await storage.updateLead(leadId, { 
-        isOpen, 
-        updatedAt: new Date() 
+        isOpen
       });
 
       // Log activity

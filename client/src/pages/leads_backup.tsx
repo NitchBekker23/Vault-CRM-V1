@@ -731,7 +731,7 @@ function AddLeadModal({ isOpen, onClose, onSubmit }: {
               name="skuReferences"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>SKU References (Model Numbers)</FormLabel>
+                  <FormLabel>SKU References</FormLabel>
                   <FormControl>
                     <Input 
                       {...field} 
@@ -986,7 +986,7 @@ function EditLeadModal({
               name="skuReferences"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>SKU References (Model Numbers)</FormLabel>
+                  <FormLabel>SKU References</FormLabel>
                   <FormControl>
                     <Input 
                       {...field} 
