@@ -528,6 +528,46 @@ export const accountSetupTokensRelations = relations(accountSetupTokens, ({ one 
   }),
 }));
 
+// Leads table for lead management workflow
+export const leads = pgTable("leads", {
+  id: serial("id").primaryKey(),
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  company: varchar("company"),
+  position: varchar("position"),
+  location: varchar("location"),
+  leadSource: varchar("lead_source").notNull(), // Website, Referral, Cold Call, etc.
+  leadStatus: varchar("lead_status", { 
+    enum: ["new", "contacted", "appointment", "outcome"] 
+  }).default("new").notNull(),
+  outcome: varchar("outcome", { 
+    enum: ["won", "lost", "wishlist"] 
+  }),
+  estimatedValue: numeric("estimated_value", { precision: 10, scale: 2 }),
+  notes: text("notes"),
+  isOpen: boolean("is_open").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  lastContactDate: timestamp("last_contact_date"),
+  nextFollowUp: timestamp("next_follow_up"),
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  createdBy: varchar("created_by").references(() => users.id).notNull(),
+});
+
+// Lead activity log for tracking status changes
+export const leadActivityLog = pgTable("lead_activity_log", {
+  id: serial("id").primaryKey(),
+  leadId: integer("lead_id").references(() => leads.id).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  action: varchar("action").notNull(), // 'status_change', 'note_added', 'follow_up_scheduled'
+  fromStatus: varchar("from_status"),
+  toStatus: varchar("to_status"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Notifications table
 export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),
@@ -548,6 +588,30 @@ export const notifications = pgTable("notifications", {
 export const notificationRelations = relations(notifications, ({ one }) => ({
   user: one(users, {
     fields: [notifications.userId],
+    references: [users.id],
+  }),
+}));
+
+// Lead relations
+export const leadsRelations = relations(leads, ({ one, many }) => ({
+  assignee: one(users, {
+    fields: [leads.assignedTo],
+    references: [users.id],
+  }),
+  creator: one(users, {
+    fields: [leads.createdBy],
+    references: [users.id],
+  }),
+  activities: many(leadActivityLog),
+}));
+
+export const leadActivityLogRelations = relations(leadActivityLog, ({ one }) => ({
+  lead: one(leads, {
+    fields: [leadActivityLog.leadId],
+    references: [leads.id],
+  }),
+  user: one(users, {
+    fields: [leadActivityLog.userId],
     references: [users.id],
   }),
 }));
@@ -673,6 +737,26 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
 });
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
+
+// Lead schema types
+export const insertLeadSchema = createInsertSchema(leads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  lastContactDate: z.string().nullable().optional().transform(val => val ? new Date(val) : null),
+  nextFollowUp: z.string().nullable().optional().transform(val => val ? new Date(val) : null),
+  estimatedValue: z.string().nullable().optional(),
+});
+export type InsertLead = z.infer<typeof insertLeadSchema>;
+export type Lead = typeof leads.$inferSelect;
+
+export const insertLeadActivityLogSchema = createInsertSchema(leadActivityLog).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertLeadActivityLog = z.infer<typeof insertLeadActivityLogSchema>;
+export type LeadActivityLog = typeof leadActivityLog.$inferSelect;
 
 // Sales Transaction Types
 export const insertSalesTransactionSchema = createInsertSchema(salesTransactions).omit({

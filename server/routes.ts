@@ -2925,6 +2925,178 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Lead Management API Routes
+
+  // Get all leads with filtering and pagination
+  app.get("/api/leads", checkAuth, async (req: any, res) => {
+    try {
+      const page = req.query.page ? parseInt(req.query.page as string) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const search = req.query.search as string;
+      const status = req.query.status as string;
+      const outcome = req.query.outcome as string;
+      const isOpen = req.query.isOpen === 'true' ? true : req.query.isOpen === 'false' ? false : undefined;
+
+      const result = await storage.getLeads(page, limit, search, status, outcome, isOpen);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching leads:", error);
+      res.status(500).json({ message: "Failed to fetch leads" });
+    }
+  });
+
+  // Create new lead
+  app.post("/api/leads", checkAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUserId;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const validatedData = insertLeadSchema.parse({
+        ...req.body,
+        createdBy: userId,
+      });
+
+      const lead = await storage.createLead(validatedData);
+      
+      // Log activity
+      await storage.createLeadActivity({
+        leadId: lead.id,
+        userId,
+        action: "lead_created",
+        toStatus: "new",
+        notes: `Lead created: ${lead.firstName} ${lead.lastName}`,
+      });
+
+      res.status(201).json(lead);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error creating lead:", error);
+      res.status(500).json({ message: "Failed to create lead" });
+    }
+  });
+
+  // Update lead status (main workflow progression)
+  app.patch("/api/leads/:id/status", checkAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUserId;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const leadId = parseInt(req.params.id);
+      const { status, outcome, notes } = req.body;
+
+      // Get current lead to track status change
+      const currentLead = await storage.getLead(leadId);
+      if (!currentLead) {
+        return res.status(404).json({ message: "Lead not found" });
+      }
+
+      const updateData: any = { updatedAt: new Date() };
+      
+      if (status) {
+        updateData.leadStatus = status;
+      }
+      
+      if (outcome) {
+        updateData.outcome = outcome;
+      }
+
+      const updatedLead = await storage.updateLead(leadId, updateData);
+
+      // Log the status change activity
+      await storage.createLeadActivity({
+        leadId,
+        userId,
+        action: "status_change",
+        fromStatus: currentLead.leadStatus,
+        toStatus: status || currentLead.leadStatus,
+        notes: notes || `Status changed from ${currentLead.leadStatus} to ${status || currentLead.leadStatus}${outcome ? ` with outcome: ${outcome}` : ''}`,
+      });
+
+      res.json(updatedLead);
+    } catch (error) {
+      console.error("Error updating lead status:", error);
+      res.status(500).json({ message: "Failed to update lead status" });
+    }
+  });
+
+  // Update lead details
+  app.put("/api/leads/:id", checkAuth, async (req: any, res) => {
+    try {
+      const leadId = parseInt(req.params.id);
+      const validatedData = insertLeadSchema.partial().parse(req.body);
+
+      const lead = await storage.updateLead(leadId, validatedData);
+      res.json(lead);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error updating lead:", error);
+      res.status(500).json({ message: "Failed to update lead" });
+    }
+  });
+
+  // Close/Open lead
+  app.patch("/api/leads/:id/toggle", checkAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUserId;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const leadId = parseInt(req.params.id);
+      const { isOpen } = req.body;
+
+      const updatedLead = await storage.updateLead(leadId, { 
+        isOpen, 
+        updatedAt: new Date() 
+      });
+
+      // Log activity
+      await storage.createLeadActivity({
+        leadId,
+        userId,
+        action: isOpen ? "lead_reopened" : "lead_closed",
+        notes: `Lead ${isOpen ? 'reopened' : 'closed'}`,
+      });
+
+      res.json(updatedLead);
+    } catch (error) {
+      console.error("Error toggling lead status:", error);
+      res.status(500).json({ message: "Failed to toggle lead status" });
+    }
+  });
+
+  // Get lead activity history
+  app.get("/api/leads/:id/activity", checkAuth, async (req: any, res) => {
+    try {
+      const leadId = parseInt(req.params.id);
+      const activities = await storage.getLeadActivities(leadId);
+      res.json(activities);
+    } catch (error) {
+      console.error("Error fetching lead activities:", error);
+      res.status(500).json({ message: "Failed to fetch lead activities" });
+    }
+  });
+
+  // Delete lead
+  app.delete("/api/leads/:id", checkAuth, async (req: any, res) => {
+    try {
+      const leadId = parseInt(req.params.id);
+      await storage.deleteLead(leadId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting lead:", error);
+      res.status(500).json({ message: "Failed to delete lead" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
