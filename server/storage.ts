@@ -53,6 +53,12 @@ import {
   type InsertSalesPerson,
   type TransactionStatusLog,
   type InsertTransactionStatusLog,
+  leads,
+  leadActivityLog,
+  type Lead,
+  type InsertLead,
+  type LeadActivityLog,
+  type InsertLeadActivityLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, ilike, or, gte, lt, inArray, not } from "drizzle-orm";
@@ -201,6 +207,27 @@ export interface IStorage {
     topClients: Array<{ client: Client; totalSpent: number; transactionCount: number }>;
     recentTransactions: SalesTransaction[];
   }>;
+
+  // Lead management operations
+  getLeads(
+    page?: number,
+    limit?: number,
+    search?: string,
+    status?: string,
+    outcome?: string,
+    isOpen?: boolean
+  ): Promise<{ leads: Lead[]; total: number }>;
+  createLead(lead: InsertLead): Promise<Lead>;
+  updateLeadStatus(
+    leadId: number,
+    status: string,
+    outcome?: string,
+    notes?: string
+  ): Promise<Lead>;
+  toggleLeadStatus(leadId: number, isOpen: boolean): Promise<Lead>;
+  getLeadActivities(leadId: number): Promise<LeadActivityLog[]>;
+  createLeadActivity(activity: InsertLeadActivityLog): Promise<LeadActivityLog>;
+  deleteLead(leadId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2150,6 +2177,179 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(salesTransactions)
       .where(eq(salesTransactions.id, id));
+  }
+
+  // Lead Management Methods
+  async getLeads(
+    page: number = 1,
+    limit: number = 10,
+    search?: string,
+    status?: string,
+    outcome?: string,
+    isOpen?: boolean
+  ): Promise<{ leads: Lead[]; total: number }> {
+    try {
+      let query = db.select().from(leads);
+      let countQuery = db.select({ count: sql`count(*)` }).from(leads);
+
+      // Build filter conditions
+      const conditions = [];
+      
+      if (search) {
+        conditions.push(
+          or(
+            ilike(leads.firstName, `%${search}%`),
+            ilike(leads.lastName, `%${search}%`),
+            ilike(leads.email, `%${search}%`),
+            ilike(leads.company, `%${search}%`)
+          )
+        );
+      }
+      
+      if (status) {
+        conditions.push(eq(leads.leadStatus, status));
+      }
+      
+      if (outcome) {
+        conditions.push(eq(leads.outcome, outcome));
+      }
+      
+      if (isOpen !== undefined) {
+        conditions.push(eq(leads.isOpen, isOpen));
+      }
+
+      // Apply conditions if any
+      if (conditions.length > 0) {
+        const whereCondition = and(...conditions);
+        query = query.where(whereCondition);
+        countQuery = countQuery.where(whereCondition);
+      }
+
+      // Get total count
+      const [{ count }] = await countQuery;
+
+      // Get paginated results
+      const offset = (page - 1) * limit;
+      const leadsResult = await query
+        .orderBy(desc(leads.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      return {
+        leads: leadsResult,
+        total: Number(count)
+      };
+    } catch (error) {
+      console.error('Error fetching leads:', error);
+      throw error;
+    }
+  }
+
+  async createLead(leadData: InsertLead): Promise<Lead> {
+    try {
+      const [lead] = await db
+        .insert(leads)
+        .values(leadData)
+        .returning();
+      return lead;
+    } catch (error) {
+      console.error('Error creating lead:', error);
+      throw error;
+    }
+  }
+
+  async updateLeadStatus(
+    leadId: number,
+    status: string,
+    outcome?: string,
+    notes?: string
+  ): Promise<Lead> {
+    try {
+      const updateData: Partial<InsertLead> = {
+        leadStatus: status as any,
+        updatedAt: new Date(),
+      };
+
+      if (outcome) {
+        updateData.outcome = outcome as any;
+      }
+
+      if (notes) {
+        updateData.notes = notes;
+      }
+
+      const [lead] = await db
+        .update(leads)
+        .set(updateData)
+        .where(eq(leads.id, leadId))
+        .returning();
+
+      return lead;
+    } catch (error) {
+      console.error('Error updating lead status:', error);
+      throw error;
+    }
+  }
+
+  async toggleLeadStatus(leadId: number, isOpen: boolean): Promise<Lead> {
+    try {
+      const [lead] = await db
+        .update(leads)
+        .set({ 
+          isOpen,
+          updatedAt: new Date()
+        })
+        .where(eq(leads.id, leadId))
+        .returning();
+
+      return lead;
+    } catch (error) {
+      console.error('Error toggling lead status:', error);
+      throw error;
+    }
+  }
+
+  async getLeadActivities(leadId: number): Promise<LeadActivityLog[]> {
+    try {
+      return await db
+        .select()
+        .from(leadActivityLog)
+        .where(eq(leadActivityLog.leadId, leadId))
+        .orderBy(desc(leadActivityLog.createdAt));
+    } catch (error) {
+      console.error('Error fetching lead activities:', error);
+      throw error;
+    }
+  }
+
+  async createLeadActivity(activityData: InsertLeadActivityLog): Promise<LeadActivityLog> {
+    try {
+      const [activity] = await db
+        .insert(leadActivityLog)
+        .values(activityData)
+        .returning();
+      return activity;
+    } catch (error) {
+      console.error('Error creating lead activity:', error);
+      throw error;
+    }
+  }
+
+  async deleteLead(leadId: number): Promise<void> {
+    try {
+      // First delete all activities for this lead
+      await db
+        .delete(leadActivityLog)
+        .where(eq(leadActivityLog.leadId, leadId));
+
+      // Then delete the lead
+      await db
+        .delete(leads)
+        .where(eq(leads.id, leadId));
+    } catch (error) {
+      console.error('Error deleting lead:', error);
+      throw error;
+    }
   }
 }
 
