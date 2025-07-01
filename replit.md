@@ -115,6 +115,13 @@ REPLIT_DOMAINS=[development]
 ```
 
 ## Recent Changes
+- July 1, 2025: **INVENTORY BRAND FILTER AND BUTTON OPTIMIZATION COMPLETE**: Enhanced inventory page with comprehensive brand filtering and improved UI
+  - **BRAND FILTER ADDED**: Replaced simple Rolex button with full brand dropdown matching wishlist filter
+  - **EXPANDED BRAND LIST**: Added Panerai and A. Lange & Söhne to both inventory and wishlist filters for consistency
+  - **BUTTON SIZE OPTIMIZATION**: Made bulk import/export buttons smaller (size="sm") with shortened text ("Import"/"Export")
+  - **COMPREHENSIVE BRAND OPTIONS**: Rolex, Tudor, Breitling, Montblanc, Omega, Cartier, TAG Heuer, Panerai, A. Lange & Söhne, Various, Other
+  - **CONSISTENT FILTERING**: Both inventory and wishlist pages now have identical brand filtering experience
+  - **RESPONSIVE DESIGN**: Brand filter maintains proper responsive width (w-36) with all luxury watch brands
 - July 1, 2025: **COMPLETE WISHLIST MANAGEMENT SYSTEM WITH EDIT FUNCTIONALITY**: Successfully implemented comprehensive wishlist editing with proper error handling
   - **WISHLIST EDIT FUNCTIONALITY**: Added complete edit capabilities through modal forms with pre-populated data and real-time updates
   - **FIXED POSTGRESQL NUMERIC ERROR**: Resolved database error with empty maxPrice fields by implementing proper data cleaning on both client and server side
