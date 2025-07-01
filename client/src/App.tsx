@@ -46,6 +46,9 @@ function Router() {
   const isMobile = useIsMobile();
   const screenSize = useScreenSize();
 
+  // Add routing debugging
+  console.log("[Router] Authentication status:", { isAuthenticated, isLoading, user: user?.email });
+
   // Initialize Web Vitals monitoring for performance tracking
   useWebVitals({
     onFCP: (metric) => {

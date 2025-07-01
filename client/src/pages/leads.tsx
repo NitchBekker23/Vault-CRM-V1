@@ -40,6 +40,8 @@ export default function Leads() {
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
 
+  console.log("[Leads] Component loading, searchTerm:", searchTerm, "statusFilter:", statusFilter);
+
   // Fetch leads from API
   const { data: leadsData, isLoading } = useQuery({
     queryKey: ["leads", searchTerm, statusFilter],
