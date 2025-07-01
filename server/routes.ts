@@ -3108,6 +3108,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/wishlist/:id", checkAuth, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body;
+      
+      const updatedItem = await storage.updateWishlistItem(id, updateData);
+      res.json(updatedItem);
+    } catch (error) {
+      console.error("Error updating wishlist item:", error);
+      res.status(500).json({ message: "Failed to update wishlist item" });
+    }
+  });
+
   app.patch("/api/wishlist/:id/status", checkAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);

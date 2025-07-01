@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,8 +14,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, MoreHorizontal, Eye, Edit, Trash2, Package, User, Clock } from "lucide-react";
-import { format } from "date-fns";
+import { Plus, MoreHorizontal, Eye, Edit, Trash2, Package, User, Clock, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { format, isAfter, isBefore, isWithinInterval } from "date-fns";
 
 const wishlistFormSchema = z.object({
   clientName: z.string().min(1, "Client name is required"),
@@ -58,32 +58,100 @@ interface WishlistTableProps {
   statusFilter: string;
   categoryFilter: string;
   brandFilter: string;
+  dateRange?: {
+    from: Date | undefined;
+    to: Date | undefined;
+  };
 }
 
-export default function WishlistTable({ searchTerm, statusFilter, categoryFilter, brandFilter }: WishlistTableProps) {
+export default function WishlistTable({ searchTerm, statusFilter, categoryFilter, brandFilter, dateRange }: WishlistTableProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingItem, setEditingItem] = useState<WishlistItem | null>(null);
   const [viewingItem, setViewingItem] = useState<WishlistItem | null>(null);
+  const [dateSortOrder, setDateSortOrder] = useState<'asc' | 'desc' | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Fetch wishlist items
   const { data: wishlistData, isLoading } = useQuery({
-    queryKey: ["wishlist", searchTerm, statusFilter, categoryFilter, brandFilter],
+    queryKey: ["wishlist"],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (searchTerm) params.append("search", searchTerm);
-      if (statusFilter && statusFilter !== "all") params.append("status", statusFilter);
-      if (categoryFilter && categoryFilter !== "all") params.append("category", categoryFilter);
-      if (brandFilter && brandFilter !== "all") params.append("brand", brandFilter);
-      
-      const response = await fetch(`/api/wishlist?${params}`);
+      const response = await fetch("/api/wishlist");
       if (!response.ok) throw new Error("Failed to fetch wishlist items");
       return response.json();
     },
   });
 
-  const wishlistItems = wishlistData?.items || [];
+  // Client-side filtering and sorting
+  const filteredAndSortedItems = useMemo(() => {
+    let items = wishlistData?.items || [];
+
+    // Apply search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      items = items.filter((item: WishlistItem) =>
+        item.clientName.toLowerCase().includes(term) ||
+        item.itemName.toLowerCase().includes(term) ||
+        item.brand.toLowerCase().includes(term) ||
+        (item.skuReferences && item.skuReferences.toLowerCase().includes(term)) ||
+        (item.clientEmail && item.clientEmail.toLowerCase().includes(term)) ||
+        (item.clientPhone && item.clientPhone.toLowerCase().includes(term)) ||
+        (item.clientCompany && item.clientCompany.toLowerCase().includes(term)) ||
+        (item.description && item.description.toLowerCase().includes(term)) ||
+        (item.notes && item.notes.toLowerCase().includes(term))
+      );
+    }
+
+    // Apply status filter
+    if (statusFilter && statusFilter !== "all") {
+      items = items.filter((item: WishlistItem) => item.status === statusFilter);
+    }
+
+    // Apply category filter
+    if (categoryFilter && categoryFilter !== "all") {
+      items = items.filter((item: WishlistItem) => item.category === categoryFilter);
+    }
+
+    // Apply brand filter
+    if (brandFilter && brandFilter !== "all") {
+      items = items.filter((item: WishlistItem) => item.brand === brandFilter);
+    }
+
+    // Apply date range filter
+    if (dateRange?.from || dateRange?.to) {
+      items = items.filter((item: WishlistItem) => {
+        const itemDate = new Date(item.createdAt);
+        
+        if (dateRange.from && dateRange.to) {
+          return isWithinInterval(itemDate, { start: dateRange.from, end: dateRange.to });
+        } else if (dateRange.from) {
+          return isAfter(itemDate, dateRange.from) || itemDate.toDateString() === dateRange.from.toDateString();
+        } else if (dateRange.to) {
+          return isBefore(itemDate, dateRange.to) || itemDate.toDateString() === dateRange.to.toDateString();
+        }
+        
+        return true;
+      });
+    }
+
+    // Apply date sorting
+    if (dateSortOrder) {
+      items = [...items].sort((a: WishlistItem, b: WishlistItem) => {
+        const dateA = new Date(a.createdAt);
+        const dateB = new Date(b.createdAt);
+        
+        if (dateSortOrder === 'asc') {
+          return dateA.getTime() - dateB.getTime();
+        } else {
+          return dateB.getTime() - dateA.getTime();
+        }
+      });
+    }
+
+    return items;
+  }, [wishlistData?.items, searchTerm, statusFilter, categoryFilter, brandFilter, dateRange, dateSortOrder]);
+
+  const wishlistItems = filteredAndSortedItems;
 
   // Form setup
   const form = useForm<WishlistFormData>({
@@ -125,6 +193,28 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
     },
   });
 
+  // Update wishlist item mutation
+  const updateWishlistMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: WishlistFormData }) => {
+      const response = await fetch(`/api/wishlist/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to update wishlist item");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wishlist"] });
+      setEditingItem(null);
+      form.reset();
+      toast({ title: "Success", description: "Wishlist item updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update wishlist item", variant: "destructive" });
+    },
+  });
+
   // Update status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
@@ -157,7 +247,51 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
   });
 
   const onSubmit = (data: WishlistFormData) => {
-    createWishlistMutation.mutate(data);
+    if (editingItem) {
+      updateWishlistMutation.mutate({ id: editingItem.id, data });
+    } else {
+      createWishlistMutation.mutate(data);
+    }
+  };
+
+  // Handle edit button click
+  const handleEdit = (item: WishlistItem) => {
+    setEditingItem(item);
+    form.reset({
+      clientName: item.clientName,
+      clientEmail: item.clientEmail || "",
+      clientPhone: item.clientPhone || "",
+      clientCompany: item.clientCompany || "",
+      itemName: item.itemName,
+      brand: item.brand,
+      description: item.description || "",
+      category: item.category,
+      maxPrice: item.maxPrice || "",
+      skuReferences: item.skuReferences || "",
+      notes: item.notes || "",
+    });
+  };
+
+  // Handle date sort toggle
+  const handleDateSort = () => {
+    if (dateSortOrder === null) {
+      setDateSortOrder('desc'); // Start with newest first
+    } else if (dateSortOrder === 'desc') {
+      setDateSortOrder('asc'); // Then oldest first
+    } else {
+      setDateSortOrder(null); // Then no sort
+    }
+  };
+
+  // Get sort icon for date column
+  const getDateSortIcon = () => {
+    if (dateSortOrder === 'desc') {
+      return <ChevronDown className="h-4 w-4" />;
+    } else if (dateSortOrder === 'asc') {
+      return <ChevronUp className="h-4 w-4" />;
+    } else {
+      return <ChevronsUpDown className="h-4 w-4" />;
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -200,7 +334,13 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
             Track client requests and future inventory needs
           </p>
         </div>
-        <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <Dialog open={showAddModal || !!editingItem} onOpenChange={(open) => {
+          if (!open) {
+            setShowAddModal(false);
+            setEditingItem(null);
+            form.reset();
+          }
+        }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -209,9 +349,14 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Add New Wishlist Item</DialogTitle>
+              <DialogTitle>
+                {editingItem ? "Edit Wishlist Item" : "Add New Wishlist Item"}
+              </DialogTitle>
               <DialogDescription>
-                Manually create a wishlist item for client requests
+                {editingItem 
+                  ? "Update the wishlist item details" 
+                  : "Manually create a wishlist item for client requests"
+                }
               </DialogDescription>
             </DialogHeader>
             
@@ -401,15 +546,23 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
                   <Button 
                     type="button" 
                     variant="outline" 
-                    onClick={() => setShowAddModal(false)}
+                    onClick={() => {
+                      setShowAddModal(false);
+                      setEditingItem(null);
+                      form.reset();
+                    }}
                   >
                     Cancel
                   </Button>
                   <Button 
                     type="submit" 
-                    disabled={createWishlistMutation.isPending}
+                    disabled={createWishlistMutation.isPending || updateWishlistMutation.isPending}
                   >
-                    {createWishlistMutation.isPending ? "Creating..." : "Create Wishlist Item"}
+                    {editingItem ? (
+                      updateWishlistMutation.isPending ? "Updating..." : "Update Wishlist Item"
+                    ) : (
+                      createWishlistMutation.isPending ? "Creating..." : "Create Wishlist Item"
+                    )}
                   </Button>
                 </div>
               </form>
@@ -450,7 +603,15 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
                   <TableHead>Brand</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-gray-50 select-none"
+                    onClick={handleDateSort}
+                  >
+                    <div className="flex items-center gap-1">
+                      Created
+                      {getDateSortIcon()}
+                    </div>
+                  </TableHead>
                   <TableHead className="w-[70px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -500,13 +661,17 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
                             <Eye className="h-4 w-4 mr-2" />
                             View Details
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEdit(item)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit Item
+                          </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => updateStatusMutation.mutate({ 
                               id: item.id, 
                               status: item.status === "active" ? "fulfilled" : "active" 
                             })}
                           >
-                            <Edit className="h-4 w-4 mr-2" />
+                            <Clock className="h-4 w-4 mr-2" />
                             Mark as {item.status === "active" ? "Fulfilled" : "Active"}
                           </DropdownMenuItem>
                           <DropdownMenuItem 
