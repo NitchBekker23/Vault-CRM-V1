@@ -162,7 +162,7 @@ export const wishlistItems = pgTable("wishlist_items", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").references(() => users.id).notNull(),
   leadId: integer("lead_id").references(() => leads.id),
-  clientName: varchar("client_name").notNull(),
+  clientName: varchar("client_name"),
   clientEmail: varchar("client_email"),
   clientPhone: varchar("client_phone"),
   clientCompany: varchar("client_company"),
