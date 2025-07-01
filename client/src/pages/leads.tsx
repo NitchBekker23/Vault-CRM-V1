@@ -38,9 +38,7 @@ export default function Leads() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const { toast } = useToast();
   const isMobile = useIsMobile();
-
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   // Fetch leads from API
   const { data: leadsData, isLoading } = useQuery({

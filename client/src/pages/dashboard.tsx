@@ -9,6 +9,7 @@ import QuickActions from "@/components/quick-actions";
 import RecentActivity from "@/components/recent-activity";
 import InventoryTable from "@/components/inventory-table";
 import MobileTestOverlay from "@/components/mobile-test-overlay";
+import { useQuery } from "@tanstack/react-query";
 
 export default function Dashboard() {
   const { toast } = useToast();
@@ -30,6 +31,20 @@ export default function Dashboard() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
+  const { data: metrics, isLoading: metricsLoading } = useQuery({
+    queryKey: ["dashboard-metrics"],
+    queryFn: async () => {
+      const response = await fetch("/api/dashboard/metrics");
+      if (!response.ok) throw new Error("Failed to fetch metrics");
+      return response.json();
+    },
+    refetchInterval: 10 * 60 * 1000, // Reduced frequency to 10 minutes
+    staleTime: 5 * 60 * 1000, // 5 minute stale time
+    gcTime: 15 * 60 * 1000, // 15 minute garbage collection time
+    refetchOnWindowFocus: false,
+    retry: 2,
+  });
+
   if (isLoading || !isAuthenticated) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -48,8 +63,8 @@ export default function Dashboard() {
           ? 'p-5 space-y-5'
           : 'p-6 space-y-6'
       }`}>
-        <DashboardMetrics />
-        
+        <DashboardMetrics metrics={metrics} metricsLoading={metricsLoading} />
+
         <div className={`grid ${
           screenSize === 'mobile' 
             ? 'grid-cols-1 gap-4' 
@@ -67,7 +82,7 @@ export default function Dashboard() {
           allowBulkActions={false} 
         />
       </div>
-      
+
       {/* Mobile Test Overlay - Only show in development */}
       {process.env.NODE_ENV === 'development' && <MobileTestOverlay />}
     </div>

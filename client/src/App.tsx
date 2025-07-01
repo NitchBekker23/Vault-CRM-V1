@@ -39,6 +39,7 @@ import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import AdminLogin from "@/pages/admin-login";
 import Sidebar from "@/components/sidebar";
+import ErrorBoundary from "@/components/error-boundary"; // Added ErrorBoundary import
 
 function Router() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -214,12 +215,14 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

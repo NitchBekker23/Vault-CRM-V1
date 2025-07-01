@@ -70,7 +70,16 @@ export default function NotificationBell() {
   // Fetch unread notification count
   const { data: countData } = useQuery({
     queryKey: ['/api/notifications/count?unreadOnly=true'],
-    refetchInterval: 30000, // Refresh every 30 seconds
+    queryFn: async () => {
+      const response = await fetch("/api/notifications/count?unreadOnly=true");
+      if (!response.ok) throw new Error("Failed to fetch notification count");
+      const data = await response.json();
+      return data.count;
+    },
+    refetchInterval: 5 * 60 * 1000, // Reduced to 5 minutes instead of 30 seconds
+    staleTime: 4 * 60 * 1000, // 4 minutes stale time
+    refetchOnWindowFocus: false, // Prevent refetch on window focus
+    retry: 1, // Reduce retry attempts
   });
 
   // Fetch notifications when dropdown is opened
@@ -142,7 +151,7 @@ export default function NotificationBell() {
     if (!notification.isRead) {
       markAsReadMutation.mutate(notification.id);
     }
-    
+
     if (notification.actionUrl) {
       window.location.href = notification.actionUrl;
     }
@@ -167,7 +176,7 @@ export default function NotificationBell() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      
+
       <DropdownMenuContent
         align="end"
         className="w-80 max-h-[600px] p-0"
@@ -215,7 +224,7 @@ export default function NotificationBell() {
                     <div className="flex-shrink-0 mt-0.5">
                       {getTypeIcon(notification.type)}
                     </div>
-                    
+
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
@@ -226,7 +235,7 @@ export default function NotificationBell() {
                             {notification.message}
                           </p>
                         </div>
-                        
+
                         <div className="flex items-center gap-1 flex-shrink-0">
                           {getPriorityIcon(notification.priority)}
                           <Button
@@ -242,7 +251,7 @@ export default function NotificationBell() {
                           </Button>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center justify-between mt-2">
                         <p className="text-xs text-gray-400">
                           {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
@@ -255,7 +264,7 @@ export default function NotificationBell() {
                       </div>
                     </div>
                   </div>
-                  
+
                   {!notification.isRead && (
                     <div className="absolute top-4 right-4">
                       <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
