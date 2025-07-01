@@ -549,6 +549,7 @@ export const leads = pgTable("leads", {
   company: varchar("company"),
   position: varchar("position"),
   location: varchar("location"),
+  brand: varchar("brand"), // Brand preference for wishlist integration
   leadSource: varchar("lead_source").notNull(), // Website, Referral, Cold Call, etc.
   leadStatus: varchar("lead_status", { 
     enum: ["new", "contacted", "appointment", "outcome"] 

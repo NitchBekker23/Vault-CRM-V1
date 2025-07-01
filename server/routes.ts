@@ -2954,7 +2954,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             clientPhone: currentLead.phone,
             clientCompany: currentLead.company,
             itemName: currentLead.notes || "General inquiry",
-            brand: "", // Will be filled manually later
+            brand: currentLead.brand || "General", // Use lead brand preference
             description: `Auto-created from lead: ${currentLead.firstName} ${currentLead.lastName}. ${currentLead.notes || ""}`,
             category: "watches", // Default category
             maxPrice: "",

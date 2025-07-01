@@ -27,6 +27,7 @@ interface Lead {
   company?: string;
   position?: string;
   location?: string;
+  brand?: string;
   leadSource: string;
   leadStatus: 'new' | 'contacted' | 'appointment' | 'outcome';
   outcome?: 'won' | 'lost' | 'wishlist';
@@ -47,6 +48,7 @@ const leadFormSchema = z.object({
   company: z.string().optional(),
   position: z.string().optional(),
   location: z.string().optional(),
+  brand: z.string().optional(),
   leadSource: z.string().min(1, "Lead source is required"),
   skuReferences: z.string().optional(),
   notes: z.string().optional(),
@@ -143,6 +145,7 @@ export default function Leads() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["wishlist"] });
       toast({ title: "Success", description: "Lead status updated successfully" });
     },
     onError: () => {
