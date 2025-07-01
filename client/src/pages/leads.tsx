@@ -340,6 +340,18 @@ export default function Leads() {
   );
 }
 
+// Helper function to get next status in workflow
+function getNextStatus(currentStatus: Lead['leadStatus']): Lead['leadStatus'] {
+  const statusFlow: Record<Lead['leadStatus'], Lead['leadStatus']> = {
+    'new': 'contacted',
+    'contacted': 'appointment', 
+    'appointment': 'outcome',
+    'outcome': 'outcome' // Stay at outcome
+  };
+  
+  return statusFlow[currentStatus];
+}
+
 // Workflow progression button component
 function WorkflowProgressButton({ 
   lead, 
