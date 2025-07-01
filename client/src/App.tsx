@@ -15,6 +15,7 @@ import Login from "@/pages/login";
 
 // Direct imports for consistent UI rendering
 import Inventory from "@/pages/inventory";
+import Leads from "@/pages/leads";
 import Clients from "@/pages/clients";
 import Sales from "@/pages/sales";
 import SalesManagement from "@/pages/sales-management";
@@ -151,6 +152,11 @@ function Router() {
             <Route path="/wishlist" component={() => (
               <Suspense fallback={<TableSkeleton rows={5} />}>
                 <Wishlist />
+              </Suspense>
+            )} />
+            <Route path="/leads" component={() => (
+              <Suspense fallback={<TableSkeleton rows={6} />}>
+                <Leads />
               </Suspense>
             )} />
             <Route path="/clients" component={() => (

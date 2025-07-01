@@ -9,6 +9,7 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: "fas fa-chart-line" },
   { name: "Inventory", href: "/inventory", icon: "fas fa-boxes" },
   { name: "Wishlist", href: "/wishlist", icon: "fas fa-heart" },
+  { name: "Leads", href: "/leads", icon: "fas fa-user-plus" },
   { name: "Clients", href: "/clients", icon: "fas fa-users" },
   { name: "Sales", href: "/sales", icon: "fas fa-dollar-sign" },
   { name: "Sales Team", href: "/sales-management", icon: "fas fa-user-tie" },
@@ -91,7 +92,7 @@ export default function Sidebar() {
                   <X className="h-6 w-6 text-slate-600" />
                 </button>
               </div>
-              
+
               <nav className="px-4 py-4 h-full overflow-y-auto">
                 <ul className="space-y-1">
                   {navigation.map((item) => (
@@ -119,7 +120,7 @@ export default function Sidebar() {
                     </li>
                   ))}
                 </ul>
-                
+
                 {isAdmin ? (
                   <div className="mt-8 pt-6 border-t border-slate-200">
                     <p className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
@@ -173,7 +174,7 @@ export default function Sidebar() {
           </div>
         </div>
       </div>
-      
+
       <nav className="px-4 pb-4">
         <ul className="space-y-1">
           {navigation.map((item) => (
@@ -190,7 +191,7 @@ export default function Sidebar() {
             </li>
           ))}
         </ul>
-        
+
         {isAdmin ? (
           <div className="mt-8 pt-6 border-t border-slate-200">
             <p className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
