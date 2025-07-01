@@ -60,6 +60,7 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("");
   const [dateRange, setDateRange] = useState("");
+  const [brandFilter, setBrandFilter] = useState("");
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -70,7 +71,6 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
-  const [rolexOnly, setRolexOnly] = useState(false);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -81,7 +81,7 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
     items: InventoryItem[];
     total: number;
   }>({
-    queryKey: ["/api/inventory", page, pageSize, search, category, status, dateRange, rolexOnly],
+    queryKey: ["/api/inventory", page, pageSize, search, category, status, dateRange, brandFilter],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -90,7 +90,7 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
         ...(category && { category }),
         ...(status && { status }),
         ...(dateRange && { dateRange }),
-        ...(rolexOnly && { brand: "Rolex" }),
+        ...(brandFilter && { brand: brandFilter }),
       });
       
       const response = await fetch(`/api/inventory?${params}`, {
@@ -404,21 +404,28 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                     </SelectContent>
                   </Select>
                   
-                  {/* Rolex Filter Button */}
-                  <Button
-                    variant={rolexOnly ? "default" : "outline"}
-                    onClick={() => {
-                      setRolexOnly(!rolexOnly);
-                      setPage(1);
-                    }}
-                    className={`w-full sm:w-auto px-4 py-2 ${
-                      rolexOnly 
-                        ? "bg-green-600 hover:bg-green-700 text-white" 
-                        : "bg-gray-100 hover:bg-gray-200 text-gray-600"
-                    }`}
-                  >
-                    Rolex
-                  </Button>
+                  {/* Brand Filter */}
+                  <Select value={brandFilter || "all"} onValueChange={(value) => {
+                    const newBrand = value === "all" ? "" : value;
+                    setBrandFilter(newBrand);
+                    setPage(1);
+                  }}>
+                    <SelectTrigger className="w-full sm:w-36">
+                      <SelectValue placeholder="All Brands" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Brands</SelectItem>
+                      <SelectItem value="Rolex">Rolex</SelectItem>
+                      <SelectItem value="Tudor">Tudor</SelectItem>
+                      <SelectItem value="Breitling">Breitling</SelectItem>
+                      <SelectItem value="Montblanc">Montblanc</SelectItem>
+                      <SelectItem value="Omega">Omega</SelectItem>
+                      <SelectItem value="Cartier">Cartier</SelectItem>
+                      <SelectItem value="TAG Heuer">TAG Heuer</SelectItem>
+                      <SelectItem value="Various">Various</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
                   
                   {!limit && (
                     <Select value={pageSize.toString()} onValueChange={(value) => {
@@ -468,17 +475,18 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                     </>
                   ) : (
                     <>
-                      <Button variant="outline" onClick={() => setShowBulkUploadModal(true)}>
-                        <i className="fas fa-upload mr-2"></i>
-                        Bulk Import
+                      <Button variant="outline" onClick={() => setShowBulkUploadModal(true)} size="sm">
+                        <i className="fas fa-upload mr-1"></i>
+                        Import
                       </Button>
                       <Button 
                         variant="outline" 
                         onClick={() => window.open('/api/inventory/export', '_blank')}
                         className="border-green-200 hover:border-green-300 hover:bg-green-50"
+                        size="sm"
                       >
-                        <i className="fas fa-download text-green-600 mr-2"></i>
-                        Export CSV
+                        <i className="fas fa-download text-green-600 mr-1"></i>
+                        Export
                       </Button>
                       {allowBulkActions && selectedItems.size > 0 && (
                         <Button 
