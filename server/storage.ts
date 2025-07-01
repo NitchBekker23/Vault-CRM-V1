@@ -230,6 +230,17 @@ export interface IStorage {
   getLeadActivities(leadId: number): Promise<LeadActivityLog[]>;
   createLeadActivity(activity: InsertLeadActivityLog): Promise<LeadActivityLog>;
   deleteLead(leadId: number): Promise<void>;
+  updateLead(leadId: number, updateData: Partial<InsertLead>): Promise<Lead>;
+
+  // Wishlist operations
+  getWishlistItems(
+    search?: string,
+    status?: string,
+    category?: string,
+    brand?: string
+  ): Promise<WishlistItem[]>;
+  updateWishlistItemStatus(id: number, status: string): Promise<WishlistItem>;
+  deleteWishlistItem(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -424,32 +435,49 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWishlistItems(
-    page = 1,
-    limit = 10,
-    userId?: string
-  ): Promise<{ items: WishlistItem[]; total: number }> {
-    const offset = (page - 1) * limit;
+    search?: string,
+    status?: string,
+    category?: string,
+    brand?: string
+  ): Promise<WishlistItem[]> {
+    const whereConditions = [];
     
-    const whereClause = userId ? eq(wishlistItems.userId, userId) : undefined;
+    if (search) {
+      whereConditions.push(
+        or(
+          ilike(wishlistItems.itemName, `%${search}%`),
+          ilike(wishlistItems.brand, `%${search}%`),
+          ilike(wishlistItems.clientName, `%${search}%`),
+          ilike(wishlistItems.clientEmail, `%${search}%`),
+          ilike(wishlistItems.clientPhone, `%${search}%`),
+          ilike(wishlistItems.clientCompany, `%${search}%`),
+          ilike(wishlistItems.description, `%${search}%`),
+          ilike(wishlistItems.notes, `%${search}%`)
+        )
+      );
+    }
+    
+    if (status) {
+      whereConditions.push(eq(wishlistItems.status, status));
+    }
+    
+    if (category) {
+      whereConditions.push(eq(wishlistItems.category, category));
+    }
+    
+    if (brand) {
+      whereConditions.push(eq(wishlistItems.brand, brand));
+    }
 
-    const [items, totalResult] = await Promise.all([
-      db
-        .select()
-        .from(wishlistItems)
-        .where(whereClause)
-        .orderBy(desc(wishlistItems.createdAt))
-        .limit(limit)
-        .offset(offset),
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(wishlistItems)
-        .where(whereClause),
-    ]);
+    const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
-    return {
-      items,
-      total: Number(totalResult[0].count),
-    };
+    const items = await db
+      .select()
+      .from(wishlistItems)
+      .where(whereClause)
+      .orderBy(desc(wishlistItems.createdAt));
+
+    return items;
   }
 
   async createWishlistItem(item: InsertWishlistItem): Promise<WishlistItem> {
@@ -464,6 +492,15 @@ export class DatabaseStorage implements IStorage {
     const [updatedItem] = await db
       .update(wishlistItems)
       .set({ ...item, updatedAt: new Date() })
+      .where(eq(wishlistItems.id, id))
+      .returning();
+    return updatedItem;
+  }
+
+  async updateWishlistItemStatus(id: number, status: string): Promise<WishlistItem> {
+    const [updatedItem] = await db
+      .update(wishlistItems)
+      .set({ status, updatedAt: new Date() })
       .where(eq(wishlistItems.id, id))
       .returning();
     return updatedItem;
@@ -2315,6 +2352,12 @@ export class DatabaseStorage implements IStorage {
 
   async updateLead(leadId: number, updateData: Partial<InsertLead>): Promise<Lead> {
     try {
+      // First get the existing lead to check for wishlist creation
+      const existingLead = await db.select().from(leads).where(eq(leads.id, leadId)).limit(1);
+      if (!existingLead.length) {
+        throw new Error('Lead not found');
+      }
+
       const [lead] = await db
         .update(leads)
         .set({ 
@@ -2323,6 +2366,29 @@ export class DatabaseStorage implements IStorage {
         })
         .where(eq(leads.id, leadId))
         .returning();
+
+      // Create wishlist item if lead is closed with wishlist outcome
+      if (updateData.isOpen === false && lead.outcome === 'wishlist') {
+        // Parse SKU references from the skuReferences field
+        const skuReferences = lead.skuReferences;
+        
+        await db.insert(wishlistItems).values({
+          userId: lead.createdBy,
+          leadId: lead.id,
+          clientName: `${lead.firstName} ${lead.lastName}`,
+          clientEmail: lead.email,
+          clientPhone: lead.phone,
+          clientCompany: lead.company,
+          itemName: lead.skuReferences || 'Various items',
+          brand: 'Various',
+          description: lead.notes,
+          category: 'watches',
+          maxPrice: null,
+          skuReferences,
+          notes: lead.notes,
+          status: 'active'
+        });
+      }
 
       return lead;
     } catch (error) {

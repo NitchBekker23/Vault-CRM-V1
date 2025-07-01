@@ -163,6 +163,11 @@ function Router() {
                 <Leads />
               </Suspense>
             )} />
+            <Route path="/wishlist" component={() => (
+              <Suspense fallback={<TableSkeleton rows={6} />}>
+                <Wishlist />
+              </Suspense>
+            )} />
             <Route path="/clients" component={() => (
               <Suspense fallback={<TableSkeleton rows={6} />}>
                 <Clients />

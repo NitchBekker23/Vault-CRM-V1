@@ -3099,6 +3099,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Wishlist endpoints
+  app.get("/api/wishlist", checkAuth, async (req: any, res) => {
+    try {
+      const { search, status, category, brand } = req.query;
+      const items = await storage.getWishlistItems(search, status, category, brand);
+      res.json({ items });
+    } catch (error) {
+      console.error("Error fetching wishlist items:", error);
+      res.status(500).json({ message: "Failed to fetch wishlist items" });
+    }
+  });
+
+  app.patch("/api/wishlist/:id/status", checkAuth, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+      
+      const updatedItem = await storage.updateWishlistItemStatus(id, status);
+      res.json(updatedItem);
+    } catch (error) {
+      console.error("Error updating wishlist item status:", error);
+      res.status(500).json({ message: "Failed to update wishlist item status" });
+    }
+  });
+
+  app.delete("/api/wishlist/:id", checkAuth, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteWishlistItem(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting wishlist item:", error);
+      res.status(500).json({ message: "Failed to delete wishlist item" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

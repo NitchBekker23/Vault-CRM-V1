@@ -161,11 +161,18 @@ export const inventoryItemImages = pgTable("inventory_item_images", {
 export const wishlistItems = pgTable("wishlist_items", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").references(() => users.id).notNull(),
+  leadId: integer("lead_id").references(() => leads.id),
+  clientName: varchar("client_name").notNull(),
+  clientEmail: varchar("client_email"),
+  clientPhone: varchar("client_phone"),
+  clientCompany: varchar("client_company"),
   itemName: varchar("item_name").notNull(),
   brand: varchar("brand").notNull(),
   description: text("description"),
   category: varchar("category").notNull(),
   maxPrice: decimal("max_price", { precision: 10, scale: 2 }),
+  skuReferences: text("sku_references"), // JSON array of SKU model numbers
+  notes: text("notes"),
   status: varchar("status").default("active").notNull(), // 'active', 'fulfilled', 'cancelled'
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -400,6 +407,10 @@ export const wishlistItemsRelations = relations(wishlistItems, ({ one }) => ({
     fields: [wishlistItems.userId],
     references: [users.id],
   }),
+  lead: one(leads, {
+    fields: [wishlistItems.leadId],
+    references: [leads.id],
+  }),
 }));
 
 export const clientsRelations = relations(clients, ({ many }) => ({
@@ -603,6 +614,7 @@ export const leadsRelations = relations(leads, ({ one, many }) => ({
     references: [users.id],
   }),
   activities: many(leadActivityLog),
+  wishlistItems: many(wishlistItems),
 }));
 
 export const leadActivityLogRelations = relations(leadActivityLog, ({ one }) => ({
