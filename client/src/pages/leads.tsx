@@ -1062,6 +1062,7 @@ function EditLeadModal({
         company: lead.company || "",
         position: lead.position || "",
         location: lead.location || "",
+        brand: lead.brand || "",
         leadSource: lead.leadSource || "",
         skuReferences: lead.skuReferences || "",
         notes: lead.notes || "",
