@@ -3004,6 +3004,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete lead
+  app.delete("/api/leads/:id", checkAuth, async (req: any, res) => {
+    try {
+      const leadId = parseInt(req.params.id);
+      const userId = req.currentUserId;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      await storage.deleteLead(leadId);
+      res.status(200).json({ message: "Lead deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting lead:", error);
+      res.status(500).json({ message: "Failed to delete lead" });
+    }
+  });
+
   // Close/Open lead
   app.patch("/api/leads/:id/toggle", checkAuth, async (req: any, res) => {
     try {

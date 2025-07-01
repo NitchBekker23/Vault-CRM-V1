@@ -2409,6 +2409,22 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async deleteLead(leadId: number): Promise<void> {
+    try {
+      // First delete any related wishlist items
+      await db.delete(wishlistItems).where(eq(wishlistItems.leadId, leadId));
+      
+      // Delete lead activities
+      await db.delete(leadActivityLog).where(eq(leadActivityLog.leadId, leadId));
+      
+      // Finally delete the lead
+      await db.delete(leads).where(eq(leads.id, leadId));
+    } catch (error) {
+      console.error('Error deleting lead:', error);
+      throw error;
+    }
+  }
+
   async getLeadActivities(leadId: number): Promise<LeadActivityLog[]> {
     try {
       return await db

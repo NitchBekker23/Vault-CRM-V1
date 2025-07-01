@@ -206,6 +206,24 @@ export default function Leads() {
     },
   });
 
+  // Delete lead mutation
+  const deleteLeadMutation = useMutation({
+    mutationFn: async (leadId: number) => {
+      const response = await fetch(`/api/leads/${leadId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to delete lead");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast({ title: "Success", description: "Lead deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete lead", variant: "destructive" });
+    },
+  });
+
   const getStatusColor = (status: Lead['leadStatus'], outcome?: Lead['outcome']) => {
     if (status === 'outcome' && outcome) {
       const outcomeColors = {
@@ -588,13 +606,30 @@ export default function Leads() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => toggleLeadMutation.mutate({ 
-                      leadId: lead.id, 
-                      isOpen: !lead.isOpen 
-                    })}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleLeadMutation.mutate({ 
+                        leadId: lead.id, 
+                        isOpen: !lead.isOpen 
+                      });
+                    }}
                     disabled={toggleLeadMutation.isPending}
                   >
                     {lead.isOpen ? "Close" : "Reopen"}
+                  </Button>
+                  
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Are you sure you want to delete the lead for ${lead.firstName} ${lead.lastName}? This action cannot be undone.`)) {
+                        deleteLeadMutation.mutate(lead.id);
+                      }
+                    }}
+                    disabled={deleteLeadMutation.isPending}
+                  >
+                    Delete
                   </Button>
                 </div>
               </CardContent>
