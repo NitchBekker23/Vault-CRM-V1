@@ -1,146 +1,163 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  MoreVertical,
-  Search,
-  Trash2,
-  CheckCircle,
-  XCircle,
-  Clock,
-  User,
-  Building,
-  Phone,
-  Mail,
-  Package,
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { WishlistItem } from "@shared/schema";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
+import { Plus, MoreHorizontal, Eye, Edit, Trash2, Package, User, Clock } from "lucide-react";
+import { format } from "date-fns";
 
-export default function WishlistTable() {
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("all");
-  const [category, setCategory] = useState("all");
-  const [brand, setBrand] = useState("all");
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<WishlistItem | null>(null);
+const wishlistFormSchema = z.object({
+  clientName: z.string().min(1, "Client name is required"),
+  clientEmail: z.string().email().optional().or(z.literal("")),
+  clientPhone: z.string().optional(),
+  clientCompany: z.string().optional(),
+  itemName: z.string().min(1, "Item name is required"),
+  brand: z.string().min(1, "Brand is required"),
+  description: z.string().optional(),
+  category: z.string().min(1, "Category is required"),
+  maxPrice: z.string().optional(),
+  skuReferences: z.string().optional(),
+  notes: z.string().optional(),
+});
 
+type WishlistFormData = z.infer<typeof wishlistFormSchema>;
+
+interface WishlistItem {
+  id: number;
+  userId: string;
+  leadId?: number;
+  clientName: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  clientCompany?: string;
+  itemName: string;
+  brand: string;
+  description?: string;
+  category: string;
+  maxPrice?: string;
+  skuReferences?: string;
+  notes?: string;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface WishlistTableProps {
+  searchTerm: string;
+  statusFilter: string;
+  categoryFilter: string;
+  brandFilter: string;
+}
+
+export default function WishlistTable({ searchTerm, statusFilter, categoryFilter, brandFilter }: WishlistTableProps) {
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<WishlistItem | null>(null);
+  const [viewingItem, setViewingItem] = useState<WishlistItem | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const isMobile = useIsMobile();
 
-  const { data: wishlistData, isLoading } = useQuery<{
-    items: WishlistItem[];
-  }>({
-    queryKey: ["/api/wishlist", search, status, category, brand],
+  // Fetch wishlist items
+  const { data: wishlistData, isLoading } = useQuery({
+    queryKey: ["wishlist", searchTerm, statusFilter, categoryFilter, brandFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (search.trim()) params.append("search", search.trim());
-      if (status && status !== "all") params.append("status", status);
-      if (category && category !== "all") params.append("category", category);
-      if (brand && brand !== "all") params.append("brand", brand);
+      if (searchTerm) params.append("search", searchTerm);
+      if (statusFilter && statusFilter !== "all") params.append("status", statusFilter);
+      if (categoryFilter && categoryFilter !== "all") params.append("category", categoryFilter);
+      if (brandFilter && brandFilter !== "all") params.append("brand", brandFilter);
       
-      const response = await fetch(`/api/wishlist?${params}`, {
-        credentials: "include",
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch wishlist items: ${response.statusText}`);
-      }
-      
+      const response = await fetch(`/api/wishlist?${params}`);
+      if (!response.ok) throw new Error("Failed to fetch wishlist items");
       return response.json();
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest(`/api/wishlist/${id}`, {
-        method: "DELETE",
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
-      toast({
-        title: "Success",
-        description: "Wishlist item deleted successfully",
-      });
-      setShowDeleteDialog(false);
-      setSelectedItem(null);
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete wishlist item",
-        variant: "destructive",
-      });
+  const wishlistItems = wishlistData?.items || [];
+
+  // Form setup
+  const form = useForm<WishlistFormData>({
+    resolver: zodResolver(wishlistFormSchema),
+    defaultValues: {
+      clientName: "",
+      clientEmail: "",
+      clientPhone: "",
+      clientCompany: "",
+      itemName: "",
+      brand: "",
+      description: "",
+      category: "",
+      maxPrice: "",
+      skuReferences: "",
+      notes: "",
     },
   });
 
+  // Create wishlist item mutation
+  const createWishlistMutation = useMutation({
+    mutationFn: async (data: WishlistFormData) => {
+      const response = await fetch("/api/wishlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to create wishlist item");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wishlist"] });
+      setShowAddModal(false);
+      form.reset();
+      toast({ title: "Success", description: "Wishlist item created successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create wishlist item", variant: "destructive" });
+    },
+  });
+
+  // Update status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      return await apiRequest(`/api/wishlist/${id}/status`, {
+      const response = await fetch(`/api/wishlist/${id}/status`, {
         method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
+      if (!response.ok) throw new Error("Failed to update status");
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
-      toast({
-        title: "Success",
-        description: "Wishlist item status updated",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update status",
-        variant: "destructive",
-      });
+      queryClient.invalidateQueries({ queryKey: ["wishlist"] });
+      toast({ title: "Success", description: "Status updated successfully" });
     },
   });
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "active":
-        return <Clock className="h-4 w-4" />;
-      case "fulfilled":
-        return <CheckCircle className="h-4 w-4" />;
-      case "cancelled":
-        return <XCircle className="h-4 w-4" />;
-      default:
-        return <Clock className="h-4 w-4" />;
-    }
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(`/api/wishlist/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to delete wishlist item");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wishlist"] });
+      toast({ title: "Success", description: "Wishlist item deleted successfully" });
+    },
+  });
+
+  const onSubmit = (data: WishlistFormData) => {
+    createWishlistMutation.mutate(data);
   };
 
   const getStatusColor = (status: string) => {
@@ -156,239 +173,435 @@ export default function WishlistTable() {
     }
   };
 
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case "watches":
+        return <Clock className="h-4 w-4" />;
+      case "leather":
+        return <Package className="h-4 w-4" />;
+      case "pens":
+        return <Edit className="h-4 w-4" />;
+      default:
+        return <Package className="h-4 w-4" />;
+    }
+  };
+
   if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Wishlist Items</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-20 w-full" />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return <div className="text-center py-8">Loading wishlist items...</div>;
   }
 
-  const items = wishlistData?.items || [];
-
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Wishlist Items</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {/* Filters */}
-          <div className="mb-6 space-y-4">
-            <div className="flex flex-col sm:flex-row gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search by client, item, brand..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9"
+    <div className="space-y-6">
+      {/* Add Wishlist Item Button */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-lg font-semibold">Wishlist Items ({wishlistItems.length})</h3>
+          <p className="text-sm text-muted-foreground">
+            Track client requests and future inventory needs
+          </p>
+        </div>
+        <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Wishlist Item
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Add New Wishlist Item</DialogTitle>
+              <DialogDescription>
+                Manually create a wishlist item for client requests
+              </DialogDescription>
+            </DialogHeader>
+            
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="clientName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Client Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="John Doe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="clientEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email (optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="john@example.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="clientPhone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone (optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="+1 (555) 123-4567" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="clientCompany"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company (optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Company Name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="itemName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Item Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Rolex Submariner" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="brand"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Brand</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Rolex" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Category</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="watches">Watches</SelectItem>
+                            <SelectItem value="leather">Leather Goods</SelectItem>
+                            <SelectItem value="pens">Pens</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="maxPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Max Price (optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="R50,000" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="skuReferences"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>SKU References (optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="126610LN, 126610LV" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="w-full sm:w-[150px]">
-                  <SelectValue placeholder="All Statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="fulfilled">Fulfilled</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger className="w-full sm:w-[150px]">
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="watches">Watches</SelectItem>
-                  <SelectItem value="leather_goods">Leather Goods</SelectItem>
-                  <SelectItem value="pens">Pens</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={brand} onValueChange={setBrand}>
-                <SelectTrigger className="w-full sm:w-[150px]">
-                  <SelectValue placeholder="All Brands" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Brands</SelectItem>
-                  <SelectItem value="Rolex">Rolex</SelectItem>
-                  <SelectItem value="Montblanc">Montblanc</SelectItem>
-                  <SelectItem value="Tudor">Tudor</SelectItem>
-                  <SelectItem value="Breitling">Breitling</SelectItem>
-                  <SelectItem value="Various">Various</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {search && (
-              <div className="text-sm text-muted-foreground">
-                Found {items.length} result{items.length !== 1 ? 's' : ''} for "{search}"
-              </div>
-            )}
-          </div>
+                
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (optional)</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Detailed description of the requested item..."
+                          rows={3}
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notes (optional)</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Additional notes or special requirements..."
+                          rows={2}
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setShowAddModal(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={createWishlistMutation.isPending}
+                  >
+                    {createWishlistMutation.isPending ? "Creating..." : "Create Wishlist Item"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-          {/* Table */}
-          {items.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No wishlist items found
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Item Details</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Max Price</TableHead>
-                    <TableHead></TableHead>
+      {/* Wishlist Items Table */}
+      {wishlistItems.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-8">
+            <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No wishlist items found</h3>
+            <p className="text-muted-foreground mb-4">
+              Create wishlist items from leads or add them manually
+            </p>
+            <Button onClick={() => setShowAddModal(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add First Wishlist Item
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Wishlist Items</CardTitle>
+            <CardDescription>
+              Manage client requests and track inventory demand
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Item</TableHead>
+                  <TableHead>Brand</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead className="w-[70px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {wishlistItems.map((item: WishlistItem) => (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div className="font-medium">{item.clientName}</div>
+                        {item.clientEmail && (
+                          <div className="text-sm text-muted-foreground">{item.clientEmail}</div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div className="font-medium">{item.itemName}</div>
+                        {item.maxPrice && (
+                          <div className="text-sm text-muted-foreground">Max: {item.maxPrice}</div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>{item.brand}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {getCategoryIcon(item.category)}
+                        <span className="capitalize">{item.category}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getStatusColor(item.status)}>
+                        {item.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(item.createdAt), "MMM d, yyyy")}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setViewingItem(item)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => updateStatusMutation.mutate({ 
+                              id: item.id, 
+                              status: item.status === "active" ? "fulfilled" : "active" 
+                            })}
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Mark as {item.status === "active" ? "Fulfilled" : "Active"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => deleteMutation.mutate(item.id)}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">{item.clientName}</span>
-                          </div>
-                          {item.clientCompany && (
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Building className="h-3 w-3" />
-                              <span>{item.clientCompany}</span>
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="font-medium">{item.itemName}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {item.brand} • {item.category}
-                          </div>
-                          {item.skuReferences && (
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Package className="h-3 w-3" />
-                              <span>SKU: {JSON.parse(item.skuReferences).join(", ")}</span>
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1 text-sm">
-                          {item.clientEmail && (
-                            <div className="flex items-center gap-2">
-                              <Mail className="h-3 w-3 text-muted-foreground" />
-                              <span>{item.clientEmail}</span>
-                            </div>
-                          )}
-                          {item.clientPhone && (
-                            <div className="flex items-center gap-2">
-                              <Phone className="h-3 w-3 text-muted-foreground" />
-                              <span>{item.clientPhone}</span>
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(item.status)}>
-                          <span className="flex items-center gap-1">
-                            {getStatusIcon(item.status)}
-                            {item.status}
-                          </span>
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {item.maxPrice ? `R ${item.maxPrice}` : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {item.status === "active" && (
-                              <>
-                                <DropdownMenuItem
-                                  onClick={() => updateStatusMutation.mutate({ id: item.id, status: "fulfilled" })}
-                                >
-                                  <CheckCircle className="mr-2 h-4 w-4" />
-                                  Mark as Fulfilled
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => updateStatusMutation.mutate({ id: item.id, status: "cancelled" })}
-                                >
-                                  <XCircle className="mr-2 h-4 w-4" />
-                                  Mark as Cancelled
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                            {item.status === "fulfilled" && (
-                              <DropdownMenuItem
-                                onClick={() => updateStatusMutation.mutate({ id: item.id, status: "active" })}
-                              >
-                                <Clock className="mr-2 h-4 w-4" />
-                                Reactivate
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedItem(item);
-                                setShowDeleteDialog(true);
-                              }}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* View Item Dialog */}
+      <Dialog open={!!viewingItem} onOpenChange={() => setViewingItem(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Wishlist Item Details</DialogTitle>
+          </DialogHeader>
+          {viewingItem && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Client Name</label>
+                  <p className="text-sm text-muted-foreground">{viewingItem.clientName}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Email</label>
+                  <p className="text-sm text-muted-foreground">{viewingItem.clientEmail || "Not provided"}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Item Name</label>
+                  <p className="text-sm text-muted-foreground">{viewingItem.itemName}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Brand</label>
+                  <p className="text-sm text-muted-foreground">{viewingItem.brand}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Category</label>
+                  <p className="text-sm text-muted-foreground capitalize">{viewingItem.category}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Status</label>
+                  <Badge className={getStatusColor(viewingItem.status)}>
+                    {viewingItem.status}
+                  </Badge>
+                </div>
+              </div>
+              
+              {viewingItem.description && (
+                <div>
+                  <label className="text-sm font-medium">Description</label>
+                  <p className="text-sm text-muted-foreground">{viewingItem.description}</p>
+                </div>
+              )}
+              
+              {viewingItem.notes && (
+                <div>
+                  <label className="text-sm font-medium">Notes</label>
+                  <p className="text-sm text-muted-foreground">{viewingItem.notes}</p>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Created</label>
+                  <p className="text-sm text-muted-foreground">
+                    {format(new Date(viewingItem.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Last Updated</label>
+                  <p className="text-sm text-muted-foreground">
+                    {format(new Date(viewingItem.updatedAt), "MMM d, yyyy 'at' h:mm a")}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the wishlist item for {selectedItem?.clientName}.
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => selectedItem && deleteMutation.mutate(selectedItem.id)}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

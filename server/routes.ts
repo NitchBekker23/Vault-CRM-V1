@@ -1894,76 +1894,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Wishlist routes
-  app.get("/api/wishlist", isAuthenticated, async (req, res) => {
-    try {
-      const search = req.query.search as string || "";
-      const status = req.query.status as string || "";
-      const category = req.query.category as string || "";
-      const brand = req.query.brand as string || "";
 
-      const items = await storage.getWishlistItems(search, status, category, brand);
-      res.json({ items });
-    } catch (error) {
-      console.error("Error fetching wishlist:", error);
-      res.status(500).json({ message: "Failed to fetch wishlist" });
-    }
-  });
-
-  app.post("/api/wishlist", isAuthenticated, async (req: any, res) => {
-    try {
-      const validatedData = insertWishlistItemSchema.parse({
-        ...req.body,
-        userId: getUserId(req) || "system",
-      });
-
-      const item = await storage.createWishlistItem(validatedData);
-      
-      // Log activity
-      await storage.createActivity({
-        userId: getUserId(req) || "system",
-        action: "wishlist_request",
-        entityType: "wishlist_item",
-        entityId: item.id,
-        description: `New wishlist request for ${item.itemName}`,
-      });
-
-      res.status(201).json(item);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      console.error("Error creating wishlist item:", error);
-      res.status(500).json({ message: "Failed to create wishlist item" });
-    }
-  });
-
-  app.put("/api/wishlist/:id", isAuthenticated, async (req: any, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const validatedData = insertWishlistItemSchema.partial().parse(req.body);
-
-      const item = await storage.updateWishlistItem(id, validatedData);
-      res.json(item);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      console.error("Error updating wishlist item:", error);
-      res.status(500).json({ message: "Failed to update wishlist item" });
-    }
-  });
-
-  app.delete("/api/wishlist/:id", isAuthenticated, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      await storage.deleteWishlistItem(id);
-      res.status(204).send();
-    } catch (error) {
-      console.error("Error deleting wishlist item:", error);
-      res.status(500).json({ message: "Failed to delete wishlist item" });
-    }
-  });
 
   // Client routes
   app.get("/api/clients", checkAuth, async (req: any, res) => {
@@ -3012,6 +2943,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const updatedLead = await storage.updateLead(leadId, updateData);
 
+      // Auto-create wishlist item if outcome is "wishlist"
+      if (outcome === "wishlist") {
+        try {
+          const wishlistItem = await storage.createWishlistItem({
+            userId: userId,
+            leadId: leadId,
+            clientName: `${currentLead.firstName} ${currentLead.lastName}`,
+            clientEmail: currentLead.email,
+            clientPhone: currentLead.phone,
+            clientCompany: currentLead.company,
+            itemName: currentLead.notes || "General inquiry",
+            brand: "", // Will be filled manually later
+            description: `Auto-created from lead: ${currentLead.firstName} ${currentLead.lastName}. ${currentLead.notes || ""}`,
+            category: "watches", // Default category
+            maxPrice: "",
+            skuReferences: "",
+            notes: `Auto-created from lead outcome: ${currentLead.notes || ""}`,
+            status: "active",
+          });
+          
+          console.log(`Wishlist item created from lead ${leadId}:`, wishlistItem);
+        } catch (wishlistError) {
+          console.error("Error creating wishlist item from lead:", wishlistError);
+          // Don't fail the lead update if wishlist creation fails
+        }
+      }
+
       // Log the status change activity
       await storage.createLeadActivity({
         leadId,
@@ -3109,6 +3067,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching wishlist items:", error);
       res.status(500).json({ message: "Failed to fetch wishlist items" });
+    }
+  });
+
+  app.post("/api/wishlist", checkAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUserId;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const wishlistData = {
+        ...req.body,
+        createdBy: userId,
+      };
+
+      const wishlistItem = await storage.createWishlistItem(wishlistData);
+      res.status(201).json(wishlistItem);
+    } catch (error) {
+      console.error("Error creating wishlist item:", error);
+      res.status(500).json({ message: "Failed to create wishlist item" });
     }
   });
 
