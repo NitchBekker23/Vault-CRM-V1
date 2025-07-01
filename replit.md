@@ -115,6 +115,13 @@ REPLIT_DOMAINS=[development]
 ```
 
 ## Recent Changes
+- July 1, 2025: **KIMI-DEV PERFORMANCE OPTIMIZATION PHASE 1 COMPLETE**: Implemented systematic performance analysis and baseline optimizations
+  - **BASELINE ANALYSIS COMPLETE**: Identified 1.5-2MB unnecessary bundle load from 27 Radix UI packages, recharts (500KB), xlsx (300KB), framer-motion (150KB)
+  - **DATA FETCHING OPTIMIZED**: Changed client refresh from 3 seconds to 30 seconds, added 30-second stale time for 90% reduction in API calls
+  - **PERFORMANCE TRACKING ESTABLISHED**: Created measurement scripts and performance monitoring dashboard with Web Vitals integration
+  - **COMPRESSION CONFIRMED**: Gzip compression already active at level 6, serving compressed responses
+  - **SAFE OPTIMIZATION STRATEGY**: Learned from previous failed attempts - test each change individually, avoid breaking authentication flows
+  - **PHASE 2 & 3 ROADMAP DOCUMENTED**: Clear incremental path for lazy loading, dependency removal, and code splitting without system breakage
 - June 27, 2025: **KIMI-DEV FRONTEND BUG FIX COMPLETE**: Resolved client purchase count display issue using systematic debugging methodology
   - **ROOT CAUSE IDENTIFIED**: Frontend field name mismatch - server sends `totalPurchases` but frontend expected `purchaseCount`
   - **COMPREHENSIVE FIX IMPLEMENTED**: Updated all frontend references in clients.tsx (line 656, 148, 173, 588, 592) to use correct `totalPurchases` field
@@ -313,6 +320,69 @@ REPLIT_DOMAINS=[development]
 Preferred communication style: Simple, everyday language.
 
 **Development Methodology**: Use Kimi-Dev AI debugging tool when writing code - systematic analysis framework for identifying and resolving complex issues through structured debugging approach.
+
+## Performance Optimization Roadmap (July 1, 2025)
+
+### Current State
+- **Critical Performance Issues**: FCP 12+ seconds (6.8x over threshold), LCP 12+ seconds (4.8x over threshold)
+- **Bundle Analysis Complete**: 1.5-2MB unnecessary load identified with 27 Radix UI packages and heavy dependencies
+- **Phase 1 Complete**: Data fetching optimized, compression confirmed, tracking established
+
+### Phase 2: Safe Dependency Optimizations (Low-Medium Risk)
+**Target**: 30-50% bundle size reduction without breaking functionality
+
+#### 2A: Unused Dependency Removal (Zero Breaking Risk)
+- Remove embla-carousel-react if unused (100KB reduction)
+- Replace framer-motion with CSS animations (150KB reduction) 
+- Audit and remove other unused packages
+
+#### 2B: Radix UI Optimization (Medium Risk - Test Thoroughly)
+- Create barrel export file for used components only
+- Replace 27 individual packages with targeted imports
+- Expected: 200-500KB reduction
+- Risk Mitigation: Test each component remains functional
+
+#### 2C: Heavy Dependency Lazy Loading (Low Risk)
+- Lazy load xlsx library (300KB) - only on import/export pages
+- Lazy load recharts (500KB) - only on analytics/dashboard
+- Implement with React.lazy and proper error boundaries
+
+### Phase 3: Advanced Optimizations (Medium-High Risk)
+**Target**: 40-60% initial load time improvement
+
+#### 3A: Route-Based Code Splitting
+- Split non-critical pages (Reports, Settings, Analytics)
+- Keep authentication and core pages (Dashboard, Inventory, Clients) as direct imports
+- Add loading skeletons and preloading on hover
+
+#### 3B: Progressive Loading Strategy  
+- Implement intersection observer for below-fold content
+- Progressive image loading with blur-up technique
+- Staggered component mounting for complex pages
+
+#### 3C: Advanced Caching Strategy
+- Service worker for offline functionality
+- Intelligent cache invalidation
+- Background sync for data updates
+
+### Learning from Previous Failed Attempts
+**What Broke Before:**
+- Lazy loading authentication components broke login flow
+- Simultaneous multiple optimizations caused mass rollback
+- Modified core routing without proper testing
+- Broke component rendering and data flow
+
+**Safe Optimization Principles:**
+1. **Test Incrementally**: One change at a time with performance measurement
+2. **Preserve Critical Paths**: Never modify authentication, core data flow, or main navigation
+3. **Rollback Plan**: Keep git checkpoints before each optimization
+4. **Functionality First**: Ensure features work before optimizing performance
+5. **Monitor Real Impact**: Track FCP/LCP after each change, not just theory
+
+### Success Metrics
+- **Phase 2 Target**: FCP under 6 seconds, LCP under 8 seconds
+- **Phase 3 Target**: FCP under 3 seconds, LCP under 4 seconds  
+- **Ultimate Goal**: Meet Core Web Vitals thresholds (FCP < 1.8s, LCP < 2.5s)
 
 ## Planned Development: Sales Management System (June 18, 2025)
 
