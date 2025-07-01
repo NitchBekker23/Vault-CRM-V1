@@ -1304,8 +1304,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const category = req.query.category as string;
       const status = req.query.status as string;
       const dateRange = req.query.dateRange as string;
+      const brand = req.query.brand as string;
 
-      const result = await storage.getInventoryItems(page, limit, search, category, status, dateRange);
+      const result = await storage.getInventoryItems(page, limit, search, category, status, dateRange, brand);
       
       // Ensure images are properly populated for each item
       const itemsWithImages = await Promise.all(

@@ -70,6 +70,7 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [rolexOnly, setRolexOnly] = useState(false);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -80,7 +81,7 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
     items: InventoryItem[];
     total: number;
   }>({
-    queryKey: ["/api/inventory", page, pageSize, search, category, status, dateRange],
+    queryKey: ["/api/inventory", page, pageSize, search, category, status, dateRange, rolexOnly],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -89,6 +90,7 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
         ...(category && { category }),
         ...(status && { status }),
         ...(dateRange && { dateRange }),
+        ...(rolexOnly && { brand: "Rolex" }),
       });
       
       const response = await fetch(`/api/inventory?${params}`, {
@@ -401,6 +403,22 @@ export default function InventoryTable({ showHeader = true, limit, allowBulkActi
                       <SelectItem value="over-90-days">Over 90 Days</SelectItem>
                     </SelectContent>
                   </Select>
+                  
+                  {/* Rolex Filter Button */}
+                  <Button
+                    variant={rolexOnly ? "default" : "outline"}
+                    onClick={() => {
+                      setRolexOnly(!rolexOnly);
+                      setPage(1);
+                    }}
+                    className={`w-full sm:w-auto px-4 py-2 ${
+                      rolexOnly 
+                        ? "bg-green-600 hover:bg-green-700 text-white" 
+                        : "bg-gray-100 hover:bg-gray-200 text-gray-600"
+                    }`}
+                  >
+                    Rolex
+                  </Button>
                   
                   {!limit && (
                     <Select value={pageSize.toString()} onValueChange={(value) => {

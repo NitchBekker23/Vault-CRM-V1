@@ -107,7 +107,9 @@ export interface IStorage {
     limit?: number,
     search?: string,
     category?: string,
-    status?: string
+    status?: string,
+    dateRange?: string,
+    brand?: string
   ): Promise<{ items: InventoryItem[]; total: number }>;
   getInventoryItem(id: number): Promise<InventoryItem | undefined>;
   getInventoryItemBySerialNumber(serialNumber: string): Promise<InventoryItem | undefined>;
@@ -286,7 +288,8 @@ export class DatabaseStorage implements IStorage {
     search?: string,
     category?: string,
     status?: string,
-    dateRange?: string
+    dateRange?: string,
+    brand?: string
   ): Promise<{ items: InventoryItem[]; total: number }> {
     const offset = (page - 1) * limit;
     
@@ -313,6 +316,10 @@ export class DatabaseStorage implements IStorage {
     
     if (category) {
       whereConditions.push(eq(inventoryItems.category, category));
+    }
+    
+    if (brand) {
+      whereConditions.push(eq(inventoryItems.brand, brand));
     }
 
     if (dateRange) {
