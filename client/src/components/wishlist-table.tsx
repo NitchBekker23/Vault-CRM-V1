@@ -247,10 +247,22 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
   });
 
   const onSubmit = (data: WishlistFormData) => {
+    // Clean up data - convert empty strings to undefined for optional fields
+    const cleanedData = {
+      ...data,
+      clientEmail: data.clientEmail || undefined,
+      clientPhone: data.clientPhone || undefined,
+      clientCompany: data.clientCompany || undefined,
+      description: data.description || undefined,
+      maxPrice: data.maxPrice || undefined,
+      skuReferences: data.skuReferences || undefined,
+      notes: data.notes || undefined,
+    };
+
     if (editingItem) {
-      updateWishlistMutation.mutate({ id: editingItem.id, data });
+      updateWishlistMutation.mutate({ id: editingItem.id, data: cleanedData });
     } else {
-      createWishlistMutation.mutate(data);
+      createWishlistMutation.mutate(cleanedData);
     }
   };
 
@@ -266,7 +278,7 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
       brand: item.brand,
       description: item.description || "",
       category: item.category,
-      maxPrice: item.maxPrice || "",
+      maxPrice: item.maxPrice?.toString() || "",
       skuReferences: item.skuReferences || "",
       notes: item.notes || "",
     });

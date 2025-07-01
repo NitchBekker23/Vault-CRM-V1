@@ -3113,7 +3113,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const updateData = req.body;
       
-      const updatedItem = await storage.updateWishlistItem(id, updateData);
+      // Clean up data - convert empty strings to null for optional fields
+      const cleanedData = {
+        ...updateData,
+        clientEmail: updateData.clientEmail || null,
+        clientPhone: updateData.clientPhone || null,
+        clientCompany: updateData.clientCompany || null,
+        description: updateData.description || null,
+        maxPrice: updateData.maxPrice || null,
+        skuReferences: updateData.skuReferences || null,
+        notes: updateData.notes || null,
+      };
+      
+      const updatedItem = await storage.updateWishlistItem(id, cleanedData);
       res.json(updatedItem);
     } catch (error) {
       console.error("Error updating wishlist item:", error);
