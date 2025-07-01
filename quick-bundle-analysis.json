@@ -1,0 +1,52 @@
+{
+  "timestamp": "2025-07-01T08:43:20.921Z",
+  "radixPackageCount": 27,
+  "heavyDependencies": [
+    "recharts",
+    "xlsx",
+    "framer-motion",
+    "embla-carousel-react",
+    "@tanstack/react-query",
+    "react-hook-form",
+    "date-fns",
+    "zod"
+  ],
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "action": "Lazy load heavy pages",
+      "impact": "30-40% initial bundle reduction",
+      "risk": "LOW",
+      "details": "Analytics, Reports, CSV Import/Export pages"
+    },
+    {
+      "priority": "HIGH",
+      "action": "Replace 30+ Radix packages with targeted imports",
+      "impact": "200-300KB reduction",
+      "risk": "MEDIUM",
+      "details": "Import only the specific Radix components used"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Lazy load xlsx library",
+      "impact": "300KB reduction",
+      "risk": "LOW",
+      "details": "Only load when user accesses import/export"
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Lazy load recharts",
+      "impact": "500KB reduction",
+      "risk": "LOW",
+      "details": "Only load on analytics/dashboard pages"
+    },
+    {
+      "priority": "LOW",
+      "action": "Enable compression",
+      "impact": "60-70% transfer size reduction",
+      "risk": "MINIMAL",
+      "details": "Add gzip/brotli compression middleware"
+    }
+  ],
+  "estimatedSavings": "1-2MB initial bundle size reduction possible"
+}

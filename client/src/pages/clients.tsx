@@ -81,14 +81,14 @@ export default function Clients() {
     },
   });
 
-  // Fetch clients data with real-time updates and cache busting
+  // Fetch clients data with optimized caching
   const { data: clientsData, isLoading: isLoadingClients, error, refetch } = useQuery({
     queryKey: ["/api/clients"],
     enabled: isAuthenticated && !isLoading,
-    staleTime: 0, // Always fetch fresh data
+    staleTime: 30 * 1000, // Consider data fresh for 30 seconds
     refetchOnMount: true,
     refetchOnWindowFocus: true,
-    refetchInterval: 3 * 1000, // Aggressive 3-second refresh
+    refetchInterval: 30 * 1000, // Refresh every 30 seconds instead of 3
     refetchIntervalInBackground: false
   });
 

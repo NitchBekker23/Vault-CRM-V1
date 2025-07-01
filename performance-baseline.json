@@ -1,0 +1,135 @@
+{
+  "timestamp": "2025-07-01T08:39:49.294611",
+  "metrics": {
+    "current_metrics": {
+      "FCP": "8500ms (threshold: 1800ms)",
+      "LCP": "8748ms (threshold: 2500ms)",
+      "TTFB": "346ms (good)",
+      "status": "CRITICAL - 4.7x slower than acceptable"
+    },
+    "observed_issues": [
+      "Poor First Contentful Paint - 8500ms vs 1800ms target",
+      "Poor Largest Contentful Paint - 8748ms vs 2500ms target",
+      "Client list refreshes every 3 seconds causing constant re-renders",
+      "Multiple components loading synchronously at startup"
+    ],
+    "user_impact": "Users wait 8+ seconds to see content"
+  },
+  "bottlenecks": [
+    {
+      "type": "bundle_size",
+      "dependency": "@radix-ui/*",
+      "issue": "30+ individual Radix UI packages loaded",
+      "impact": "HIGH",
+      "recommendation": "Lazy load or code split this dependency"
+    },
+    {
+      "type": "bundle_size",
+      "dependency": "recharts",
+      "issue": "Large charting library for analytics",
+      "impact": "HIGH",
+      "recommendation": "Lazy load or code split this dependency"
+    },
+    {
+      "type": "bundle_size",
+      "dependency": "xlsx",
+      "issue": "Excel processing library loaded on startup",
+      "impact": "HIGH",
+      "recommendation": "Lazy load or code split this dependency"
+    },
+    {
+      "type": "bundle_size",
+      "dependency": "framer-motion",
+      "issue": "Animation library loaded globally",
+      "impact": "HIGH",
+      "recommendation": "Lazy load or code split this dependency"
+    },
+    {
+      "type": "bundle_size",
+      "dependency": "embla-carousel-react",
+      "issue": "Carousel library loaded but rarely used",
+      "impact": "HIGH",
+      "recommendation": "Lazy load or code split this dependency"
+    },
+    {
+      "component": "Clients",
+      "issue": "3-second automatic refresh causing constant re-renders",
+      "impact": "HIGH",
+      "performance_cost": "Continuous network requests and DOM updates",
+      "recommendation": "Use event-based updates or longer intervals"
+    },
+    {
+      "component": "Clients",
+      "issue": "Zero stale time forces fresh data on every access",
+      "impact": "MEDIUM",
+      "performance_cost": "No data caching benefit",
+      "recommendation": "Set reasonable stale time (30-60 seconds)"
+    }
+  ],
+  "dependencies": {
+    "authentication_flow": [
+      "App.tsx \u2192 auth context",
+      "All pages \u2192 requireAuth middleware",
+      "Header \u2192 user data from auth"
+    ],
+    "data_flow": [
+      "Dashboard \u2192 inventory + clients + sales APIs",
+      "Clients \u2192 client API + purchase history",
+      "Inventory \u2192 items + images + SKU data"
+    ],
+    "critical_paths": [
+      "Login \u2192 Dashboard (must be fast)",
+      "Dashboard \u2192 Inventory/Clients (core features)",
+      "Data mutations \u2192 Cache invalidation"
+    ],
+    "safe_to_optimize": [
+      "Reports generation",
+      "Analytics calculations",
+      "CSV import/export",
+      "Settings pages"
+    ]
+  },
+  "risk_assessment": {
+    "high_risk_changes": [
+      {
+        "change": "Lazy loading authentication components",
+        "risk": "Could break login flow",
+        "mitigation": "Never lazy load auth components"
+      },
+      {
+        "change": "Modifying core data fetching",
+        "risk": "Could break real-time updates",
+        "mitigation": "Test extensively with rollback plan"
+      }
+    ],
+    "medium_risk_changes": [
+      {
+        "change": "Code splitting large components",
+        "risk": "Initial load flash",
+        "mitigation": "Add loading skeletons"
+      },
+      {
+        "change": "Implementing route-based splitting",
+        "risk": "Navigation delays",
+        "mitigation": "Preload on hover/focus"
+      }
+    ],
+    "low_risk_changes": [
+      {
+        "change": "Compression middleware",
+        "risk": "Minimal - server-side only",
+        "mitigation": "Monitor CPU usage"
+      },
+      {
+        "change": "Image optimization",
+        "risk": "Quality degradation",
+        "mitigation": "Test with sample images"
+      },
+      {
+        "change": "Bundle analysis",
+        "risk": "None - analysis only",
+        "mitigation": "N/A"
+      }
+    ]
+  }
+}

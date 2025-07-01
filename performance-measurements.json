@@ -1,0 +1,36 @@
+{
+  "timestamp": "2025-07-01T08:46:46.978Z",
+  "metrics": {
+    "FCP": {
+      "value": 11848,
+      "threshold": 1800,
+      "status": "POOR",
+      "percentageOverThreshold": "558.2%"
+    },
+    "LCP": {
+      "value": 12164,
+      "threshold": 2500,
+      "status": "POOR",
+      "percentageOverThreshold": "386.6%"
+    },
+    "TTFB": {
+      "value": 387,
+      "threshold": 800,
+      "status": "GOOD",
+      "percentageUnderThreshold": "51.6%"
+    }
+  },
+  "optimizations": {
+    "completed": [
+      "Client refresh interval: 3s → 30s",
+      "Client stale time: 0s → 30s",
+      "Compression: Already enabled (gzip level 6)"
+    ],
+    "pending": [
+      "Lazy load heavy dependencies (recharts, xlsx)",
+      "Optimize Radix UI imports",
+      "Remove unused dependencies",
+      "Code split non-critical pages"
+    ]
+  }
+}
