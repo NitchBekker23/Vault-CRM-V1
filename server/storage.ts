@@ -1246,20 +1246,33 @@ export class DatabaseStorage implements IStorage {
                   continue;
                 }
 
-                // Enhanced client lookup with improved customer information handling
-                console.log(`Looking up client - customerNumber: ${row.customerNumber}, customerName: ${row.customerName}, customerEmail: ${row.customerEmail}`);
+                // Enhanced client lookup with clientId priority and improved customer information handling
+                console.log(`Looking up client - clientId: ${row.clientId}, customerCode: ${row.customerCode}, customerName: ${row.customerName}, customerEmail: ${row.customerEmail}`);
                 let client;
                 
-                // Strategy 1: Find by customer number (unique identifier)
-                if (row.customerNumber) {
-                  console.log(`Searching for client with customer number: ${row.customerNumber}`);
+                // Strategy 1: Find by clientId (direct database lookup - highest priority)
+                if (row.clientId && row.clientId.toString().trim() !== '') {
+                  console.log(`Searching for client with clientId: ${row.clientId}`);
                   [client] = await db
                     .select()
                     .from(clients)
-                    .where(eq(clients.customerNumber, row.customerNumber.toString()));
+                    .where(eq(clients.id, parseInt(row.clientId)));
                   
                   if (client) {
-                    console.log(`Found existing client by customer number:`, { id: client.id, fullName: client.fullName, customerNumber: client.customerNumber });
+                    console.log(`Found existing client by clientId:`, { id: client.id, fullName: client.fullName, customerNumber: client.customerNumber });
+                  }
+                }
+                
+                // Strategy 2: Find by customer code (unique identifier)
+                if (!client && row.customerCode) {
+                  console.log(`Searching for client with customer code: ${row.customerCode}`);
+                  [client] = await db
+                    .select()
+                    .from(clients)
+                    .where(eq(clients.customerNumber, row.customerCode.toString()));
+                  
+                  if (client) {
+                    console.log(`Found existing client by customer code:`, { id: client.id, fullName: client.fullName, customerNumber: client.customerNumber });
                   }
                 }
                 
@@ -1308,12 +1321,12 @@ export class DatabaseStorage implements IStorage {
                     lastName: row.customerName.split(' ').slice(1).join(' ') || '',
                     email: row.customerEmail || null,
                     phoneNumber: row.customerPhone || null,
-                    customerNumber: row.customerNumber ? row.customerNumber.toString() : null,
+                    customerNumber: row.customerCode ? row.customerCode.toString() : null,
                     clientCategory: "Regular",
                     vipStatus: "regular" as const,
                     totalSpend: "0",
                     totalPurchases: 0,
-                    notes: `Created during CSV import. Customer Number: ${row.customerNumber || 'N/A'}`
+                    notes: `Created during CSV import. Customer Code: ${row.customerCode || 'N/A'}`
                   };
                   
                   console.log(`Creating new client with comprehensive data:`, newClientData);
@@ -1336,7 +1349,7 @@ export class DatabaseStorage implements IStorage {
                 }
                 
                 // Strategy 5: Update existing client information if provided and different
-                if (client && (row.customerEmail || row.customerPhone || row.customerName)) {
+                if (client && (row.customerEmail || row.customerPhone || row.customerName || row.customerCode)) {
                   const updates: any = {};
                   let needsUpdate = false;
                   
@@ -1357,6 +1370,12 @@ export class DatabaseStorage implements IStorage {
                     updates.fullName = row.customerName;
                     updates.firstName = row.customerName.split(' ')[0] || '';
                     updates.lastName = row.customerName.split(' ').slice(1).join(' ') || '';
+                    needsUpdate = true;
+                  }
+                  
+                  // Update customer code if provided and different
+                  if (row.customerCode && row.customerCode !== client.customerNumber) {
+                    updates.customerNumber = row.customerCode;
                     needsUpdate = true;
                   }
                   
@@ -1491,7 +1510,7 @@ export class DatabaseStorage implements IStorage {
                   retailPrice: retailPrice ? retailPrice.toString() : null,
                   sellingPrice: sellingPrice.toString(),
                   profitMargin: profitMargin ? profitMargin.toString() : null,
-                  customerCode: row.customerNumber || client.customerNumber || null, // Use customer number for backward compatibility
+                  customerCode: row.customerCode || client.customerNumber || null, // Use customer code for identification
                   salesPerson: row.salesPerson || null,
                   store: row.store || null,
                   csvBatchId: batchId,
@@ -1626,18 +1645,26 @@ export class DatabaseStorage implements IStorage {
                   continue;
                 }
 
-                // Find client by customer number, email, or name
+                // Find client by clientId, customer code, email, or name
                 let client;
                 
-                // Try to find by customer number first
-                if (row.customerNumber) {
+                // Try to find by clientId first (direct database lookup)
+                if (row.clientId && row.clientId.toString().trim() !== '') {
                   [client] = await db
                     .select()
                     .from(clients)
-                    .where(eq(clients.customerNumber, row.customerNumber.toString()));
+                    .where(eq(clients.id, parseInt(row.clientId)));
                 }
                 
-                // Try to find by email if no customer number match
+                // Try to find by customer code if no clientId match
+                if (!client && row.customerCode) {
+                  [client] = await db
+                    .select()
+                    .from(clients)
+                    .where(eq(clients.customerNumber, row.customerCode.toString()));
+                }
+                
+                // Try to find by email if no customer code match
                 if (!client && row.customerEmail) {
                   [client] = await db
                     .select()
@@ -1657,8 +1684,8 @@ export class DatabaseStorage implements IStorage {
                 if (!client) {
                   client = {
                     id: 0,
-                    fullName: row.customerName || `Customer ${row.customerNumber}` || 'Anonymous Customer',
-                    customerNumber: row.customerNumber || null,
+                    fullName: row.customerName || `Customer ${row.customerCode}` || 'Anonymous Customer',
+                    customerNumber: row.customerCode || null,
                     email: row.customerEmail || null
                   };
                 }
