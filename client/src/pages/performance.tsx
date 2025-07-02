@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, Users, TrendingUp, DollarSign, Calendar, Filter } from "lucide-react";
+import { Building2, Users, TrendingUp, DollarSign, Calendar, Filter, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface StorePerformance {
@@ -37,6 +37,10 @@ export default function Performance() {
   const currentDate = new Date();
   const [selectedYear, setSelectedYear] = useState<number>(currentDate.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number>(currentDate.getMonth() + 1);
+  
+  // State for additional filters
+  const [selectedStore, setSelectedStore] = useState<string>('all');
+  const [selectedSalesPerson, setSelectedSalesPerson] = useState<string>('all');
 
   // Generate year options (current year and 3 years back)
   const yearOptions = Array.from({ length: 4 }, (_, i) => currentDate.getFullYear() - i);
@@ -57,13 +61,48 @@ export default function Performance() {
     { value: 12, label: 'December' },
   ];
 
+  // Build query parameters
+  const buildStoreQuery = () => {
+    const params = new URLSearchParams({
+      month: selectedMonth.toString(),
+      year: selectedYear.toString(),
+    });
+    if (selectedStore !== 'all') {
+      params.append('storeId', selectedStore);
+    }
+    return `/api/performance/stores?${params.toString()}`;
+  };
+
+  const buildSalesPersonQuery = () => {
+    const params = new URLSearchParams({
+      month: selectedMonth.toString(),
+      year: selectedYear.toString(),
+    });
+    if (selectedSalesPerson !== 'all') {
+      params.append('salesPersonId', selectedSalesPerson);
+    }
+    return `/api/performance/sales-persons?${params.toString()}`;
+  };
+
   const { data: storePerformance, isLoading: storeLoading } = useQuery<StorePerformance[]>({
-    queryKey: [`/api/performance/stores?month=${selectedMonth}&year=${selectedYear}`],
+    queryKey: [buildStoreQuery()],
     retry: false,
   });
 
   const { data: salesPersonPerformance, isLoading: salesPersonLoading } = useQuery<SalesPersonPerformance[]>({
-    queryKey: [`/api/performance/sales-persons?month=${selectedMonth}&year=${selectedYear}`],
+    queryKey: [buildSalesPersonQuery()],
+    retry: false,
+  });
+
+  // Get list of stores for filter dropdown
+  const { data: storesList } = useQuery<{id: number, name: string, code: string}[]>({
+    queryKey: ['/api/stores'],
+    retry: false,
+  });
+
+  // Get list of sales persons for filter dropdown
+  const { data: salesPersonsList } = useQuery<{id: number, firstName: string, lastName: string, employeeId: string}[]>({
+    queryKey: ['/api/sales-persons'],
     retry: false,
   });
 
@@ -81,14 +120,27 @@ export default function Performance() {
     return monthOptions.find(m => m.value === month)?.label || '';
   };
 
+  // Clear all filters function
+  const clearAllFilters = () => {
+    setSelectedStore('all');
+    setSelectedSalesPerson('all');
+    setSelectedYear(currentDate.getFullYear());
+    setSelectedMonth(currentDate.getMonth() + 1);
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters = selectedStore !== 'all' || selectedSalesPerson !== 'all' || 
+    selectedYear !== currentDate.getFullYear() || selectedMonth !== (currentDate.getMonth() + 1);
+
   return (
     <div className="p-6 space-y-6">
       {/* Header with Title and Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-3xl font-bold">Performance Analytics</h1>
         
-        {/* Date Filter Controls */}
-        <div className="flex items-center gap-4">
+        {/* Filter Controls */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          {/* Date Display Badge */}
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <Badge variant="outline" className="text-sm">
@@ -96,10 +148,13 @@ export default function Performance() {
             </Badge>
           </div>
           
-          <div className="flex items-center gap-2">
+          {/* Filter Controls */}
+          <div className="flex flex-wrap items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
+            
+            {/* Year Filter */}
             <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
-              <SelectTrigger className="w-24">
+              <SelectTrigger className="w-20">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -111,8 +166,9 @@ export default function Performance() {
               </SelectContent>
             </Select>
             
+            {/* Month Filter */}
             <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-28">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -123,6 +179,49 @@ export default function Performance() {
                 ))}
               </SelectContent>
             </Select>
+            
+            {/* Store Filter */}
+            <Select value={selectedStore} onValueChange={setSelectedStore}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="All Stores" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Stores</SelectItem>
+                {storesList?.map((store) => (
+                  <SelectItem key={store.id} value={store.id.toString()}>
+                    {store.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {/* Sales Person Filter */}
+            <Select value={selectedSalesPerson} onValueChange={setSelectedSalesPerson}>
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder="All Sales Staff" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sales Staff</SelectItem>
+                {salesPersonsList?.map((person) => (
+                  <SelectItem key={person.id} value={person.id.toString()}>
+                    {person.firstName} {person.lastName} ({person.employeeId})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {/* Clear Filters Button */}
+            {hasActiveFilters && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearAllFilters}
+                className="flex items-center gap-1"
+              >
+                <X className="h-3 w-3" />
+                Clear
+              </Button>
+            )}
           </div>
         </div>
       </div>
