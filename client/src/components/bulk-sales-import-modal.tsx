@@ -180,7 +180,7 @@ export default function BulkSalesImportModal({ isOpen, onClose }: BulkSalesImpor
       "# 4. Full name - if email not found",
       "# 5. Create new - if no matches found, creates client with all provided information",
       "#",
-      "# REQUIRED FOR NEW CLIENTS: customerNumber, customerName, customerEmail, customerPhone",
+      "# REQUIRED FOR NEW CLIENTS: customerCode, customerName, customerEmail, customerPhone",
       "# OPTIONAL FOR EXISTING CLIENTS: Will update any provided fields that differ from current data"
     ].join("\n");
     
