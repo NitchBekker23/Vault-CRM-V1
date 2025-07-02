@@ -208,12 +208,17 @@ function Router() {
                 <UserManagement />
               </Suspense>
             )} />
-            {((user as any)?.role === 'admin' || (user as any)?.role === 'owner' || (user as any)?.email === 'nitchbekker@gmail.com') && (
-              <>
-                <Route path="/admin/users" component={AdminUsers} />
-                <Route path="/admin/users/:userId" component={UserProfile} />
-              </>
-            )}
+            {/* Admin routes - render if user is authenticated (role check happens in component) */}
+            <Route path="/admin/users" component={() => (
+              <Suspense fallback={<TableSkeleton rows={6} />}>
+                <AdminUsers />
+              </Suspense>
+            )} />
+            <Route path="/admin/users/:userId" component={() => (
+              <Suspense fallback={<CardSkeleton />}>
+                <UserProfile />
+              </Suspense>
+            )} />
             <Route component={NotFound} />
           </Switch>
       </main>

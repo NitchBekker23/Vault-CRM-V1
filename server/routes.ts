@@ -509,15 +509,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // Get individual user
-  app.get('/api/admin/users/:id', isAuthenticated, async (req, res) => {
+  app.get('/api/admin/users/:id', checkAuth, async (req: any, res) => {
     try {
+      console.log("GET /api/admin/users/:id - User lookup request for ID:", req.params.id);
+      
       const userId = req.params.id;
+      const currentUserId = req.currentUserId;
+      
+      // Get current user to check admin privileges
+      const currentUser = await storage.getUser(currentUserId);
+      
+      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'owner')) {
+        console.log("GET /api/admin/users/:id - Access denied for user:", currentUserId, "role:", currentUser?.role);
+        return res.status(403).json({ message: "Admin privileges required" });
+      }
+      
       const user = await storage.getUser(userId);
       
       if (!user) {
+        console.log("GET /api/admin/users/:id - User not found:", userId);
         return res.status(404).json({ message: "User not found" });
       }
       
+      console.log("GET /api/admin/users/:id - Success, returning user:", user.id);
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -526,13 +540,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update user
-  app.patch('/api/admin/users/:id', isAuthenticated, async (req, res) => {
+  app.patch('/api/admin/users/:id', checkAuth, async (req: any, res) => {
     try {
+      console.log("PATCH /api/admin/users/:id - Update user request for ID:", req.params.id);
+      
       const userId = req.params.id;
+      const currentUserId = req.currentUserId;
       const updates = req.body;
+      
+      // Get current user to check admin privileges
+      const currentUser = await storage.getUser(currentUserId);
+      
+      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'owner')) {
+        console.log("PATCH /api/admin/users/:id - Access denied for user:", currentUserId, "role:", currentUser?.role);
+        return res.status(403).json({ message: "Admin privileges required" });
+      }
       
       // Use the comprehensive updateUser method
       const updatedUser = await storage.updateUser(userId, updates);
+      console.log("PATCH /api/admin/users/:id - Success, updated user:", updatedUser.id);
       res.json(updatedUser);
     } catch (error) {
       console.error("Error updating user:", error);
@@ -541,10 +567,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete user
-  app.delete('/api/admin/users/:id', async (req, res) => {
+  app.delete('/api/admin/users/:id', checkAuth, async (req: any, res) => {
     try {
+      console.log("DELETE /api/admin/users/:id - Delete user request for ID:", req.params.id);
+      
       const userId = req.params.id;
+      const currentUserId = req.currentUserId;
+      
+      // Get current user to check admin privileges
+      const currentUser = await storage.getUser(currentUserId);
+      
+      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'owner')) {
+        console.log("DELETE /api/admin/users/:id - Access denied for user:", currentUserId, "role:", currentUser?.role);
+        return res.status(403).json({ message: "Admin privileges required" });
+      }
+      
+      // Prevent self-deletion
+      if (userId === currentUserId) {
+        console.log("DELETE /api/admin/users/:id - Prevented self-deletion attempt by:", currentUserId);
+        return res.status(403).json({ message: "Cannot delete your own account" });
+      }
+      
       await storage.deleteUser(userId);
+      console.log("DELETE /api/admin/users/:id - Success, deleted user:", userId);
       res.json({ message: "User deleted successfully" });
     } catch (error) {
       console.error("Error deleting user:", error);
