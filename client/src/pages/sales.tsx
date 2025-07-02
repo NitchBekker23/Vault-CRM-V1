@@ -220,34 +220,7 @@ export default function Sales() {
     const csvContent = [
       headers.join(","),
       sampleData.join(","),
-      secondSampleData.join(","),
-      "# Additional rows for more sales...",
-      "# itemSerialNumber: Serial number of sold item (must exist in inventory)",
-      "# saleDate: Date of sale (YYYY-MM-DD format)",
-      "# sellingPrice: Final sale price in ZAR",
-      "# retailPrice: Original retail price in ZAR (optional)",
-      "# transactionType: sale, credit, exchange, warranty",
-      "# clientId: Internal client database ID (10, 11, etc.) - leave empty for new clients",
-      "# customerCode: Unique customer number from your system (101552, 101553, etc.)",
-      "# customerName: Full customer name (required for new clients)",
-      "# customerEmail: Customer email address (required for new clients)",
-      "# customerPhone: Customer phone number (required for new clients)",
-      "# salesPerson: Employee ID (AP, BW, LW, etc.)",
-      "# store: Store code (001=Melrose, 002=Sandton, 003=Menlyn, 006=V&A, 099=HQ)",
-      "# notes: Optional sale notes",
-      "# EXAMPLES:",
-      "# Row 1: NEW CLIENT - Leave clientId empty, provide customerCode (101554) + full contact info",
-      "# Row 2: EXISTING CLIENT - Use clientId (10) from system + customerCode (101552) for updates",
-      "#",
-      "# CLIENT MATCHING PRIORITY:",
-      "# 1. ClientId (if provided) - direct database lookup",
-      "# 2. CustomerCode - your unique customer number",
-      "# 3. Email address - if customerCode not found",
-      "# 4. Full name - if email not found",
-      "# 5. Create new - if no matches found, creates client with all provided information",
-      "#",
-      "# REQUIRED FOR NEW CLIENTS: customerCode, customerName, customerEmail, customerPhone",
-      "# OPTIONAL FOR EXISTING CLIENTS: Will update any provided fields that differ from current data"
+      secondSampleData.join(",")
     ].join("\n");
     
     const blob = new Blob([csvContent], { type: 'text/csv' });
