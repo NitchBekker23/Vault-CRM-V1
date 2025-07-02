@@ -115,6 +115,13 @@ REPLIT_DOMAINS=[development]
 ```
 
 ## Recent Changes
+- July 2, 2025: **CSV TEMPLATE STRUCTURE COMPLETELY UPDATED TO MATCH EXCEL FORMAT**: Fixed CSV template generation to include clientId and customerCode fields with comprehensive client information handling
+  - **CORRECT TEMPLATE IDENTIFIED**: Found and updated the main CSV template download function in Sales page (outside import modal)
+  - **ENHANCED FIELD STRUCTURE**: Updated template with clientId, customerCode, customerName, customerEmail, customerPhone fields matching user's Excel format
+  - **COMPREHENSIVE DOCUMENTATION**: Added detailed field explanations and client matching priority system in template comments
+  - **REALISTIC SAMPLE DATA**: Included examples for both new client creation and existing client updates scenarios
+  - **BACKEND PROCESSING UPGRADED**: Updated server-side logic to handle clientId → customerCode → email → name lookup priority
+  - **PRODUCTION-READY TEMPLATE**: Template now generates proper CSV structure for real-world client data import workflows
 - July 2, 2025: **COMPREHENSIVE SALES CSV IMPORT ENHANCEMENT WITH REAL CLIENT DATA STRUCTURE**: Systematically upgraded CSV template and processing to handle complete customer information
   - **ENHANCED CSV TEMPLATE**: Updated template with realistic customer data examples showing both new client creation (101554 - Michael Thompson) and existing client updates (101552 - Sarah Amy Stride)
   - **SMART CLIENT LOOKUP SYSTEM**: Implemented 4-tier priority matching: Customer Number → Email → Name → Create New with comprehensive logging

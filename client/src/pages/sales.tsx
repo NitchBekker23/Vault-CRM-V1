@@ -169,10 +169,86 @@ export default function Sales() {
   };
 
   const downloadTemplate = () => {
-    const csvContent = `itemSerialNumber,saleDate,sellingPrice,retailPrice,transactionType,clientId,customerCode,salesPerson,store,notes
-SN123456789,2025-06-19,25000.00,30000.00,sale,1,CUST001,AP,001,Premium Breitling watch sale at Melrose
-SN987654321,2025-06-19,18000.00,22000.00,sale,2,CUST002,BW,002,Luxury leather goods purchase at Sandton
-SN555666777,2025-06-19,5000.00,6000.00,credit,3,CUST003,LW,006,Return credit processed at V&A Waterfront`;
+    const headers = [
+      "itemSerialNumber",
+      "saleDate",
+      "sellingPrice",
+      "retailPrice",
+      "transactionType",
+      "clientId",
+      "customerCode", 
+      "customerName",
+      "customerEmail",
+      "customerPhone",
+      "salesPerson",
+      "store",
+      "notes"
+    ];
+    
+    const sampleData = [
+      "SN123456789",
+      "2025-06-19",
+      "25000.00",
+      "30000.00",
+      "sale",
+      "", // clientId (leave empty for new clients)
+      "101554",
+      "Michael Thompson",
+      "michael.thompson@gmail.com",
+      "+27832567890",
+      "AP",
+      "001",
+      "New client purchase - Rolex watch at Melrose"
+    ];
+    
+    const secondSampleData = [
+      "BRE456DEF",
+      "2025-06-20",
+      "18500.00",
+      "22000.00", 
+      "sale",
+      "10", // clientId (existing client)
+      "101552",
+      "Sarah Amy Stride",
+      "sarah.stride@gmail.com",
+      "+27834567123",
+      "BW",
+      "002",
+      "Existing client purchase - Breitling at Sandton"
+    ];
+
+    const csvContent = [
+      headers.join(","),
+      sampleData.join(","),
+      secondSampleData.join(","),
+      "# Additional rows for more sales...",
+      "# itemSerialNumber: Serial number of sold item (must exist in inventory)",
+      "# saleDate: Date of sale (YYYY-MM-DD format)",
+      "# sellingPrice: Final sale price in ZAR",
+      "# retailPrice: Original retail price in ZAR (optional)",
+      "# transactionType: sale, credit, exchange, warranty",
+      "# clientId: Internal client database ID (10, 11, etc.) - leave empty for new clients",
+      "# customerCode: Unique customer number from your system (101552, 101553, etc.)",
+      "# customerName: Full customer name (required for new clients)",
+      "# customerEmail: Customer email address (required for new clients)",
+      "# customerPhone: Customer phone number (required for new clients)",
+      "# salesPerson: Employee ID (AP, BW, LW, etc.)",
+      "# store: Store code (001=Melrose, 002=Sandton, 003=Menlyn, 006=V&A, 099=HQ)",
+      "# notes: Optional sale notes",
+      "# EXAMPLES:",
+      "# Row 1: NEW CLIENT - Leave clientId empty, provide customerCode (101554) + full contact info",
+      "# Row 2: EXISTING CLIENT - Use clientId (10) from system + customerCode (101552) for updates",
+      "#",
+      "# CLIENT MATCHING PRIORITY:",
+      "# 1. ClientId (if provided) - direct database lookup",
+      "# 2. CustomerCode - your unique customer number",
+      "# 3. Email address - if customerCode not found",
+      "# 4. Full name - if email not found",
+      "# 5. Create new - if no matches found, creates client with all provided information",
+      "#",
+      "# REQUIRED FOR NEW CLIENTS: customerCode, customerName, customerEmail, customerPhone",
+      "# OPTIONAL FOR EXISTING CLIENTS: Will update any provided fields that differ from current data"
+    ].join("\n");
     
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -244,7 +320,7 @@ SN555666777,2025-06-19,5000.00,6000.00,credit,3,CUST003,LW,006,Return credit pro
                   onChange={handleFileChange}
                 />
                 <p className="text-sm text-muted-foreground mt-1">
-                  CSV should include: itemSerialNumber, saleDate, sellingPrice, retailPrice, transactionType, clientId, customerCode, salesPerson, store, notes
+                  CSV should include: itemSerialNumber, saleDate, sellingPrice, retailPrice, transactionType, clientId, customerCode, customerName, customerEmail, customerPhone, salesPerson, store, notes
                 </p>
               </div>
               {csvFile && (
