@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Users, TrendingUp, DollarSign } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Building2, Users, TrendingUp, DollarSign, Calendar, Filter } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface StorePerformance {
@@ -30,13 +33,37 @@ interface SalesPersonPerformance {
 }
 
 export default function Performance() {
+  // State for date filtering
+  const currentDate = new Date();
+  const [selectedYear, setSelectedYear] = useState<number>(currentDate.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(currentDate.getMonth() + 1);
+
+  // Generate year options (current year and 3 years back)
+  const yearOptions = Array.from({ length: 4 }, (_, i) => currentDate.getFullYear() - i);
+  
+  // Month options
+  const monthOptions = [
+    { value: 1, label: 'January' },
+    { value: 2, label: 'February' },
+    { value: 3, label: 'March' },
+    { value: 4, label: 'April' },
+    { value: 5, label: 'May' },
+    { value: 6, label: 'June' },
+    { value: 7, label: 'July' },
+    { value: 8, label: 'August' },
+    { value: 9, label: 'September' },
+    { value: 10, label: 'October' },
+    { value: 11, label: 'November' },
+    { value: 12, label: 'December' },
+  ];
+
   const { data: storePerformance, isLoading: storeLoading } = useQuery<StorePerformance[]>({
-    queryKey: ['/api/performance/stores?month=6&year=2025'],
+    queryKey: [`/api/performance/stores?month=${selectedMonth}&year=${selectedYear}`],
     retry: false,
   });
 
   const { data: salesPersonPerformance, isLoading: salesPersonLoading } = useQuery<SalesPersonPerformance[]>({
-    queryKey: ['/api/performance/sales-persons?month=6&year=2025'],
+    queryKey: [`/api/performance/sales-persons?month=${selectedMonth}&year=${selectedYear}`],
     retry: false,
   });
 
@@ -49,13 +76,55 @@ export default function Performance() {
   const totalStoreProfit = storePerformance?.reduce((sum, store) => sum + parseFloat(store.total_profit), 0) || 0;
   // Commission system removed as requested
 
+  // Get month name for display
+  const getMonthName = (month: number) => {
+    return monthOptions.find(m => m.value === month)?.label || '';
+  };
+
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header with Title and Filters */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-3xl font-bold">Performance Analytics</h1>
-        <Badge variant="outline" className="text-sm">
-          June 2025
-        </Badge>
+        
+        {/* Date Filter Controls */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Badge variant="outline" className="text-sm">
+              {getMonthName(selectedMonth)} {selectedYear}
+            </Badge>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+              <SelectTrigger className="w-24">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {yearOptions.map((year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {monthOptions.map((month) => (
+                  <SelectItem key={month.value} value={month.value.toString()}>
+                    {month.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
 
       {/* Summary Cards */}
