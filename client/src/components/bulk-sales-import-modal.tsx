@@ -124,18 +124,34 @@ export default function BulkSalesImportModal({ isOpen, onClose }: BulkSalesImpor
       "25000.00",
       "30000.00",
       "sale",
-      "101552",
-      "Sarah Johnson",
-      "sarah.johnson@email.com",
-      "+27821234567",
+      "101554",
+      "Michael Thompson",
+      "michael.thompson@gmail.com",
+      "+27832567890",
       "AP",
       "001",
-      "Premium Breitling watch sale at Melrose"
+      "New client purchase - Rolex watch at Melrose"
     ];
     
+    const secondSampleData = [
+      "BRE456DEF",
+      "2025-06-20",
+      "18500.00",
+      "22000.00", 
+      "sale",
+      "101552",
+      "Sarah Amy Stride",
+      "sarah.stride@gmail.com",
+      "+27834567123",
+      "BW",
+      "002",
+      "Existing client purchase - Breitling at Sandton"
+    ];
+
     const csvContent = [
       headers.join(","),
       sampleData.join(","),
+      secondSampleData.join(","),
       "# Additional rows for more sales...",
       "# itemSerialNumber: Serial number of sold item (must exist in inventory)",
       "# saleDate: Date of sale (YYYY-MM-DD format)",
@@ -149,8 +165,18 @@ export default function BulkSalesImportModal({ isOpen, onClose }: BulkSalesImpor
       "# salesPerson: Employee ID (AP, BW, LW, etc.)",
       "# store: Store code (001=Melrose, 002=Sandton, 003=Menlyn, 006=V&A, 099=HQ)",
       "# notes: Optional sale notes",
-      "# NOTE: If customerNumber exists in system, customerName/Email/Phone will update existing client",
-      "# NOTE: If customerNumber is new, system will create client with provided contact information"
+      "# EXAMPLES:",
+      "# Row 1: New client 101554 'Michael Thompson' - will create new client with full contact info",
+      "# Row 2: Existing client 101552 'Sarah Amy Stride' - will update contact details if different",
+      "#",
+      "# CLIENT MATCHING PRIORITY:",
+      "# 1. Customer Number (101552, 101554, etc.) - primary identifier", 
+      "# 2. Email address - secondary lookup if number not found",
+      "# 3. Full name - tertiary lookup if email not found",
+      "# 4. Create new - if no matches found, creates client with all provided information",
+      "#",
+      "# REQUIRED FOR NEW CLIENTS: customerNumber, customerName, customerEmail, customerPhone",
+      "# OPTIONAL FOR EXISTING CLIENTS: Will update any provided fields that differ from current data"
     ].join("\n");
     
     const blob = new Blob([csvContent], { type: "text/csv" });
