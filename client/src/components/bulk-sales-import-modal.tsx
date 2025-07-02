@@ -109,8 +109,10 @@ export default function BulkSalesImportModal({ isOpen, onClose }: BulkSalesImpor
       "sellingPrice",
       "retailPrice",
       "transactionType",
-      "clientId",
-      "customerCode",
+      "customerNumber",
+      "customerName",
+      "customerEmail",
+      "customerPhone",
       "salesPerson",
       "store",
       "notes"
@@ -122,8 +124,10 @@ export default function BulkSalesImportModal({ isOpen, onClose }: BulkSalesImpor
       "25000.00",
       "30000.00",
       "sale",
-      "1",
-      "CUST001",
+      "101552",
+      "Sarah Johnson",
+      "sarah.johnson@email.com",
+      "+27821234567",
       "AP",
       "001",
       "Premium Breitling watch sale at Melrose"
@@ -138,11 +142,15 @@ export default function BulkSalesImportModal({ isOpen, onClose }: BulkSalesImpor
       "# sellingPrice: Final sale price in ZAR",
       "# retailPrice: Original retail price in ZAR (optional)",
       "# transactionType: sale, credit, exchange, warranty",
-      "# clientId: Existing client ID number (optional - if blank, uses customerCode)",
-      "# customerCode: Customer identifier (CUST001, CUST002, etc.)",
+      "# customerNumber: Unique customer ID (101552, 101553, etc.) - will link to existing client or create new",
+      "# customerName: Full customer name (required for new clients)",
+      "# customerEmail: Customer email address (required for new clients)",
+      "# customerPhone: Customer phone number (required for new clients)",
       "# salesPerson: Employee ID (AP, BW, LW, etc.)",
       "# store: Store code (001=Melrose, 002=Sandton, 003=Menlyn, 006=V&A, 099=HQ)",
-      "# notes: Optional sale notes"
+      "# notes: Optional sale notes",
+      "# NOTE: If customerNumber exists in system, customerName/Email/Phone will update existing client",
+      "# NOTE: If customerNumber is new, system will create client with provided contact information"
     ].join("\n");
     
     const blob = new Blob([csvContent], { type: "text/csv" });

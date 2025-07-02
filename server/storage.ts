@@ -1246,79 +1246,134 @@ export class DatabaseStorage implements IStorage {
                   continue;
                 }
 
-                // Enhanced client lookup with multiple strategies
-                console.log(`Looking up client - clientId: ${row.clientId}, customerCode: ${row.customerCode}, customerName: ${row.customerName}`);
+                // Enhanced client lookup with improved customer information handling
+                console.log(`Looking up client - customerNumber: ${row.customerNumber}, customerName: ${row.customerName}, customerEmail: ${row.customerEmail}`);
                 let client;
                 
-                // Strategy 1: Find by exact client ID if provided
-                if (row.clientId) {
-                  console.log(`Searching for client with ID: ${row.clientId}`);
+                // Strategy 1: Find by customer number (unique identifier)
+                if (row.customerNumber) {
+                  console.log(`Searching for client with customer number: ${row.customerNumber}`);
                   [client] = await db
                     .select()
                     .from(clients)
-                    .where(eq(clients.id, parseInt(row.clientId)));
+                    .where(eq(clients.customerNumber, row.customerNumber.toString()));
                   
                   if (client) {
-                    console.log(`Found existing client by ID:`, { id: client.id, fullName: client.fullName });
+                    console.log(`Found existing client by customer number:`, { id: client.id, fullName: client.fullName, customerNumber: client.customerNumber });
                   }
                 }
                 
-                // Strategy 2: Find by customer code in notes or customerNumber field
-                if (!client && row.customerCode) {
-                  console.log(`Searching for client with customer code: ${row.customerCode}`);
-                  
-                  // Try customerNumber field first
+                // Strategy 2: Find by email if no customer number match
+                if (!client && row.customerEmail) {
+                  console.log(`Searching for client by email: ${row.customerEmail}`);
                   [client] = await db
                     .select()
                     .from(clients)
-                    .where(eq(clients.customerNumber, row.customerCode));
-                  
-                  // If not found, try notes field
-                  if (!client) {
-                    [client] = await db
-                      .select()
-                      .from(clients)
-                      .where(sql`${clients.notes} LIKE ${`%Customer Code: ${row.customerCode}%`}`);
-                  }
+                    .where(eq(clients.email, row.customerEmail));
                   
                   if (client) {
-                    console.log(`Found existing client by customer code:`, { id: client.id, fullName: client.fullName });
+                    console.log(`Found existing client by email:`, { id: client.id, fullName: client.fullName, email: client.email });
                   }
                 }
                 
-                // Strategy 3: Find by name match if customerName provided
+                // Strategy 3: Find by exact name match if provided
                 if (!client && row.customerName) {
                   console.log(`Searching for client by name: ${row.customerName}`);
                   [client] = await db
                     .select()
                     .from(clients)
-                    .where(or(
-                      eq(clients.fullName, row.customerName),
-                      sql`LOWER(${clients.fullName}) = LOWER(${row.customerName})`
-                    ));
+                    .where(sql`LOWER(${clients.fullName}) = LOWER(${row.customerName})`);
                   
                   if (client) {
                     console.log(`Found existing client by name:`, { id: client.id, fullName: client.fullName });
                   }
                 }
                 
-                // Strategy 4: Create new client if none found
+                // Strategy 4: Create new client with comprehensive information
                 if (!client) {
+                  // Validate required fields for new client creation
+                  if (!row.customerName) {
+                    console.error(`Cannot create client without customer name for row ${rowNumber}`);
+                    errors.push({
+                      row: rowNumber,
+                      error: "Customer name is required for new client creation",
+                      data: row
+                    });
+                    continue;
+                  }
+                  
                   const newClientData = {
-                    fullName: row.customerName || `Customer ${row.customerCode || row.clientId || 'Unknown'}`,
-                    firstName: row.customerName ? row.customerName.split(' ')[0] : 'Customer',
-                    lastName: row.customerName ? row.customerName.split(' ').slice(1).join(' ') || '' : (row.customerCode || row.clientId || 'Unknown'),
-                    email: row.customerCode ? `${row.customerCode.toLowerCase()}@customer.vault.com` : `client${row.clientId || Date.now()}@customer.vault.com`,
-                    customerNumber: row.customerCode || null,
-                    notes: row.customerCode ? `Customer Code: ${row.customerCode}` : `Auto-created for CSV import - Original Client ID: ${row.clientId || 'N/A'}`
+                    fullName: row.customerName,
+                    firstName: row.customerName.split(' ')[0] || '',
+                    lastName: row.customerName.split(' ').slice(1).join(' ') || '',
+                    email: row.customerEmail || null,
+                    phoneNumber: row.customerPhone || null,
+                    customerNumber: row.customerNumber ? row.customerNumber.toString() : null,
+                    clientCategory: "Regular",
+                    vipStatus: "regular" as const,
+                    totalSpend: "0",
+                    totalPurchases: 0,
+                    notes: `Created during CSV import. Customer Number: ${row.customerNumber || 'N/A'}`
                   };
                   
-                  console.log(`Creating new client:`, newClientData);
-                  [client] = await db
-                    .insert(clients)
-                    .values(newClientData)
-                    .returning();
-                  console.log(`Created new client:`, { id: client.id, fullName: client.fullName });
+                  console.log(`Creating new client with comprehensive data:`, newClientData);
+                  
+                  try {
+                    [client] = await db
+                      .insert(clients)
+                      .values(newClientData)
+                      .returning();
+                    console.log(`Successfully created new client:`, { id: client.id, fullName: client.fullName, customerNumber: client.customerNumber });
+                  } catch (clientError) {
+                    console.error(`Error creating client:`, clientError);
+                    errors.push({
+                      row: rowNumber,
+                      error: `Failed to create client: ${clientError instanceof Error ? clientError.message : 'Unknown error'}`,
+                      data: row
+                    });
+                    continue;
+                  }
+                }
+                
+                // Strategy 5: Update existing client information if provided and different
+                if (client && (row.customerEmail || row.customerPhone || row.customerName)) {
+                  const updates: any = {};
+                  let needsUpdate = false;
+                  
+                  // Update email if provided and different
+                  if (row.customerEmail && row.customerEmail !== client.email) {
+                    updates.email = row.customerEmail;
+                    needsUpdate = true;
+                  }
+                  
+                  // Update phone if provided and different
+                  if (row.customerPhone && row.customerPhone !== client.phoneNumber) {
+                    updates.phoneNumber = row.customerPhone;
+                    needsUpdate = true;
+                  }
+                  
+                  // Update name if provided and different
+                  if (row.customerName && row.customerName !== client.fullName) {
+                    updates.fullName = row.customerName;
+                    updates.firstName = row.customerName.split(' ')[0] || '';
+                    updates.lastName = row.customerName.split(' ').slice(1).join(' ') || '';
+                    needsUpdate = true;
+                  }
+                  
+                  if (needsUpdate) {
+                    updates.updatedAt = new Date();
+                    console.log(`Updating existing client ${client.id} with new information:`, updates);
+                    
+                    try {
+                      await db.update(clients)
+                        .set(updates)
+                        .where(eq(clients.id, client.id));
+                      console.log(`Successfully updated client ${client.id} information`);
+                    } catch (updateError) {
+                      console.warn(`Failed to update client ${client.id}:`, updateError);
+                      // Don't fail the transaction for update errors, just log
+                    }
+                  }
                 }
 
                 // Find inventory item by serial number
@@ -1426,7 +1481,7 @@ export class DatabaseStorage implements IStorage {
                   console.log(`Using inventory price as retail price: R${retailPrice}`);
                 }
 
-                // Create transaction
+                // Create transaction with updated customer information
                 console.log(`Creating transaction data...`);
                 const transactionData: InsertSalesTransaction = {
                   clientId: client.id,
@@ -1436,12 +1491,12 @@ export class DatabaseStorage implements IStorage {
                   retailPrice: retailPrice ? retailPrice.toString() : null,
                   sellingPrice: sellingPrice.toString(),
                   profitMargin: profitMargin ? profitMargin.toString() : null,
-                  customerCode: row.customerCode || null,
+                  customerCode: row.customerNumber || client.customerNumber || null, // Use customer number for backward compatibility
                   salesPerson: row.salesPerson || null,
                   store: row.store || null,
                   csvBatchId: batchId,
                   source: 'csv_import',
-                  notes: row.notes || null,
+                  notes: row.notes || `Customer: ${client.fullName}${client.customerNumber ? ` (${client.customerNumber})` : ''}`,
                   processedBy: userId,
                 };
                 console.log(`Transaction data prepared:`, JSON.stringify(transactionData, null, 2));
@@ -1571,20 +1626,40 @@ export class DatabaseStorage implements IStorage {
                   continue;
                 }
 
-                // Find client by customer code or create placeholder
+                // Find client by customer number, email, or name
                 let client;
-                if (row.customerCode) {
+                
+                // Try to find by customer number first
+                if (row.customerNumber) {
                   [client] = await db
                     .select()
                     .from(clients)
-                    .where(eq(clients.notes, `Customer Code: ${row.customerCode}`));
+                    .where(eq(clients.customerNumber, row.customerNumber.toString()));
                 }
                 
-                // Use placeholder client for preview
+                // Try to find by email if no customer number match
+                if (!client && row.customerEmail) {
+                  [client] = await db
+                    .select()
+                    .from(clients)
+                    .where(eq(clients.email, row.customerEmail));
+                }
+                
+                // Try to find by name if no other matches
+                if (!client && row.customerName) {
+                  [client] = await db
+                    .select()
+                    .from(clients)
+                    .where(sql`LOWER(${clients.fullName}) = LOWER(${row.customerName})`);
+                }
+                
+                // Use placeholder client for preview if none found
                 if (!client) {
                   client = {
                     id: 0,
-                    full_name: row.customerCode ? `Customer ${row.customerCode}` : 'Anonymous Customer'
+                    fullName: row.customerName || `Customer ${row.customerNumber}` || 'Anonymous Customer',
+                    customerNumber: row.customerNumber || null,
+                    email: row.customerEmail || null
                   };
                 }
 
