@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -12,14 +11,14 @@ interface Metrics {
   salesThisMonth: number;
 }
 
-export default function DashboardMetrics() {
-  const { data: metrics, isLoading } = useQuery<Metrics>({
-    queryKey: ["/api/dashboard/metrics"],
-    staleTime: 30 * 1000, // 30 seconds fresh data
-    refetchOnMount: true,
-    refetchOnWindowFocus: true
-  });
+interface DashboardMetricsProps {
+  metrics: Metrics | undefined;
+  metricsLoading: boolean;
+}
+
+export default function DashboardMetrics({ metrics, metricsLoading }: DashboardMetricsProps) {
   const isMobile = useIsMobile();
+  const isLoading = metricsLoading;
 
   if (isLoading) {
     return (
