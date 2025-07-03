@@ -351,10 +351,12 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
             setShowAddModal(false);
             setEditingItem(null);
             form.reset();
+          } else if (!editingItem) {
+            setShowAddModal(true);
           }
         }}>
           <DialogTrigger asChild>
-            <Button>
+            <Button onClick={() => setShowAddModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add Wishlist Item
             </Button>
