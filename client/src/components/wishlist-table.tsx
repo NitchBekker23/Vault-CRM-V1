@@ -174,13 +174,29 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
   // Create wishlist item mutation
   const createWishlistMutation = useMutation({
     mutationFn: async (data: WishlistFormData) => {
+      console.log("Sending wishlist data:", data);
       const response = await fetch("/api/wishlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error("Failed to create wishlist item");
-      return response.json();
+      
+      console.log("Response status:", response.status);
+      const responseText = await response.text();
+      console.log("Response text:", responseText);
+      
+      if (!response.ok) {
+        let errorMessage = "Failed to create wishlist item";
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          errorMessage = responseText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+      
+      return JSON.parse(responseText);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["wishlist"] });
