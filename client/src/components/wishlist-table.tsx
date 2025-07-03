@@ -188,8 +188,9 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
       form.reset();
       toast({ title: "Success", description: "Wishlist item created successfully" });
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to create wishlist item", variant: "destructive" });
+    onError: (error) => {
+      console.error("Wishlist creation error:", error);
+      toast({ title: "Error", description: `Failed to create wishlist item: ${error.message}`, variant: "destructive" });
     },
   });
 

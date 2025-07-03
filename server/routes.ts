@@ -3142,14 +3142,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const wishlistData = {
         ...req.body,
-        createdBy: userId,
+        userId: userId,
       };
 
+      console.log("Creating wishlist item with data:", wishlistData);
       const wishlistItem = await storage.createWishlistItem(wishlistData);
       res.status(201).json(wishlistItem);
     } catch (error) {
       console.error("Error creating wishlist item:", error);
-      res.status(500).json({ message: "Failed to create wishlist item" });
+      res.status(500).json({ message: "Failed to create wishlist item", error: error.message });
     }
   });
 
