@@ -128,6 +128,17 @@ export default function Performance() {
     setSelectedMonth(currentDate.getMonth() + 1);
   };
 
+  // Filter display data based on selections
+  const filteredStorePerformance = storePerformance?.filter(store => {
+    if (selectedStore === 'all') return true;
+    return store.store_id.toString() === selectedStore;
+  });
+
+  const filteredSalesPersonPerformance = salesPersonPerformance?.filter(person => {
+    if (selectedSalesPerson === 'all') return true;
+    return person.sales_person_id.toString() === selectedSalesPerson;
+  });
+
   // Check if any filters are active
   const hasActiveFilters = selectedStore !== 'all' || selectedSalesPerson !== 'all' || 
     selectedYear !== currentDate.getFullYear() || selectedMonth !== (currentDate.getMonth() + 1);
@@ -295,7 +306,7 @@ export default function Performance() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {storePerformance?.map((store) => (
+                  {filteredStorePerformance?.map((store) => (
                     <div key={store.store_id} className="border rounded-lg p-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
@@ -346,7 +357,7 @@ export default function Performance() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {salesPersonPerformance?.map((person) => (
+                  {filteredSalesPersonPerformance?.map((person) => (
                     <div key={person.sales_person_id} className="border rounded-lg p-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
