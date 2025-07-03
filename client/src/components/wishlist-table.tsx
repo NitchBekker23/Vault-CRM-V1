@@ -16,42 +16,15 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useToast } from "@/hooks/use-toast";
 import { Plus, MoreHorizontal, Eye, Edit, Trash2, Package, User, Clock, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { format, isAfter, isBefore, isWithinInterval } from "date-fns";
+import { insertWishlistItemSchema, type InsertWishlistItem, type WishlistItem as SharedWishlistItem } from "@shared/schema";
 
-const wishlistFormSchema = z.object({
-  clientName: z.string().min(1, "Client name is required"),
-  clientEmail: z.string().email().optional().or(z.literal("")),
-  clientPhone: z.string().optional(),
-  clientCompany: z.string().optional(),
-  itemName: z.string().min(1, "Item name is required"),
-  brand: z.string().min(1, "Brand is required"),
-  description: z.string().optional(),
-  category: z.string().min(1, "Category is required"),
-  maxPrice: z.string().optional(),
-  skuReferences: z.string().optional(),
-  notes: z.string().optional(),
-});
+// Use the proper shared schema instead of local one
+const wishlistFormSchema = insertWishlistItemSchema.omit({ userId: true });
 
 type WishlistFormData = z.infer<typeof wishlistFormSchema>;
 
-interface WishlistItem {
-  id: number;
-  userId: string;
-  leadId?: number;
-  clientName: string;
-  clientEmail?: string;
-  clientPhone?: string;
-  clientCompany?: string;
-  itemName: string;
-  brand: string;
-  description?: string;
-  category: string;
-  maxPrice?: string;
-  skuReferences?: string;
-  notes?: string;
-  status: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+// Use the shared WishlistItem type
+type WishlistItem = SharedWishlistItem;
 
 interface WishlistTableProps {
   searchTerm: string;
@@ -264,6 +237,11 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
   });
 
   const onSubmit = (data: WishlistFormData) => {
+    console.log("🔍 KIMI-DEV: Form submission started");
+    console.log("📝 Raw form data:", data);
+    console.log("📋 Form validation errors:", form.formState.errors);
+    console.log("🔄 Form is valid:", form.formState.isValid);
+    
     // Clean up data - convert empty strings to undefined for optional fields
     const cleanedData = {
       ...data,
@@ -275,10 +253,15 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
       skuReferences: data.skuReferences || undefined,
       notes: data.notes || undefined,
     };
+    
+    console.log("🧹 Cleaned form data:", cleanedData);
+    console.log("✏️ Editing mode:", !!editingItem);
 
     if (editingItem) {
+      console.log("📝 Triggering update mutation for item:", editingItem.id);
       updateWishlistMutation.mutate({ id: editingItem.id, data: cleanedData });
     } else {
+      console.log("🆕 Triggering create mutation");
       createWishlistMutation.mutate(cleanedData);
     }
   };

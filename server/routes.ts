@@ -3135,8 +3135,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/wishlist", checkAuth, async (req: any, res) => {
     try {
+      console.log("🔍 KIMI-DEV: POST /api/wishlist endpoint hit");
+      console.log("📦 Request body:", req.body);
+      console.log("🔐 Authentication status:", !!req.currentUserId);
+      console.log("👤 User ID:", req.currentUserId);
+      
       const userId = req.currentUserId;
       if (!userId) {
+        console.log("❌ KIMI-DEV: Authentication failed - no userId");
         return res.status(401).json({ message: "Authentication required" });
       }
 
@@ -3145,12 +3151,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: userId,
       };
 
-      console.log("Creating wishlist item with data:", wishlistData);
+      console.log("🔄 KIMI-DEV: Final wishlist data for storage:", wishlistData);
+      console.log("🗄️ KIMI-DEV: Calling storage.createWishlistItem");
+      
       const wishlistItem = await storage.createWishlistItem(wishlistData);
+      
+      console.log("✅ KIMI-DEV: Wishlist item created successfully:", wishlistItem);
       res.status(201).json(wishlistItem);
     } catch (error) {
-      console.error("Error creating wishlist item:", error);
-      res.status(500).json({ message: "Failed to create wishlist item", error: error.message });
+      console.error("❌ KIMI-DEV: Error creating wishlist item:", error);
+      console.error("❌ KIMI-DEV: Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+      res.status(500).json({ message: "Failed to create wishlist item", error: error instanceof Error ? error.message : String(error) });
     }
   });
 
