@@ -286,7 +286,7 @@ export default function Performance() {
         <TabsContent value="stores" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Store Performance - October 2025</CardTitle>
+              <CardTitle>Store Performance - {monthOptions.find(m => m.value === selectedMonth)?.label} {selectedYear}</CardTitle>
             </CardHeader>
             <CardContent>
               {storeLoading ? (
@@ -337,7 +337,7 @@ export default function Performance() {
         <TabsContent value="sales-persons" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Sales Team Performance - October 2025</CardTitle>
+              <CardTitle>Sales Team Performance - {monthOptions.find(m => m.value === selectedMonth)?.label} {selectedYear}</CardTitle>
             </CardHeader>
             <CardContent>
               {salesPersonLoading ? (

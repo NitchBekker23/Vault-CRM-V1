@@ -115,6 +115,12 @@ REPLIT_DOMAINS=[development]
 ```
 
 ## Recent Changes
+- July 2, 2025: **PERFORMANCE ANALYTICS FILTERING SYSTEM FIXED**: Resolved hardcoded date display and filter logic to properly respond to user selections
+  - **DYNAMIC DATE HEADERS**: Fixed hardcoded "October 2025" headers in both Store and Sales Team Performance to display selected month/year dynamically
+  - **BACKEND FILTER LOGIC CORRECTED**: Updated storage layer to use current month/year instead of hardcoded June 2025 defaults
+  - **PROPER PARAMETER HANDLING**: Fixed month and year filtering to correctly process user selections from dropdown filters
+  - **REAL-TIME FILTER RESPONSE**: Performance analytics now properly updates data when month, year, store, or sales person filters are changed
+  - **CONSISTENT DATE DISPLAY**: Headers now show "July 2025" when July is selected, matching user filter selections
 - July 2, 2025: **CSV TEMPLATE STRUCTURE COMPLETELY UPDATED TO MATCH EXCEL FORMAT**: Fixed CSV template generation to include clientId and customerCode fields with comprehensive client information handling
   - **CORRECT TEMPLATE IDENTIFIED**: Found and updated the main CSV template download function in Sales page (outside import modal)
   - **ENHANCED FIELD STRUCTURE**: Updated template with clientId, customerCode, customerName, customerEmail, customerPhone fields matching user's Excel format

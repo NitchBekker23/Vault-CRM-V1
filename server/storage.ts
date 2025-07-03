@@ -1930,8 +1930,8 @@ export class DatabaseStorage implements IStorage {
     try {
       // Calculate performance directly from sales transactions for current sales data
       const currentDate = new Date();
-      const targetMonth = month || 6; // June 2025 for current sales data
-      const targetYear = year || 2025;
+      const targetMonth = month || (currentDate.getMonth() + 1); // Current month
+      const targetYear = year || currentDate.getFullYear();
 
       console.log(`Fetching store performance for ${targetMonth}/${targetYear}`);
 
@@ -1984,8 +1984,9 @@ export class DatabaseStorage implements IStorage {
   async getSalesPersonPerformance(salesPersonId?: number, month?: number, year?: number): Promise<any[]> {
     try {
       // Calculate performance directly from sales transactions for current sales data
-      const targetMonth = month || 6; // June 2025 for current sales data
-      const targetYear = year || 2025;
+      const currentDate = new Date();
+      const targetMonth = month || (currentDate.getMonth() + 1); // Current month
+      const targetYear = year || currentDate.getFullYear();
 
       console.log(`Fetching sales person performance for ${targetMonth}/${targetYear}`);
 
