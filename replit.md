@@ -124,6 +124,9 @@ REPLIT_DOMAINS=[development]
   - **REAL FILE SERVING**: Document viewing/downloading now serves actual files from disk instead of placeholders
   - **FALLBACK HANDLING**: Graceful fallback to placeholder content for missing files with proper error messages
   - **CLEANUP ON ERRORS**: Automatic file cleanup when database updates fail to prevent orphaned files
+  - **DUPLICATE PREVENTION**: Fixed file upload system to prevent duplicate uploads by replacing files instead of appending
+  - **FILE PREVIEW**: Added visual file selection preview showing selected filenames before upload
+  - **STATE MANAGEMENT**: Proper clearing of pending files on form reset and cancellation
 - July 4, 2025: **ENHANCED DOCUMENT MANAGEMENT WITH OPTIMIZED VIEWING**: Improved document viewing experience with proper browser compatibility and file handling
   - **OPTIMIZED FILE VIEWING**: Fixed document access errors by correcting storage method calls from getRepair to getRepairs
   - **BROWSER-COMPATIBLE VIEWING**: Enhanced PDF viewing with proper inline display and browser PDF viewer integration

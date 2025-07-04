@@ -195,6 +195,9 @@ export default function Repairs() {
       }});
       setShowNewRepairModal(false);
       form.reset();
+      // Clear pending files after successful creation
+      setPendingDocuments([]);
+      setPendingImages([]);
       toast({
         title: "Success",
         description: "Repair created successfully",
@@ -1033,9 +1036,9 @@ export default function Repairs() {
                             onChange={(e) => {
                               const files = Array.from(e.target.files || []);
                               field.onChange(files.map(f => f.name));
-                              // Store the actual files for later upload
+                              // Store the actual files for later upload (replace, don't append)
                               if (files.length > 0) {
-                                setPendingDocuments(prev => [...(prev || []), ...files]);
+                                setPendingDocuments(files);
                               }
                             }}
                           />
@@ -1043,6 +1046,11 @@ export default function Repairs() {
                         <p className="text-xs text-muted-foreground">
                           Upload repair documents (PDF, DOC, DOCX, TXT)
                         </p>
+                        {pendingDocuments.length > 0 && (
+                          <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                            <strong>Selected:</strong> {pendingDocuments.map(f => f.name).join(', ')}
+                          </div>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1062,9 +1070,9 @@ export default function Repairs() {
                             onChange={(e) => {
                               const files = Array.from(e.target.files || []);
                               field.onChange(files.map(f => f.name));
-                              // Store the actual files for later upload
+                              // Store the actual files for later upload (replace, don't append)
                               if (files.length > 0) {
-                                setPendingImages(prev => [...(prev || []), ...files]);
+                                setPendingImages(files);
                               }
                             }}
                           />
@@ -1072,6 +1080,11 @@ export default function Repairs() {
                         <p className="text-xs text-muted-foreground">
                           Upload repair images (JPG, PNG, etc.)
                         </p>
+                        {pendingImages.length > 0 && (
+                          <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                            <strong>Selected:</strong> {pendingImages.map(f => f.name).join(', ')}
+                          </div>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1101,7 +1114,13 @@ export default function Repairs() {
                 <Button 
                   type="button" 
                   variant="outline" 
-                  onClick={() => setShowNewRepairModal(false)}
+                  onClick={() => {
+                    setShowNewRepairModal(false);
+                    // Clear pending files when cancelling
+                    setPendingDocuments([]);
+                    setPendingImages([]);
+                    form.reset();
+                  }}
                 >
                   Cancel
                 </Button>
