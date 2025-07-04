@@ -1,8 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import compression from "compression";
 import { registerRoutes } from "./routes";
-import { birthdayScheduler } from "./birthdayScheduler";
-import type { User, Session } from "@shared/schema";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
@@ -62,7 +60,7 @@ app.use((req, res, next) => {
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
-
+      
       console.error('Express error:', err);
       res.status(status).json({ message });
     });
@@ -75,9 +73,6 @@ app.use((req, res, next) => {
     } else {
       serveStatic(app);
     }
-
-    // Start birthday notification scheduler
-    birthdayScheduler.start();
 
     // ALWAYS serve the app on port 5000
     // this serves both the API and the client.
@@ -94,7 +89,6 @@ app.use((req, res, next) => {
     // Handle graceful shutdown
     process.on('SIGTERM', () => {
       log('SIGTERM received, shutting down gracefully');
-      birthdayScheduler.stop();
       server.close(() => {
         log('Process terminated');
       });
