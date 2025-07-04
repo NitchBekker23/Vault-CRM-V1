@@ -115,6 +115,15 @@ REPLIT_DOMAINS=[development]
 ```
 
 ## Recent Changes
+- July 4, 2025: **ENHANCED WISHLIST CLIENT INTEGRATION COMPLETE**: Implemented comprehensive customer code functionality for improved client-wishlist linking
+  - **CUSTOMER CODE FORMS**: Added customerCode field to both Add and Edit wishlist forms with proper validation
+  - **ENHANCED TABLE DISPLAY**: Updated wishlist table to show customer codes in client column with "Code: XXX" format
+  - **IMPROVED VIEW DIALOG**: Added customer code to view item details dialog in 3-column layout
+  - **PRIORITY MATCHING SYSTEM**: Enhanced getClientWishlistItems to prioritize customer code matching over email matching
+  - **COMPREHENSIVE SEARCH**: Updated search functionality to include customer code searches across all wishlist items
+  - **DATABASE INTEGRATION**: Confirmed customer_code column exists in wishlist_items table for proper data storage
+  - **CLIENT PROFILE LINKING**: Fixed wishlist items not appearing in client profiles by implementing customer code as primary matching criteria
+  - **ENHANCED DEBUGGING**: Added comprehensive logging to track client-wishlist linking for troubleshooting
 - July 4, 2025: **COMPLETE FILE STORAGE SYSTEM IMPLEMENTED**: Established comprehensive file storage with disk-based uploads and proper file serving for repair documents
   - **DISK STORAGE CONFIGURED**: Implemented multer disk storage for repair documents with unique filename generation and 20MB file size limits
   - **UPLOAD ENDPOINT CREATED**: Added POST /api/repairs/:id/upload endpoint supporting multiple file uploads with proper authentication

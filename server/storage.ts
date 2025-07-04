@@ -530,22 +530,43 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getClientWishlistItems(clientId: number): Promise<WishlistItem[]> {
+    console.log(`🔍 KIMI-DEV: Getting wishlist items for client ${clientId}`);
+    
     // First get the client information
     const client = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
     if (!client.length) {
+      console.log(`❌ KIMI-DEV: Client ${clientId} not found`);
       return [];
     }
 
     const clientData = client[0];
+    console.log(`👤 KIMI-DEV: Client data:`, {
+      id: clientData.id,
+      customerNumber: clientData.customerNumber,
+      email: clientData.email,
+      phone: clientData.phone,
+      fullName: clientData.fullName
+    });
+    
+    // Primary match: customer code (highest priority) - most reliable identifier
+    if (clientData.customerNumber) {
+      console.log(`🎯 KIMI-DEV: Searching by customer code: ${clientData.customerNumber}`);
+      const codeMatches = await db
+        .select()
+        .from(wishlistItems)
+        .where(eq(wishlistItems.customerCode, clientData.customerNumber))
+        .orderBy(desc(wishlistItems.createdAt));
+      
+      console.log(`🔍 KIMI-DEV: Found ${codeMatches.length} items by customer code`);
+      if (codeMatches.length > 0) {
+        console.log(`✅ KIMI-DEV: Returning ${codeMatches.length} wishlist items`);
+        return codeMatches;
+      }
+    }
     
     // Search for wishlist items that match this client's information
-    // Priority matching: customerCode (highest) > email > phone > name
+    // Priority matching: email > phone > name
     const whereConditions = [];
-    
-    // Primary match: customer code (highest priority)
-    if (clientData.customerNumber) {
-      whereConditions.push(eq(wishlistItems.customerCode, clientData.customerNumber));
-    }
     
     // Secondary match: email
     if (clientData.email) {
@@ -562,7 +583,9 @@ export class DatabaseStorage implements IStorage {
       whereConditions.push(eq(wishlistItems.clientName, clientData.fullName));
     }
 
+    console.log(`🔍 KIMI-DEV: Fallback search with ${whereConditions.length} conditions`);
     if (whereConditions.length === 0) {
+      console.log(`❌ KIMI-DEV: No search conditions available`);
       return [];
     }
 
@@ -572,6 +595,7 @@ export class DatabaseStorage implements IStorage {
       .where(or(...whereConditions))
       .orderBy(desc(wishlistItems.createdAt));
 
+    console.log(`✅ KIMI-DEV: Found ${items.length} items via fallback search`);
     return items;
   }
 
