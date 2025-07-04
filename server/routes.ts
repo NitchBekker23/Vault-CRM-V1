@@ -3151,12 +3151,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Authentication required" });
       }
 
-      const validatedData = insertRepairSchema.parse({
+      console.log("=== REPAIR CREATION DEBUG ===");
+      console.log("UserId:", userId);
+      console.log("Request body:", JSON.stringify(req.body, null, 2));
+
+      const dataToValidate = {
         ...req.body,
         createdBy: userId,
-      });
+      };
+      console.log("Data to validate:", JSON.stringify(dataToValidate, null, 2));
+
+      const validatedData = insertRepairSchema.parse(dataToValidate);
+      console.log("Validated data:", JSON.stringify(validatedData, null, 2));
 
       const repair = await storage.createRepair(validatedData);
+      console.log("Created repair:", JSON.stringify(repair, null, 2));
 
       // Send notification to admins about new repair
       await notificationService.notifyAllAdmins(
