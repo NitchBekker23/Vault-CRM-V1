@@ -2997,9 +2997,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             userId: userId,
             leadId: leadId,
             clientName: `${currentLead.firstName} ${currentLead.lastName}`,
-            clientEmail: currentLead.email,
-            clientPhone: currentLead.phone,
-            clientCompany: currentLead.company,
+            clientEmail: currentLead.email || undefined,
+            clientPhone: currentLead.phone || undefined,
+            clientCompany: currentLead.company || undefined,
             itemName: currentLead.notes || "General inquiry",
             brand: currentLead.brand || "General", // Use lead brand preference
             description: `Auto-created from lead: ${currentLead.firstName} ${currentLead.lastName}. ${currentLead.notes || ""}`,
