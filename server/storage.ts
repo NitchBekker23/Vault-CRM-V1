@@ -67,7 +67,7 @@ import {
   type InsertRepairActivityLog,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, and, ilike, or, gte, lt, inArray, not } from "drizzle-orm";
+import { eq, desc, sql, and, ilike, or, gte, lte, lt, inArray, not } from "drizzle-orm";
 import csv from "csv-parser";
 import { Readable } from "stream";
 
@@ -1005,13 +1005,47 @@ export class DatabaseStorage implements IStorage {
     sold: number;
     wishlistRequests: number;
     salesThisMonth: number;
+    inventoryGrowth: number;
+    wishlistGrowth: number;
+    salesGrowth: number;
   }> {
     try {
-      const currentMonth = new Date();
-      currentMonth.setDate(1);
-      currentMonth.setHours(0, 0, 0, 0);
+      const now = new Date();
+      
+      // Current month boundaries
+      const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      
+      // Last month boundaries
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+      
+      // Current week boundaries (starting Monday)
+      const currentWeek = new Date(now);
+      const dayOfWeek = currentWeek.getDay();
+      const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      currentWeek.setDate(currentWeek.getDate() - daysToMonday);
+      currentWeek.setHours(0, 0, 0, 0);
+      
+      // Last week boundaries
+      const lastWeek = new Date(currentWeek);
+      lastWeek.setDate(lastWeek.getDate() - 7);
+      const lastWeekEnd = new Date(currentWeek);
+      lastWeekEnd.setTime(lastWeekEnd.getTime() - 1);
 
-      const [totalInventoryResult, inStockResult, reservedResult, soldResult, wishlistResult, salesResult] = await Promise.all([
+      const [
+        totalInventoryResult, 
+        inStockResult, 
+        reservedResult, 
+        soldResult, 
+        wishlistResult, 
+        salesResult,
+        // Historical data for comparisons
+        lastMonthInventoryResult,
+        lastMonthSalesResult,
+        lastWeekWishlistResult,
+        thisWeekWishlistResult
+      ] = await Promise.all([
+        // Current metrics
         db.select({ count: sql<number>`count(*)` }).from(inventoryItems),
         db
           .select({ count: sql<number>`count(*)` })
@@ -1036,15 +1070,74 @@ export class DatabaseStorage implements IStorage {
             eq(salesTransactions.transactionType, "sale"),
             gte(salesTransactions.saleDate, currentMonth)
           )),
+        
+        // Historical data for growth calculations
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(inventoryItems)
+          .where(lte(inventoryItems.dateReceived, lastMonthEnd)),
+        db
+          .select({ total: sql<number>`COALESCE(sum(CAST(${salesTransactions.sellingPrice} AS DECIMAL)), 0)` })
+          .from(salesTransactions)
+          .where(and(
+            eq(salesTransactions.transactionType, "sale"),
+            gte(salesTransactions.saleDate, lastMonth),
+            lte(salesTransactions.saleDate, lastMonthEnd)
+          )),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(wishlistItems)
+          .where(and(
+            eq(wishlistItems.status, "active"),
+            gte(wishlistItems.createdAt, lastWeek),
+            lte(wishlistItems.createdAt, lastWeekEnd)
+          )),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(wishlistItems)
+          .where(and(
+            eq(wishlistItems.status, "active"),
+            gte(wishlistItems.createdAt, currentWeek)
+          ))
       ]);
 
+      // Current values
+      const totalInventory = Number(totalInventoryResult[0]?.count || 0);
+      const inStock = Number(inStockResult[0]?.count || 0);
+      const reserved = Number(reservedResult[0]?.count || 0);
+      const sold = Number(soldResult[0]?.count || 0);
+      const wishlistRequests = Number(wishlistResult[0]?.count || 0);
+      const salesThisMonth = Number(salesResult[0]?.total || 0);
+
+      // Historical values for comparison
+      const lastMonthInventory = Number(lastMonthInventoryResult[0]?.count || 0);
+      const lastMonthSales = Number(lastMonthSalesResult[0]?.total || 0);
+      const lastWeekWishlist = Number(lastWeekWishlistResult[0]?.count || 0);
+      const thisWeekWishlist = Number(thisWeekWishlistResult[0]?.count || 0);
+
+      // Calculate growth percentages
+      const inventoryGrowth = lastMonthInventory > 0 
+        ? Math.round(((totalInventory - lastMonthInventory) / lastMonthInventory) * 100)
+        : totalInventory > 0 ? 100 : 0;
+      
+      const salesGrowth = lastMonthSales > 0 
+        ? Math.round(((salesThisMonth - lastMonthSales) / lastMonthSales) * 100)
+        : salesThisMonth > 0 ? 100 : 0;
+
+      const wishlistGrowth = lastWeekWishlist > 0 
+        ? Math.round(((thisWeekWishlist - lastWeekWishlist) / lastWeekWishlist) * 100)
+        : thisWeekWishlist > 0 ? 100 : 0;
+
       return {
-        totalInventory: Number(totalInventoryResult[0]?.count || 0),
-        inStock: Number(inStockResult[0]?.count || 0),
-        reserved: Number(reservedResult[0]?.count || 0),
-        sold: Number(soldResult[0]?.count || 0),
-        wishlistRequests: Number(wishlistResult[0]?.count || 0),
-        salesThisMonth: Number(salesResult[0]?.total || 0),
+        totalInventory,
+        inStock,
+        reserved,
+        sold,
+        wishlistRequests,
+        salesThisMonth,
+        inventoryGrowth,
+        wishlistGrowth,
+        salesGrowth,
       };
     } catch (error) {
       console.error("Error fetching dashboard metrics:", error);
@@ -1056,6 +1149,9 @@ export class DatabaseStorage implements IStorage {
         sold: 0,
         wishlistRequests: 0,
         salesThisMonth: 0,
+        inventoryGrowth: 0,
+        wishlistGrowth: 0,
+        salesGrowth: 0,
       };
     }
   }

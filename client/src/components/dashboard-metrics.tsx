@@ -9,6 +9,9 @@ interface Metrics {
   sold: number;
   wishlistRequests: number;
   salesThisMonth: number;
+  inventoryGrowth: number;
+  wishlistGrowth: number;
+  salesGrowth: number;
 }
 
 interface DashboardMetricsProps {
@@ -52,9 +55,13 @@ export default function DashboardMetrics({ metrics, metricsLoading }: DashboardM
             </div>
           </div>
           <div className={`flex items-center text-sm ${isMobile ? 'mt-3 justify-center' : 'mt-4'}`}>
-            <span className="text-green-600 flex items-center">
-              <i className="fas fa-arrow-up mr-1"></i>
-              12%
+            <span className={`flex items-center ${
+              (metrics?.inventoryGrowth || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+            }`}>
+              <i className={`fas ${
+                (metrics?.inventoryGrowth || 0) >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'
+              } mr-1`}></i>
+              {Math.abs(metrics?.inventoryGrowth || 0)}%
             </span>
             <span className="text-slate-500 ml-2">vs last month</span>
           </div>
@@ -119,11 +126,15 @@ export default function DashboardMetrics({ metrics, metricsLoading }: DashboardM
             </div>
           </div>
           <div className={`flex items-center text-sm ${isMobile ? 'mt-3 justify-center' : 'mt-4'}`}>
-            <span className="text-green-600 flex items-center">
-              <i className="fas fa-arrow-up mr-1"></i>
-              8%
+            <span className={`flex items-center ${
+              (metrics?.wishlistGrowth || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+            }`}>
+              <i className={`fas ${
+                (metrics?.wishlistGrowth || 0) >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'
+              } mr-1`}></i>
+              {Math.abs(metrics?.wishlistGrowth || 0)}%
             </span>
-            <span className="text-slate-500 ml-2">new this week</span>
+            <span className="text-slate-500 ml-2">vs last week</span>
           </div>
         </CardContent>
       </Card>
@@ -142,9 +153,13 @@ export default function DashboardMetrics({ metrics, metricsLoading }: DashboardM
             </div>
           </div>
           <div className={`flex items-center text-sm ${isMobile ? 'mt-3 justify-center' : 'mt-4'}`}>
-            <span className="text-green-600 flex items-center">
-              <i className="fas fa-arrow-up mr-1"></i>
-              23%
+            <span className={`flex items-center ${
+              (metrics?.salesGrowth || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+            }`}>
+              <i className={`fas ${
+                (metrics?.salesGrowth || 0) >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'
+              } mr-1`}></i>
+              {Math.abs(metrics?.salesGrowth || 0)}%
             </span>
             <span className="text-slate-500 ml-2">vs last month</span>
           </div>
