@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Filter, X, MoreHorizontal, Edit, Trash2, Clock, CheckCircle, XCircle, AlertTriangle, Calendar, User, Phone, Mail, MapPin, Wrench, Info, FileText, Upload, Download, Eye } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -115,6 +115,47 @@ export default function Repairs() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Check for repair highlighting on page load
+  useEffect(() => {
+    const highlightRepairId = sessionStorage.getItem('highlightRepairId');
+    if (highlightRepairId && repairsData?.repairs) {
+      console.log('Checking for repair to highlight:', highlightRepairId);
+      
+      const attemptHighlight = (attempts = 0) => {
+        const maxAttempts = 15;
+        const repairElement = document.getElementById(`repair-${highlightRepairId}`);
+        
+        console.log(`Highlight attempt ${attempts + 1}: Looking for repair-${highlightRepairId}`, repairElement ? 'Found' : 'Not found');
+        
+        if (repairElement) {
+          // Found the element - highlight it
+          repairElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          repairElement.style.border = '3px solid #3b82f6';
+          repairElement.style.borderRadius = '8px';
+          repairElement.style.transition = 'border 0.3s ease';
+          
+          console.log('Successfully highlighted repair from page load');
+          
+          // Remove highlighting after 5 seconds
+          setTimeout(() => {
+            repairElement.style.border = '';
+            repairElement.style.borderRadius = '';
+            sessionStorage.removeItem('highlightRepairId');
+          }, 5000);
+        } else if (attempts < maxAttempts) {
+          // Not found yet - try again
+          setTimeout(() => attemptHighlight(attempts + 1), 400);
+        } else {
+          console.log('Could not find repair element after maximum attempts on page load');
+          sessionStorage.removeItem('highlightRepairId');
+        }
+      };
+      
+      // Start highlighting attempts after repair data loads
+      setTimeout(() => attemptHighlight(), 500);
+    }
+  }, [repairsData?.repairs]); // Trigger when repairs data changes
 
   const form = useForm<RepairFormData>({
     resolver: zodResolver(repairFormSchema),

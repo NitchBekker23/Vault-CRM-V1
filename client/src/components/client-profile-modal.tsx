@@ -61,19 +61,46 @@ export default function ClientProfileModal({ clientId, isOpen, onClose }: Client
 
   // Navigation function to go to specific repair
   const navigateToRepair = (repairId: number) => {
+    console.log(`Navigating to repair ${repairId}`);
     onClose(); // Close the modal first
     setLocation("/repairs"); // Navigate to repairs page
-    // Add a small delay to ensure page loads, then try to highlight the repair
-    setTimeout(() => {
+    
+    // Store the repair ID for highlighting after navigation
+    sessionStorage.setItem('highlightRepairId', repairId.toString());
+    
+    // Try to find and highlight the repair with multiple attempts
+    const attemptHighlight = (attempts = 0) => {
+      const maxAttempts = 10;
       const repairElement = document.getElementById(`repair-${repairId}`);
+      
+      console.log(`Attempt ${attempts + 1}: Looking for repair-${repairId}`, repairElement ? 'Found' : 'Not found');
+      
       if (repairElement) {
-        repairElement.scrollIntoView({ behavior: 'smooth' });
-        repairElement.style.border = '2px solid #3b82f6';
+        // Found the element - highlight it
+        repairElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        repairElement.style.border = '3px solid #3b82f6';
+        repairElement.style.borderRadius = '8px';
+        repairElement.style.transition = 'border 0.3s ease';
+        
+        console.log('Successfully highlighted repair');
+        
+        // Remove highlighting after 4 seconds
         setTimeout(() => {
           repairElement.style.border = '';
-        }, 3000);
+          repairElement.style.borderRadius = '';
+          sessionStorage.removeItem('highlightRepairId');
+        }, 4000);
+      } else if (attempts < maxAttempts) {
+        // Not found yet - try again
+        setTimeout(() => attemptHighlight(attempts + 1), 300);
+      } else {
+        console.log('Could not find repair element after maximum attempts');
+        sessionStorage.removeItem('highlightRepairId');
       }
-    }, 500);
+    };
+    
+    // Start highlighting attempts after a short delay
+    setTimeout(() => attemptHighlight(), 200);
   };
 
   // Fetch client details
