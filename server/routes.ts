@@ -3155,8 +3155,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("UserId:", userId);
       console.log("Request body:", JSON.stringify(req.body, null, 2));
 
+      // Clean empty strings for numeric fields before validation
+      const cleanedBody = { ...req.body };
+      
+      // Convert empty strings to null for price fields
+      if (cleanedBody.quotedPrice === '') cleanedBody.quotedPrice = null;
+      if (cleanedBody.finalPrice === '') cleanedBody.finalPrice = null;
+      
+      // Convert empty strings to null for date fields
+      if (cleanedBody.receivedDate === '') cleanedBody.receivedDate = null;
+      if (cleanedBody.estimatedCompletionDate === '') cleanedBody.estimatedCompletionDate = null;
+      if (cleanedBody.quoteDate === '') cleanedBody.quoteDate = null;
+      if (cleanedBody.acceptedDate === '') cleanedBody.acceptedDate = null;
+      if (cleanedBody.completedDate === '') cleanedBody.completedDate = null;
+
       const dataToValidate = {
-        ...req.body,
+        ...cleanedBody,
         createdBy: userId,
       };
       console.log("Data to validate:", JSON.stringify(dataToValidate, null, 2));

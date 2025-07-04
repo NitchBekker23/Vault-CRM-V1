@@ -651,7 +651,7 @@ export default function Repairs() {
 
       {/* New/Edit Repair Modal */}
       <Dialog open={showNewRepairModal} onOpenChange={setShowNewRepairModal}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingRepair ? "Edit Repair" : "New Repair Request"}</DialogTitle>
             <DialogDescription>
@@ -663,10 +663,13 @@ export default function Repairs() {
             <form onSubmit={form.handleSubmit(handleSubmit, (errors) => {
               console.log("=== FORM VALIDATION ERRORS ===");
               console.log("Validation errors:", errors);
-            })} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
+            })} className="space-y-3">
+              {/* Customer Information Section */}
+              <div className="border rounded-lg p-3 space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground">Customer Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
                   name="customerName"
                   render={({ field }) => (
                     <FormItem>
@@ -731,23 +734,27 @@ export default function Repairs() {
                     </FormItem>
                   )}
                 />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="customerAddress"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Customer Address</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Customer address" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
-              <FormField
-                control={form.control}
-                name="customerAddress"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Customer Address</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Customer address" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Item Information Section */}
+              <div className="border rounded-lg p-3 space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground">Item Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <FormField
                   control={form.control}
                   name="itemBrand"
@@ -789,6 +796,7 @@ export default function Repairs() {
                     </FormItem>
                   )}
                 />
+                </div>
               </div>
 
               <FormField
@@ -809,126 +817,138 @@ export default function Repairs() {
                 )}
               />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="quotedPrice"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Quoted Price (R)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="0.00" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
 
-                <FormField
-                  control={form.control}
-                  name="finalPrice"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Final Price (R)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="0.00" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
 
-              {/* Date Tracking Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="receivedDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Date Received</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="date" 
-                          {...field} 
-                          value={field.value || ""} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              {/* Pricing Information Section */}
+              <div className="border rounded-lg p-3 space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground">Pricing & Timeline</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="quotedPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Quoted Price (R)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="0.00" 
+                            {...field} 
+                            value={field.value || ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="estimatedCompletionDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Estimated Completion Date</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="date" 
-                          {...field} 
-                          value={field.value || ""} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                  <FormField
+                    control={form.control}
+                    name="finalPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Final Price (R)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="0.00" 
+                            {...field} 
+                            value={field.value || ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-              {/* File Upload Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="repairDocuments"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Documents</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="file" 
-                          multiple
-                          accept=".pdf,.doc,.docx,.txt"
-                          onChange={(e) => {
-                            const files = Array.from(e.target.files || []);
-                            field.onChange(files.map(f => f.name));
-                          }}
-                        />
-                      </FormControl>
-                      <p className="text-xs text-muted-foreground">
-                        Upload repair documents (PDF, DOC, DOCX, TXT)
-                      </p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="receivedDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date Received</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="date" 
+                            {...field} 
+                            value={field.value || ""} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="repairImages"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Images</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="file" 
-                          multiple
-                          accept="image/*"
-                          onChange={(e) => {
-                            const files = Array.from(e.target.files || []);
-                            field.onChange(files.map(f => f.name));
-                          }}
-                        />
-                      </FormControl>
-                      <p className="text-xs text-muted-foreground">
-                        Upload repair images (JPG, PNG, etc.)
-                      </p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="estimatedCompletionDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Estimated Completion Date</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="date" 
+                            {...field} 
+                            value={field.value || ""} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="repairDocuments"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Documents</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="file" 
+                            multiple
+                            accept=".pdf,.doc,.docx,.txt"
+                            onChange={(e) => {
+                              const files = Array.from(e.target.files || []);
+                              field.onChange(files.map(f => f.name));
+                            }}
+                          />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">
+                          Upload repair documents (PDF, DOC, DOCX, TXT)
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="repairImages"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Images</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="file" 
+                            multiple
+                            accept="image/*"
+                            onChange={(e) => {
+                              const files = Array.from(e.target.files || []);
+                              field.onChange(files.map(f => f.name));
+                            }}
+                          />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">
+                          Upload repair images (JPG, PNG, etc.)
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
 
               <FormField
