@@ -144,6 +144,7 @@ REPLIT_DOMAINS=[development]
   - **RESTRICTED DELETE ACCESS**: Open repairs cannot be deleted - only closed repairs can be removed to maintain data integrity during active workflows
   - **COMPREHENSIVE REPAIR DISPLAY**: Repair history shows status badges, outcomes, pricing, dates, and store information with proper formatting
   - **INTEGRATED BUSINESS VIEW**: Client profiles now show complete customer relationship including purchases and repair service history
+  - **REPAIR NAVIGATION LINKS**: Added "View Repair Details" buttons in client repair history that navigate directly to specific repairs on repairs page with visual highlighting
 - July 4, 2025: **COMPLETE REPAIR MANAGEMENT SYSTEM OPERATIONAL**: Successfully implemented and debugged comprehensive repair workflow with full pipeline functionality
   - **REPAIR FUNNEL WORKING**: All status transitions functioning: New repair → Quote sent → Quote accepted → Repair received back → Outcome
   - **DATABASE TABLES CREATED**: Fixed missing repair_activity_log table with proper column structure (previous_value, new_value fields)

@@ -10,10 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { User, Phone, Mail, Calendar, Star, ShoppingBag, Edit, Save, X, Wrench, AlertCircle } from "lucide-react";
+import { User, Phone, Mail, Calendar, Star, ShoppingBag, Edit, Save, X, Wrench, AlertCircle, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Client } from "@shared/schema";
+import { useLocation } from "wouter";
 
 interface ClientProfileModalProps {
   clientId: number | null;
@@ -56,6 +57,24 @@ export default function ClientProfileModal({ clientId, isOpen, onClose }: Client
   const [editedClient, setEditedClient] = useState<Partial<Client>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
+
+  // Navigation function to go to specific repair
+  const navigateToRepair = (repairId: number) => {
+    onClose(); // Close the modal first
+    setLocation("/repairs"); // Navigate to repairs page
+    // Add a small delay to ensure page loads, then try to highlight the repair
+    setTimeout(() => {
+      const repairElement = document.getElementById(`repair-${repairId}`);
+      if (repairElement) {
+        repairElement.scrollIntoView({ behavior: 'smooth' });
+        repairElement.style.border = '2px solid #3b82f6';
+        setTimeout(() => {
+          repairElement.style.border = '';
+        }, 3000);
+      }
+    }, 500);
+  };
 
   // Fetch client details
   const { data: client, isLoading: clientLoading } = useQuery({
@@ -650,6 +669,18 @@ export default function ClientProfileModal({ clientId, isOpen, onClose }: Client
                                 <span className="text-muted-foreground ml-2">{repair.store}</span>
                               </div>
                             )}
+                          </div>
+                          
+                          <div className="pt-3 border-t">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigateToRepair(repair.id)}
+                              className="w-full flex items-center gap-2"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              View Repair Details
+                            </Button>
                           </div>
                         </div>
                       ))}

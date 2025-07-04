@@ -564,7 +564,7 @@ export default function Repairs() {
           ) : (
             <div className="grid gap-4">
               {openRepairs.map((repair) => (
-                <Card key={repair.id} className="hover:shadow-md transition-shadow">
+                <Card key={repair.id} id={`repair-${repair.id}`} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="space-y-3 flex-1">
@@ -704,7 +704,7 @@ export default function Repairs() {
           ) : (
             <div className="grid gap-4">
               {closedRepairs.map((repair) => (
-                <Card key={repair.id} className="opacity-75">
+                <Card key={repair.id} id={`repair-${repair.id}`} className="opacity-75">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="space-y-3 flex-1">
