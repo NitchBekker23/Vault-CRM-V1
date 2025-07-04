@@ -3368,6 +3368,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get/Download repair documents
+  app.get("/api/repairs/:id/documents/:filename", checkAuth, async (req: any, res) => {
+    try {
+      const repairId = parseInt(req.params.id);
+      const filename = decodeURIComponent(req.params.filename);
+      const action = req.query.action; // 'view' or 'download'
+      
+      console.log(`Document ${action} requested: ${filename} for repair ${repairId}`);
+      
+      // Get repair to verify it exists and user has access
+      const repair = await storage.getRepair(repairId);
+      if (!repair) {
+        return res.status(404).json({ message: "Repair not found" });
+      }
+
+      // Check if file exists in repair documents or images
+      const isDocument = repair.repairDocuments?.includes(filename);
+      const isImage = repair.repairImages?.includes(filename);
+      
+      if (!isDocument && !isImage) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      // For now, we'll return a simple response since we don't have actual file storage
+      // In a real implementation, you would:
+      // 1. Read the file from storage (local filesystem, S3, etc.)
+      // 2. Set appropriate headers based on file type
+      // 3. Stream the file to the response
+      
+      if (action === 'download') {
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      } else {
+        res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+      }
+      
+      // Determine content type based on file extension
+      const ext = filename.toLowerCase().split('.').pop();
+      const contentTypes: { [key: string]: string } = {
+        'pdf': 'application/pdf',
+        'doc': 'application/msword',
+        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'txt': 'text/plain',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'gif': 'image/gif',
+        'avif': 'image/avif'
+      };
+      
+      const contentType = contentTypes[ext || ''] || 'application/octet-stream';
+      res.setHeader('Content-Type', contentType);
+      
+      // For demonstration, we'll return a message
+      // In production, replace this with actual file streaming
+      res.status(200).send(`Document access requested: ${filename} (${action}). File handling would be implemented here.`);
+      
+    } catch (error) {
+      console.error("Error accessing document:", error);
+      res.status(500).json({ message: "Failed to access document" });
+    }
+  });
+
   // Wishlist endpoints
   app.get("/api/wishlist", checkAuth, async (req: any, res) => {
     try {

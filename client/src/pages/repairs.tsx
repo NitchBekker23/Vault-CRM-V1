@@ -262,6 +262,50 @@ export default function Repairs() {
     },
   });
 
+  const handleViewDocument = async (repairId: number, filename: string, type: 'document' | 'image') => {
+    try {
+      const url = `/api/repairs/${repairId}/documents/${encodeURIComponent(filename)}?action=view`;
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error('Error viewing document:', error);
+      toast({ 
+        title: "Failed to view document", 
+        description: "Could not open the document",
+        variant: "destructive" 
+      });
+    }
+  };
+
+  const handleDownloadDocument = async (repairId: number, filename: string, type: 'document' | 'image') => {
+    try {
+      const url = `/api/repairs/${repairId}/documents/${encodeURIComponent(filename)}?action=download`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error('Failed to download document');
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      toast({ title: "Document downloaded successfully" });
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      toast({ 
+        title: "Failed to download document", 
+        description: "Could not download the document",
+        variant: "destructive" 
+      });
+    }
+  };
+
   const handleSubmit = (data: RepairFormData) => {
     console.log("=== FRONTEND SUBMIT DEBUG ===");
     console.log("Form data submitted:", data);
@@ -1226,10 +1270,18 @@ export default function Repairs() {
                               <span className="text-sm">{doc}</span>
                             </div>
                             <div className="flex gap-1">
-                              <Button variant="outline" size="sm">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleViewDocument(showDocumentModal.id, doc, 'document')}
+                              >
                                 <Eye className="w-3 h-3" />
                               </Button>
-                              <Button variant="outline" size="sm">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleDownloadDocument(showDocumentModal.id, doc, 'document')}
+                              >
                                 <Download className="w-3 h-3" />
                               </Button>
                             </div>
@@ -1252,10 +1304,18 @@ export default function Repairs() {
                               <span className="text-sm">{img}</span>
                             </div>
                             <div className="flex gap-1">
-                              <Button variant="outline" size="sm">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleViewDocument(showDocumentModal.id, img, 'image')}
+                              >
                                 <Eye className="w-3 h-3" />
                               </Button>
-                              <Button variant="outline" size="sm">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleDownloadDocument(showDocumentModal.id, img, 'image')}
+                              >
                                 <Download className="w-3 h-3" />
                               </Button>
                             </div>
