@@ -141,12 +141,20 @@ export default function Repairs() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: RepairFormData) => apiRequest(`/api/repairs`, {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
-    onSuccess: () => {
+    mutationFn: (data: RepairFormData) => {
+      console.log("Creating repair with data:", data);
+      return apiRequest(`/api/repairs`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: (result) => {
+      console.log("Repair creation successful:", result);
       queryClient.invalidateQueries({ queryKey: ["/api/repairs"] });
+      queryClient.invalidateQueries({ predicate: (query) => {
+        const key = query.queryKey[0];
+        return key ? key.toString().startsWith("/api/repairs") : false;
+      }});
       setShowNewRepairModal(false);
       form.reset();
       toast({
@@ -228,9 +236,16 @@ export default function Repairs() {
   });
 
   const handleSubmit = (data: RepairFormData) => {
+    console.log("=== FRONTEND SUBMIT DEBUG ===");
+    console.log("Form data submitted:", data);
+    console.log("Editing repair:", editingRepair);
+    console.log("Form validation errors:", form.formState.errors);
+    
     if (editingRepair) {
+      console.log("Updating existing repair");
       updateMutation.mutate({ id: editingRepair.id, data });
     } else {
+      console.log("Creating new repair");
       createMutation.mutate(data);
     }
   };
