@@ -482,8 +482,18 @@ export default function Repairs() {
     return <Badge variant="secondary">{repair.repairStatus}</Badge>;
   };
 
-  const openRepairs = repairsData?.repairs.filter(r => r.isOpen) || [];
-  const closedRepairs = repairsData?.repairs.filter(r => !r.isOpen) || [];
+  // Separate repairs into open/closed from server response
+  const allRepairs = repairsData?.repairs || [];
+  const openRepairs = allRepairs.filter(r => r.isOpen);
+  const closedRepairs = allRepairs.filter(r => !r.isOpen);
+  
+  console.log('Repairs data:', { 
+    total: allRepairs.length, 
+    open: openRepairs.length, 
+    closed: closedRepairs.length,
+    repairIds: allRepairs.map(r => r.id),
+    firstRepair: allRepairs[0]
+  });
 
   if (isLoading) {
     return (
