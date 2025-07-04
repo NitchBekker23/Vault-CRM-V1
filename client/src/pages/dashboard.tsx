@@ -9,6 +9,7 @@ import QuickActions from "@/components/quick-actions";
 import RecentActivity from "@/components/recent-activity";
 import InventoryTable from "@/components/inventory-table";
 import MobileTestOverlay from "@/components/mobile-test-overlay";
+import { BirthdayNotifications } from "@/components/birthday-notifications";
 import { useQuery } from "@tanstack/react-query";
 
 export default function Dashboard() {
@@ -64,6 +65,8 @@ export default function Dashboard() {
           : 'p-6 space-y-6'
       }`}>
         <DashboardMetrics metrics={metrics} metricsLoading={metricsLoading} />
+
+        <BirthdayNotifications />
 
         <div className={`grid ${
           screenSize === 'mobile' 

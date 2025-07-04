@@ -3835,6 +3835,39 @@ startxref
     }
   });
 
+  // Birthday notification endpoints
+  app.get("/api/birthdays/today", checkAuth, async (req: any, res) => {
+    try {
+      const birthdayClients = await storage.getTodaysBirthdays();
+      res.json(birthdayClients);
+    } catch (error) {
+      console.error("Error fetching today's birthdays:", error);
+      res.status(500).json({ message: "Failed to fetch today's birthdays" });
+    }
+  });
+
+  app.post("/api/birthdays/check-and-notify", checkAuth, async (req: any, res) => {
+    try {
+      const birthdayClients = await storage.getTodaysBirthdays();
+      
+      if (birthdayClients.length > 0) {
+        await storage.createBirthdayNotifications(birthdayClients);
+        res.json({
+          message: `Created birthday notifications for ${birthdayClients.length} clients`,
+          clients: birthdayClients.map(c => ({ id: c.id, name: c.fullName, birthday: c.birthday }))
+        });
+      } else {
+        res.json({
+          message: "No client birthdays today",
+          clients: []
+        });
+      }
+    } catch (error) {
+      console.error("Error checking birthdays and creating notifications:", error);
+      res.status(500).json({ message: "Failed to process birthday notifications" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

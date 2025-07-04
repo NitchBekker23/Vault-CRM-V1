@@ -67,7 +67,7 @@ import {
   type InsertRepairActivityLog,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, and, ilike, or, gte, lte, lt, inArray, not } from "drizzle-orm";
+import { eq, desc, sql, and, ilike, or, gte, lte, lt, inArray, not, isNotNull, like } from "drizzle-orm";
 import csv from "csv-parser";
 import { Readable } from "stream";
 
@@ -264,6 +264,10 @@ export interface IStorage {
 
   // Additional wishlist operations
   updateWishlistItemStatus(id: number, status: string): Promise<WishlistItem>;
+
+  // Birthday notification operations
+  getTodaysBirthdays(): Promise<Client[]>;
+  createBirthdayNotifications(clients: Client[]): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3012,6 +3016,90 @@ export class DatabaseStorage implements IStorage {
       return repair;
     } catch (error) {
       console.error('Error updating repair:', error);
+      throw error;
+    }
+  }
+
+  // Birthday notification methods
+  async getTodaysBirthdays(): Promise<Client[]> {
+    try {
+      const today = new Date();
+      const todayMonth = today.getMonth() + 1; // JavaScript months are 0-based
+      const todayDay = today.getDate();
+
+      const birthdayClients = await db
+        .select()
+        .from(clients)
+        .where(
+          and(
+            sql`${clients.birthday} IS NOT NULL`,
+            sql`EXTRACT(MONTH FROM ${clients.birthday}) = ${todayMonth}`,
+            sql`EXTRACT(DAY FROM ${clients.birthday}) = ${todayDay}`
+          )
+        );
+
+      return birthdayClients;
+    } catch (error) {
+      console.error('Error getting today\'s birthdays:', error);
+      throw error;
+    }
+  }
+
+  async createBirthdayNotifications(birthdayClients: Client[]): Promise<void> {
+    try {
+      // Get all users to send notifications to
+      const allUsers = await db.select().from(users);
+      
+      const notificationsToCreate: InsertNotification[] = [];
+
+      for (const client of birthdayClients) {
+        for (const user of allUsers) {
+          // Check if notification already exists for today
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const tomorrow = new Date(today);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+
+          const existingNotification = await db
+            .select()
+            .from(notifications)
+            .where(
+              and(
+                eq(notifications.userId, user.id),
+                eq(notifications.type, 'birthday'),
+                ilike(notifications.title, `🎂 ${client.fullName}%`),
+                and(
+                  sql`${notifications.createdAt} >= ${today}`,
+                  sql`${notifications.createdAt} < ${tomorrow}`
+                )
+              )
+            )
+            .limit(1);
+
+          // Only create notification if it doesn't already exist for today
+          if (existingNotification.length === 0) {
+            notificationsToCreate.push({
+              userId: user.id,
+              type: 'birthday',
+              title: `🎂 ${client.fullName}'s Birthday Today!`,
+              message: `It's ${client.fullName}'s birthday today. Consider reaching out to wish them well!`,
+              isRead: false,
+              priority: 'normal',
+              actionUrl: `/clients?highlight=${client.id}`,
+              entityType: 'client',
+              entityId: client.id.toString()
+            });
+          }
+        }
+      }
+
+      // Batch insert all notifications
+      if (notificationsToCreate.length > 0) {
+        await db.insert(notifications).values(notificationsToCreate);
+        console.log(`Created ${notificationsToCreate.length} birthday notifications for ${birthdayClients.length} clients`);
+      }
+    } catch (error) {
+      console.error('Error creating birthday notifications:', error);
       throw error;
     }
   }
