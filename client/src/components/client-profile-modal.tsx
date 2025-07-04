@@ -52,6 +52,24 @@ interface RepairRecord {
   completedDate: string | null;
 }
 
+interface WishlistItem {
+  id: number;
+  clientName: string | null;
+  clientEmail: string | null;
+  clientPhone: string | null;
+  clientCompany: string | null;
+  itemName: string;
+  brand: string;
+  description: string | null;
+  category: string;
+  maxPrice: string | null;
+  skuReferences: string | null;
+  notes: string | null;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export default function ClientProfileModal({ clientId, isOpen, onClose }: ClientProfileModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedClient, setEditedClient] = useState<Partial<Client>>({});
@@ -121,6 +139,13 @@ export default function ClientProfileModal({ clientId, isOpen, onClose }: Client
   const { data: repairHistory, isLoading: repairLoading } = useQuery({
     queryKey: ["/api/clients", clientId, "repairs"],
     queryFn: () => apiRequest(`/api/clients/${clientId}/repair-history`),
+    enabled: isOpen && !!clientId,
+  });
+
+  // Fetch client wishlist items
+  const { data: wishlistItems, isLoading: wishlistLoading } = useQuery<WishlistItem[]>({
+    queryKey: ["/api/clients", clientId, "wishlist"],
+    queryFn: () => apiRequest(`/api/clients/${clientId}/wishlist`),
     enabled: isOpen && !!clientId,
   });
 
@@ -276,10 +301,11 @@ export default function ClientProfileModal({ clientId, isOpen, onClose }: Client
         </DialogHeader>
 
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="purchases">Purchase History</TabsTrigger>
             <TabsTrigger value="repairs">Repair History</TabsTrigger>
+            <TabsTrigger value="wishlist">Wishlist</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
 
@@ -719,6 +745,93 @@ export default function ClientProfileModal({ clientId, isOpen, onClose }: Client
                     <h3 className="text-lg font-medium mb-2">No Repair History</h3>
                     <p className="text-muted-foreground">
                       This client has no repair records on file.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="wishlist" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="h-5 w-5" />
+                  Wishlist Items
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {wishlistLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p className="text-muted-foreground mt-2">Loading wishlist...</p>
+                  </div>
+                ) : wishlistItems && wishlistItems.length > 0 ? (
+                  <div className="space-y-4">
+                    {wishlistItems.map((item) => (
+                      <div key={item.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-2 flex-1">
+                            <div className="flex items-center gap-3">
+                              <h4 className="font-semibold text-lg">{item.itemName}</h4>
+                              <Badge variant={item.status === 'active' ? 'default' : 
+                                           item.status === 'fulfilled' ? 'secondary' : 'destructive'}>
+                                {item.status}
+                              </Badge>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">Brand:</span>
+                                <span>{item.brand}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">Category:</span>
+                                <span className="capitalize">{item.category}</span>
+                              </div>
+                              {item.maxPrice && (
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">Max Price:</span>
+                                  <span className="text-green-600 font-medium">R{parseFloat(item.maxPrice).toLocaleString()}</span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">Created:</span>
+                                <span>{new Date(item.createdAt).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+
+                            {item.description && (
+                              <div className="mt-3">
+                                <span className="font-medium text-sm">Description:</span>
+                                <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+                              </div>
+                            )}
+
+                            {item.skuReferences && (
+                              <div className="mt-3">
+                                <span className="font-medium text-sm">SKU References:</span>
+                                <p className="text-sm text-muted-foreground mt-1">{item.skuReferences}</p>
+                              </div>
+                            )}
+
+                            {item.notes && (
+                              <div className="mt-3">
+                                <span className="font-medium text-sm">Notes:</span>
+                                <p className="text-sm text-muted-foreground mt-1">{item.notes}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No Wishlist Items</h3>
+                    <p className="text-muted-foreground">
+                      This client has no items on their wishlist.
                     </p>
                   </div>
                 )}

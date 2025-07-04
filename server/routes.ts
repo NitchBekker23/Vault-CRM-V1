@@ -2828,6 +2828,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get client wishlist items
+  app.get("/api/clients/:id/wishlist", checkAuth, async (req: any, res) => {
+    try {
+      const clientId = parseInt(req.params.id);
+      
+      const wishlistItems = await storage.getClientWishlistItems(clientId);
+      res.json(wishlistItems);
+    } catch (error) {
+      console.error("Error fetching client wishlist items:", error);
+      res.status(500).json({ message: "Failed to fetch client wishlist items" });
+    }
+  });
+
   // Force refresh client statistics
   app.post("/api/clients/refresh-stats", checkAuth, async (req: any, res) => {
     try {

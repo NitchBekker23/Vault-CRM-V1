@@ -132,6 +132,7 @@ export interface IStorage {
     category?: string,
     brand?: string
   ): Promise<WishlistItem[]>;
+  getClientWishlistItems(clientId: number): Promise<WishlistItem[]>;
   createWishlistItem(item: InsertWishlistItem): Promise<WishlistItem>;
   updateWishlistItem(id: number, item: Partial<InsertWishlistItem>): Promise<WishlistItem>;
   deleteWishlistItem(id: number): Promise<void>;
@@ -526,6 +527,45 @@ export class DatabaseStorage implements IStorage {
       .where(eq(wishlistItems.id, id))
       .returning();
     return updatedItem;
+  }
+
+  async getClientWishlistItems(clientId: number): Promise<WishlistItem[]> {
+    // First get the client information
+    const client = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
+    if (!client.length) {
+      return [];
+    }
+
+    const clientData = client[0];
+    
+    // Search for wishlist items that match this client's information
+    // We'll match by email (primary), phone, or name combination
+    const whereConditions = [];
+    
+    if (clientData.email) {
+      whereConditions.push(eq(wishlistItems.clientEmail, clientData.email));
+    }
+    
+    if (clientData.phone) {
+      whereConditions.push(eq(wishlistItems.clientPhone, clientData.phone));
+    }
+    
+    // Match by full name if available
+    if (clientData.fullName) {
+      whereConditions.push(eq(wishlistItems.clientName, clientData.fullName));
+    }
+
+    if (whereConditions.length === 0) {
+      return [];
+    }
+
+    const items = await db
+      .select()
+      .from(wishlistItems)
+      .where(or(...whereConditions))
+      .orderBy(desc(wishlistItems.createdAt));
+
+    return items;
   }
 
   async deleteWishlistItem(id: number): Promise<void> {
