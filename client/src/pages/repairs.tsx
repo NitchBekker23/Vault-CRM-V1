@@ -41,6 +41,10 @@ interface Repair {
   quoteDate: string | null;
   acceptedDate: string | null;
   completedDate: string | null;
+  receivedDate: string | null;
+  estimatedCompletionDate: string | null;
+  repairDocuments: string[];
+  repairImages: string[];
   assignedTo: string | null;
   createdBy: string;
 }
@@ -71,6 +75,10 @@ const repairFormSchema = z.object({
   notes: z.string().optional(),
   quotedPrice: z.string().optional(),
   finalPrice: z.string().optional(),
+  receivedDate: z.string().optional(),
+  estimatedCompletionDate: z.string().optional(),
+  repairDocuments: z.array(z.string()).optional().default([]),
+  repairImages: z.array(z.string()).optional().default([]),
 });
 
 type RepairFormData = z.infer<typeof repairFormSchema>;
@@ -118,6 +126,10 @@ export default function Repairs() {
       notes: "",
       quotedPrice: "",
       finalPrice: "",
+      receivedDate: "",
+      estimatedCompletionDate: "",
+      repairDocuments: [],
+      repairImages: [],
     },
   });
 
@@ -272,6 +284,10 @@ export default function Repairs() {
       notes: repair.notes || "",
       quotedPrice: repair.quotedPrice || "",
       finalPrice: repair.finalPrice || "",
+      receivedDate: repair.receivedDate ? repair.receivedDate.split('T')[0] : "",
+      estimatedCompletionDate: repair.estimatedCompletionDate ? repair.estimatedCompletionDate.split('T')[0] : "",
+      repairDocuments: repair.repairDocuments || [],
+      repairImages: repair.repairImages || [],
     });
     setShowNewRepairModal(true);
   };
@@ -697,9 +713,20 @@ export default function Repairs() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Store Location</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Store location" {...field} />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select store location" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="002">Breitling Sandton</SelectItem>
+                          <SelectItem value="006">Breitling V&A</SelectItem>
+                          <SelectItem value="099">HQ</SelectItem>
+                          <SelectItem value="001">Melrose</SelectItem>
+                          <SelectItem value="003">Menlyn</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -806,6 +833,98 @@ export default function Repairs() {
                       <FormControl>
                         <Input placeholder="0.00" {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Date Tracking Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="receivedDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Date Received</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          {...field} 
+                          value={field.value || ""} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="estimatedCompletionDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Estimated Completion Date</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          {...field} 
+                          value={field.value || ""} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* File Upload Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="repairDocuments"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Documents</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="file" 
+                          multiple
+                          accept=".pdf,.doc,.docx,.txt"
+                          onChange={(e) => {
+                            const files = Array.from(e.target.files || []);
+                            field.onChange(files.map(f => f.name));
+                          }}
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        Upload repair documents (PDF, DOC, DOCX, TXT)
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="repairImages"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Images</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="file" 
+                          multiple
+                          accept="image/*"
+                          onChange={(e) => {
+                            const files = Array.from(e.target.files || []);
+                            field.onChange(files.map(f => f.name));
+                          }}
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        Upload repair images (JPG, PNG, etc.)
+                      </p>
                       <FormMessage />
                     </FormItem>
                   )}

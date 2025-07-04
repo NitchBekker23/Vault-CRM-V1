@@ -607,6 +607,10 @@ export const repairs = pgTable("repairs", {
   quoteDate: timestamp("quote_date"),
   acceptedDate: timestamp("accepted_date"),
   completedDate: timestamp("completed_date"),
+  receivedDate: timestamp("received_date"),
+  estimatedCompletionDate: timestamp("estimated_completion_date"),
+  repairDocuments: jsonb("repair_documents").$type<string[]>().default([]),
+  repairImages: jsonb("repair_images").$type<string[]>().default([]),
   assignedTo: varchar("assigned_to").references(() => users.id),
   createdBy: varchar("created_by").references(() => users.id).notNull(),
 });
@@ -853,8 +857,12 @@ export const insertRepairSchema = createInsertSchema(repairs).omit({
   quoteDate: z.string().nullable().optional().transform(val => val ? new Date(val) : null),
   acceptedDate: z.string().nullable().optional().transform(val => val ? new Date(val) : null),
   completedDate: z.string().nullable().optional().transform(val => val ? new Date(val) : null),
+  receivedDate: z.string().nullable().optional().transform(val => val ? new Date(val) : null),
+  estimatedCompletionDate: z.string().nullable().optional().transform(val => val ? new Date(val) : null),
   quotedPrice: z.string().nullable().optional(),
   finalPrice: z.string().nullable().optional(),
+  repairDocuments: z.array(z.string()).optional().default([]),
+  repairImages: z.array(z.string()).optional().default([]),
 });
 export type InsertRepair = z.infer<typeof insertRepairSchema>;
 export type Repair = typeof repairs.$inferSelect;
