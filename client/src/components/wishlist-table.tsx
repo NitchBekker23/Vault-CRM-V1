@@ -63,9 +63,10 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       items = items.filter((item: WishlistItem) =>
-        item.clientName.toLowerCase().includes(term) ||
+        (item.clientName && item.clientName.toLowerCase().includes(term)) ||
         item.itemName.toLowerCase().includes(term) ||
         item.brand.toLowerCase().includes(term) ||
+        (item.customerCode && item.customerCode.toLowerCase().includes(term)) ||
         (item.skuReferences && item.skuReferences.toLowerCase().includes(term)) ||
         (item.clientEmail && item.clientEmail.toLowerCase().includes(term)) ||
         (item.clientPhone && item.clientPhone.toLowerCase().includes(term)) ||
@@ -130,6 +131,7 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
   const form = useForm<WishlistFormData>({
     resolver: zodResolver(wishlistFormSchema),
     defaultValues: {
+      customerCode: "",
       clientName: "",
       clientEmail: "",
       clientPhone: "",
@@ -245,6 +247,7 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
     // Clean up data - convert empty strings to undefined for optional fields
     const cleanedData = {
       ...data,
+      customerCode: data.customerCode || undefined,
       clientEmail: data.clientEmail || undefined,
       clientPhone: data.clientPhone || undefined,
       clientCompany: data.clientCompany || undefined,
@@ -270,6 +273,7 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
   const handleEdit = (item: WishlistItem) => {
     setEditingItem(item);
     form.reset({
+      customerCode: item.customerCode || "",
       clientName: item.clientName,
       clientEmail: item.clientEmail || "",
       clientPhone: item.clientPhone || "",
@@ -379,6 +383,20 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
+                    name="customerCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Customer Code (optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., 101554" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
                     name="clientName"
                     render={({ field }) => (
                       <FormItem>
@@ -390,7 +408,9 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
                       </FormItem>
                     )}
                   />
-                  
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="clientEmail"
@@ -404,9 +424,7 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
                       </FormItem>
                     )}
                   />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
+                  
                   <FormField
                     control={form.control}
                     name="clientPhone"
@@ -420,21 +438,21 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
                       </FormItem>
                     )}
                   />
-                  
-                  <FormField
-                    control={form.control}
-                    name="clientCompany"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Company (optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Company Name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
+                
+                <FormField
+                  control={form.control}
+                  name="clientCompany"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company (optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Company Name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
@@ -635,6 +653,9 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
                     <TableCell>
                       <div className="space-y-1">
                         <div className="font-medium">{item.clientName}</div>
+                        {item.customerCode && (
+                          <div className="text-sm text-muted-foreground">Code: {item.customerCode}</div>
+                        )}
                         {item.clientEmail && (
                           <div className="text-sm text-muted-foreground">{item.clientEmail}</div>
                         )}
@@ -714,7 +735,11 @@ export default function WishlistTable({ searchTerm, statusFilter, categoryFilter
           </DialogHeader>
           {viewingItem && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Customer Code</label>
+                  <p className="text-sm text-muted-foreground">{viewingItem.customerCode || "Not provided"}</p>
+                </div>
                 <div>
                   <label className="text-sm font-medium">Client Name</label>
                   <p className="text-sm text-muted-foreground">{viewingItem.clientName}</p>

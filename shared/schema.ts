@@ -162,6 +162,7 @@ export const wishlistItems = pgTable("wishlist_items", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").references(() => users.id).notNull(),
   leadId: integer("lead_id").references(() => leads.id),
+  customerCode: varchar("customer_code"), // Links to clients table customer_number
   clientName: varchar("client_name"),
   clientEmail: varchar("client_email"),
   clientPhone: varchar("client_phone"),
@@ -735,6 +736,7 @@ export const insertWishlistItemSchema = createInsertSchema(wishlistItems).omit({
 }).extend({
   description: z.string().optional(),
   maxPrice: z.string().optional().transform(val => val === "" ? null : val),
+  customerCode: z.string().optional(),
   clientName: z.string().optional(),
   clientEmail: z.string().optional(),
   clientPhone: z.string().optional(),

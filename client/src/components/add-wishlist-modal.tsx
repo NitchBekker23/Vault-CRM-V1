@@ -53,6 +53,11 @@ export default function AddWishlistModal({ isOpen, onClose }: AddWishlistModalPr
       category: "",
       maxPrice: "",
       status: "active",
+      customerCode: "",
+      clientName: "",
+      clientEmail: "",
+      clientPhone: "",
+      clientCompany: "",
     },
   });
 
@@ -156,6 +161,105 @@ export default function AddWishlistModal({ isOpen, onClose }: AddWishlistModalPr
                 </FormItem>
               )}
             />
+
+            {/* Client Information Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold border-b pb-2">Client Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="customerCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Customer Code</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="e.g., 101554" 
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="clientName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Client Name</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="e.g., John Smith" 
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="clientEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Client Email</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="email"
+                          placeholder="e.g., john.smith@email.com" 
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="clientPhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Client Phone</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="e.g., +27 11 123 4567" 
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="clientCompany"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Client Company</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="e.g., ABC Corporation" 
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField

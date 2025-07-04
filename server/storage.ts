@@ -539,18 +539,25 @@ export class DatabaseStorage implements IStorage {
     const clientData = client[0];
     
     // Search for wishlist items that match this client's information
-    // We'll match by email (primary), phone, or name combination
+    // Priority matching: customerCode (highest) > email > phone > name
     const whereConditions = [];
     
+    // Primary match: customer code (highest priority)
+    if (clientData.customerNumber) {
+      whereConditions.push(eq(wishlistItems.customerCode, clientData.customerNumber));
+    }
+    
+    // Secondary match: email
     if (clientData.email) {
       whereConditions.push(eq(wishlistItems.clientEmail, clientData.email));
     }
     
+    // Tertiary match: phone
     if (clientData.phone) {
       whereConditions.push(eq(wishlistItems.clientPhone, clientData.phone));
     }
     
-    // Match by full name if available
+    // Quaternary match: full name
     if (clientData.fullName) {
       whereConditions.push(eq(wishlistItems.clientName, clientData.fullName));
     }
