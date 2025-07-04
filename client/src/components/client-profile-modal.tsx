@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { User, Phone, Mail, Calendar, Star, ShoppingBag, Edit, Save, X } from "lucide-react";
+import { User, Phone, Mail, Calendar, Star, ShoppingBag, Edit, Save, X, Wrench, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Client } from "@shared/schema";
@@ -34,6 +34,23 @@ interface SalesTransaction {
   notes: string | null;
 }
 
+interface RepairRecord {
+  id: number;
+  customerCode: string | null;
+  customerName: string;
+  itemBrand: string;
+  itemModel: string;
+  itemSerial: string | null;
+  issueDescription: string;
+  repairStatus: string;
+  outcome: string | null;
+  quotedPrice: string | null;
+  finalPrice: string | null;
+  store: string | null;
+  createdAt: string;
+  completedDate: string | null;
+}
+
 export default function ClientProfileModal({ clientId, isOpen, onClose }: ClientProfileModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedClient, setEditedClient] = useState<Partial<Client>>({});
@@ -51,6 +68,13 @@ export default function ClientProfileModal({ clientId, isOpen, onClose }: Client
   const { data: purchaseHistory, isLoading: historyLoading } = useQuery({
     queryKey: ["/api/clients", clientId, "purchases"],
     queryFn: () => apiRequest(`/api/clients/${clientId}/purchase-history`),
+    enabled: isOpen && !!clientId,
+  });
+
+  // Fetch client repair history
+  const { data: repairHistory, isLoading: repairLoading } = useQuery({
+    queryKey: ["/api/clients", clientId, "repairs"],
+    queryFn: () => apiRequest(`/api/clients/${clientId}/repair-history`),
     enabled: isOpen && !!clientId,
   });
 
@@ -206,9 +230,10 @@ export default function ClientProfileModal({ clientId, isOpen, onClose }: Client
         </DialogHeader>
 
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="purchases">Purchase History</TabsTrigger>
+            <TabsTrigger value="repairs">Repair History</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
 
@@ -511,6 +536,134 @@ export default function ClientProfileModal({ clientId, isOpen, onClose }: Client
                     </p>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="repairs" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wrench className="h-5 w-5" />
+                  Repair History
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {repairLoading ? (
+                  <div className="flex items-center justify-center h-32">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : repairHistory?.repairs && repairHistory.repairs.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="text-sm text-muted-foreground mb-4">
+                      Showing {repairHistory.repairs.length} repair{repairHistory.repairs.length === 1 ? '' : 's'}
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {repairHistory.repairs.map((repair: RepairRecord) => (
+                        <div key={repair.id} className="border rounded-lg p-4 space-y-3">
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-1">
+                              <h4 className="font-medium">
+                                {repair.itemBrand} {repair.itemModel}
+                              </h4>
+                              {repair.itemSerial && (
+                                <p className="text-sm text-muted-foreground">
+                                  Serial: {repair.itemSerial}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right space-y-1">
+                              <Badge 
+                                variant={
+                                  repair.repairStatus === 'completed' ? 'default' :
+                                  repair.repairStatus === 'quote_sent' ? 'secondary' :
+                                  repair.repairStatus === 'quote_accepted' ? 'secondary' :
+                                  repair.repairStatus === 'received_back' ? 'secondary' :
+                                  'outline'
+                                }
+                              >
+                                {repair.repairStatus.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                              </Badge>
+                              {repair.outcome && (
+                                <div className="mt-1">
+                                  <Badge 
+                                    variant={
+                                      repair.outcome === 'completed' ? 'default' :
+                                      repair.outcome === 'customer_declined' ? 'destructive' :
+                                      repair.outcome === 'unrepairable' ? 'destructive' :
+                                      'outline'
+                                    }
+                                  >
+                                    {repair.outcome.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                  </Badge>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div>
+                              <span className="text-sm font-medium">Issue:</span>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {repair.issueDescription}
+                              </p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <span className="font-medium">Created:</span>
+                                <p className="text-muted-foreground">
+                                  {new Date(repair.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                              {repair.completedDate && (
+                                <div>
+                                  <span className="font-medium">Completed:</span>
+                                  <p className="text-muted-foreground">
+                                    {new Date(repair.completedDate).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+
+                            {(repair.quotedPrice || repair.finalPrice) && (
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                {repair.quotedPrice && (
+                                  <div>
+                                    <span className="font-medium">Quoted Price:</span>
+                                    <p className="text-muted-foreground">R{repair.quotedPrice}</p>
+                                  </div>
+                                )}
+                                {repair.finalPrice && (
+                                  <div>
+                                    <span className="font-medium">Final Price:</span>
+                                    <p className="text-muted-foreground">R{repair.finalPrice}</p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {repair.store && (
+                              <div className="text-sm">
+                                <span className="font-medium">Store:</span>
+                                <span className="text-muted-foreground ml-2">{repair.store}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No Repair History</h3>
+                    <p className="text-muted-foreground">
+                      This client has no repair records on file.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

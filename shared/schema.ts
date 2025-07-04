@@ -583,6 +583,7 @@ export const leadActivityLog = pgTable("lead_activity_log", {
 // Repairs table - mirrors leads functionality for repair workflow
 export const repairs = pgTable("repairs", {
   id: serial("id").primaryKey(),
+  customerCode: varchar("customer_code"), // Links to clients.customerNumber
   customerName: varchar("customer_name").notNull(),
   customerEmail: varchar("customer_email"),
   customerPhone: varchar("customer_phone"),
@@ -854,6 +855,7 @@ export const insertRepairSchema = createInsertSchema(repairs).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
+  customerCode: z.string().nullable().optional(),
   quoteDate: z.string().nullable().optional().transform(val => val ? new Date(val) : null),
   acceptedDate: z.string().nullable().optional().transform(val => val ? new Date(val) : null),
   completedDate: z.string().nullable().optional().transform(val => val ? new Date(val) : null),

@@ -2801,6 +2801,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get client repair history by customer code
+  app.get("/api/clients/:id/repair-history", checkAuth, async (req: any, res) => {
+    try {
+      const clientId = parseInt(req.params.id);
+      
+      // Get client to find their customer number
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      // Get all repairs for this customer code
+      const repairsResult = await storage.getRepairs(1, 1000); // Get all repairs for filtering
+      const clientRepairs = repairsResult.repairs.filter(repair => 
+        repair.customerCode === client.customerNumber
+      );
+
+      res.json({ 
+        repairs: clientRepairs,
+        total: clientRepairs.length 
+      });
+    } catch (error) {
+      console.error("Error fetching client repair history:", error);
+      res.status(500).json({ message: "Failed to fetch client repair history" });
+    }
+  });
+
   // Force refresh client statistics
   app.post("/api/clients/refresh-stats", checkAuth, async (req: any, res) => {
     try {

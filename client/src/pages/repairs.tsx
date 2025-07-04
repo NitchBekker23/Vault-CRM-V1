@@ -61,6 +61,7 @@ interface RepairActivity {
 }
 
 const repairFormSchema = z.object({
+  customerCode: z.string().optional(),
   customerName: z.string().min(1, "Customer name is required"),
   customerEmail: z.string().optional().refine((val) => !val || z.string().email().safeParse(val).success, {
     message: "Invalid email format"
@@ -118,6 +119,7 @@ export default function Repairs() {
   const form = useForm<RepairFormData>({
     resolver: zodResolver(repairFormSchema),
     defaultValues: {
+      customerCode: "",
       customerName: "",
       customerEmail: "",
       customerPhone: "",
@@ -384,6 +386,7 @@ export default function Repairs() {
   const handleEdit = (repair: Repair) => {
     setEditingRepair(repair);
     form.reset({
+      customerCode: repair.customerCode || "",
       customerName: repair.customerName,
       customerEmail: repair.customerEmail || "",
       customerPhone: repair.customerPhone || "",
@@ -791,6 +794,23 @@ export default function Repairs() {
               <div className="border rounded-lg p-3 space-y-3">
                 <h3 className="text-sm font-semibold text-muted-foreground">Customer Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="customerCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Customer Code</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. 101554" {...field} />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">
+                          Link to existing client for complete history tracking
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   <FormField
                     control={form.control}
                   name="customerName"
