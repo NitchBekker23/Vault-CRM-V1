@@ -6,6 +6,8 @@ import bcrypt from "bcrypt";
 import multer from "multer";
 import csv from "csv-parser";
 import { Readable } from "stream";
+import path from "path";
+import fs from "fs";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { imageOptimizer } from "./imageOptimizer";
@@ -76,6 +78,56 @@ const imageUpload = multer({
       cb(null, true);
     } else {
       cb(new Error('Only image files are allowed'));
+    }
+  },
+});
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(process.cwd(), 'uploads');
+const repairUploadsDir = path.join(uploadsDir, 'repairs');
+
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+if (!fs.existsSync(repairUploadsDir)) {
+  fs.mkdirSync(repairUploadsDir, { recursive: true });
+}
+
+// Configure multer for repair document uploads with disk storage
+const repairDocumentUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, repairUploadsDir);
+    },
+    filename: (req, file, cb) => {
+      // Generate unique filename while preserving original extension
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const ext = path.extname(file.originalname);
+      const baseName = path.basename(file.originalname, ext);
+      cb(null, `${baseName}-${uniqueSuffix}${ext}`);
+    }
+  }),
+  limits: {
+    fileSize: 20 * 1024 * 1024, // 20MB limit for documents
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow documents and images
+    const allowedMimes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'image/avif',
+      'image/webp'
+    ];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('File type not supported. Please upload PDF, DOC, DOCX, TXT, or image files.'));
     }
   },
 });
@@ -3368,6 +3420,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Upload repair documents
+  app.post("/api/repairs/:id/upload", checkAuth, repairDocumentUpload.array('files'), async (req: any, res) => {
+    try {
+      const repairId = parseInt(req.params.id);
+      const userId = req.currentUserId;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      // Get repair to verify it exists and user has access
+      const repairsResult = await storage.getRepairs(1, 1000);
+      const repair = repairsResult.repairs.find(r => r.id === repairId);
+      if (!repair) {
+        return res.status(404).json({ message: "Repair not found" });
+      }
+
+      const uploadedFiles = req.files as Express.Multer.File[];
+      if (!uploadedFiles || uploadedFiles.length === 0) {
+        return res.status(400).json({ message: "No files uploaded" });
+      }
+
+      // Separate uploaded files by type
+      const documents: string[] = [];
+      const images: string[] = [];
+
+      uploadedFiles.forEach(file => {
+        if (file.mimetype.startsWith('image/')) {
+          images.push(file.filename);
+        } else {
+          documents.push(file.filename);
+        }
+      });
+
+      // Update repair with new file names (append to existing)
+      const currentDocuments = repair.repairDocuments || [];
+      const currentImages = repair.repairImages || [];
+      
+      const updatedDocuments = [...currentDocuments, ...documents];
+      const updatedImages = [...currentImages, ...images];
+
+      await storage.updateRepair(repairId, {
+        repairDocuments: updatedDocuments,
+        repairImages: updatedImages
+      });
+
+      console.log(`Successfully uploaded ${uploadedFiles.length} files for repair ${repairId}`);
+
+      res.json({
+        message: "Files uploaded successfully",
+        uploadedFiles: uploadedFiles.map(f => ({
+          originalName: f.originalname,
+          filename: f.filename,
+          type: f.mimetype.startsWith('image/') ? 'image' : 'document'
+        }))
+      });
+
+    } catch (error) {
+      console.error("Error uploading repair documents:", error);
+      
+      // Clean up uploaded files if database update fails
+      if (req.files) {
+        const uploadedFiles = req.files as Express.Multer.File[];
+        uploadedFiles.forEach(file => {
+          try {
+            fs.unlinkSync(file.path);
+          } catch (unlinkError) {
+            console.error(`Failed to cleanup file ${file.path}:`, unlinkError);
+          }
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to upload documents" });
+    }
+  });
+
   // Get/Download repair documents
   app.get("/api/repairs/:id/documents/:filename", checkAuth, async (req: any, res) => {
     try {
@@ -3433,12 +3561,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Since we don't have actual file storage implemented yet,
-      // we'll create a placeholder response that demonstrates the functionality
+      // Try to serve actual file from disk
+      const filePath = path.join(repairUploadsDir, filename);
       
-      if (ext === 'pdf') {
-        // For PDFs, return a minimal PDF that browsers can display
-        const pdfContent = `%PDF-1.4
+      // Check if file exists on disk
+      if (fs.existsSync(filePath)) {
+        console.log(`Serving file from disk: ${filePath}`);
+        
+        // For downloads, use res.download()
+        if (action === 'download') {
+          res.download(filePath, filename, (err) => {
+            if (err) {
+              console.error('Error downloading file:', err);
+              res.status(500).json({ message: 'Failed to download file' });
+            }
+          });
+          return;
+        }
+        
+        // For viewing, stream the file with appropriate headers
+        const fileStats = fs.statSync(filePath);
+        res.setHeader('Content-Length', fileStats.size.toString());
+        
+        const fileStream = fs.createReadStream(filePath);
+        fileStream.pipe(res);
+        
+        fileStream.on('error', (error) => {
+          console.error('Error streaming file:', error);
+          if (!res.headersSent) {
+            res.status(500).json({ message: 'Failed to stream file' });
+          }
+        });
+        
+      } else {
+        // File doesn't exist - create placeholder response
+        console.log(`File not found on disk: ${filePath}, creating placeholder`);
+        
+        if (ext === 'pdf') {
+          // For PDFs, return a minimal PDF that browsers can display
+          const pdfContent = `%PDF-1.4
 1 0 obj
 <<
 /Type /Catalog
@@ -3470,13 +3631,13 @@ endobj
 
 4 0 obj
 <<
-/Length 44
+/Length 60
 >>
 stream
 BT
 /F1 12 Tf
 72 720 Td
-(Document: ${filename}) Tj
+(File not found: ${filename}) Tj
 ET
 endstream
 endobj
@@ -3496,32 +3657,33 @@ xref
 0000000058 00000 n 
 0000000115 00000 n 
 0000000279 00000 n 
-0000000373 00000 n 
+0000000395 00000 n 
 trailer
 <<
 /Size 6
 /Root 1 0 R
 >>
 startxref
-444
+460
 %%EOF`;
-        res.send(pdfContent);
-      } else if (['jpg', 'jpeg', 'png', 'gif', 'avif', 'webp'].includes(ext || '')) {
-        // For images, create a simple SVG placeholder that displays properly
-        const svgContent = `<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+          res.send(pdfContent);
+        } else if (['jpg', 'jpeg', 'png', 'gif', 'avif', 'webp'].includes(ext || '')) {
+          // For images, create a simple SVG placeholder
+          const svgContent = `<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
   <rect width="100%" height="100%" fill="#f0f0f0" stroke="#ccc" stroke-width="2"/>
   <text x="50%" y="40%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#666">
-    Image: ${filename}
+    File not found: ${filename}
   </text>
   <text x="50%" y="60%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#999">
-    (File storage not implemented)
+    Please re-upload this file
   </text>
 </svg>`;
-        res.setHeader('Content-Type', 'image/svg+xml');
-        res.send(svgContent);
-      } else {
-        // For other file types, return the filename info
-        res.status(200).send(`Document: ${filename}\nAction: ${action}\nFile type: ${ext}\n\nFile storage system would serve actual file content here.`);
+          res.setHeader('Content-Type', 'image/svg+xml');
+          res.send(svgContent);
+        } else {
+          // For other file types, return the filename info
+          res.status(404).send(`File not found: ${filename}\nPlease re-upload this file.`);
+        }
       }
       
     } catch (error) {

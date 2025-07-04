@@ -109,6 +109,8 @@ export default function Repairs() {
   const [selectedRepair, setSelectedRepair] = useState<Repair | null>(null);
   const [statusUpdate, setStatusUpdate] = useState<{ repair: Repair; newStatus: string; outcome?: string } | null>(null);
   const [showDocumentModal, setShowDocumentModal] = useState<Repair | null>(null);
+  const [pendingDocuments, setPendingDocuments] = useState<File[]>([]);
+  const [pendingImages, setPendingImages] = useState<File[]>([]);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -161,8 +163,31 @@ export default function Repairs() {
       console.log("Creating repair with data:", data);
       return apiRequest("POST", `/api/repairs`, data);
     },
-    onSuccess: (result) => {
+    onSuccess: async (result: any) => {
       console.log("Repair creation successful:", result);
+      
+      // Upload pending files if any
+      const allPendingFiles = [...pendingDocuments, ...pendingImages];
+      if (allPendingFiles.length > 0) {
+        try {
+          console.log(`Uploading ${allPendingFiles.length} files for repair ${result.id}`);
+          await fileUploadMutation.mutateAsync({
+            id: result.id,
+            files: allPendingFiles
+          });
+          // Clear pending files after successful upload
+          setPendingDocuments([]);
+          setPendingImages([]);
+        } catch (uploadError) {
+          console.error("File upload error after repair creation:", uploadError);
+          toast({
+            title: "Warning",
+            description: "Repair created but file upload failed. You can upload files later.",
+            variant: "destructive",
+          });
+        }
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["/api/repairs"] });
       queryClient.invalidateQueries({ predicate: (query) => {
         const key = query.queryKey[0];
@@ -242,21 +267,39 @@ export default function Repairs() {
     },
   });
 
-  const documentUploadMutation = useMutation({
-    mutationFn: ({ id, documents, images }: { id: number; documents: string[]; images: string[] }) =>
-      apiRequest("PATCH", `/api/repairs/${id}`, { repairDocuments: documents, repairImages: images }),
-    onSuccess: () => {
+  const fileUploadMutation = useMutation({
+    mutationFn: async ({ id, files }: { id: number; files: File[] }) => {
+      const formData = new FormData();
+      files.forEach(file => {
+        formData.append('files', file);
+      });
+
+      const response = await fetch(`/api/repairs/${id}/upload`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include', // Include session cookies
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Upload failed' }));
+        throw new Error(errorData.message || 'Upload failed');
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/repairs"] });
       setShowDocumentModal(null);
       toast({
         title: "Success",
-        description: "Documents updated successfully",
+        description: `Successfully uploaded ${data.uploadedFiles?.length || 0} file(s)`,
       });
     },
     onError: (error: any) => {
+      console.error('File upload error:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to update documents",
+        description: error.message || "Failed to upload files",
         variant: "destructive",
       });
     },
@@ -990,6 +1033,10 @@ export default function Repairs() {
                             onChange={(e) => {
                               const files = Array.from(e.target.files || []);
                               field.onChange(files.map(f => f.name));
+                              // Store the actual files for later upload
+                              if (files.length > 0) {
+                                setPendingDocuments(prev => [...(prev || []), ...files]);
+                              }
                             }}
                           />
                         </FormControl>
@@ -1015,6 +1062,10 @@ export default function Repairs() {
                             onChange={(e) => {
                               const files = Array.from(e.target.files || []);
                               field.onChange(files.map(f => f.name));
+                              // Store the actual files for later upload
+                              if (files.length > 0) {
+                                setPendingImages(prev => [...(prev || []), ...files]);
+                              }
                             }}
                           />
                         </FormControl>
@@ -1343,14 +1394,12 @@ export default function Repairs() {
                       onChange={(e) => {
                         const files = Array.from(e.target.files || []);
                         if (files.length > 0) {
-                          const fileNames = files.map(f => f.name);
-                          const currentDocs = showDocumentModal.repairDocuments || [];
-                          const updatedDocs = [...currentDocs, ...fileNames];
-                          documentUploadMutation.mutate({
+                          fileUploadMutation.mutate({
                             id: showDocumentModal.id,
-                            documents: updatedDocs,
-                            images: showDocumentModal.repairImages || []
+                            files: files
                           });
+                          // Clear the input after upload
+                          e.target.value = '';
                         }
                       }}
                     />
@@ -1369,14 +1418,12 @@ export default function Repairs() {
                       onChange={(e) => {
                         const files = Array.from(e.target.files || []);
                         if (files.length > 0) {
-                          const fileNames = files.map(f => f.name);
-                          const currentImages = showDocumentModal.repairImages || [];
-                          const updatedImages = [...currentImages, ...fileNames];
-                          documentUploadMutation.mutate({
+                          fileUploadMutation.mutate({
                             id: showDocumentModal.id,
-                            documents: showDocumentModal.repairDocuments || [],
-                            images: updatedImages
+                            files: files
                           });
+                          // Clear the input after upload
+                          e.target.value = '';
                         }
                       }}
                     />
