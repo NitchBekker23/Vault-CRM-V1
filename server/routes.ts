@@ -3392,19 +3392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Document not found" });
       }
 
-      // For now, we'll return a simple response since we don't have actual file storage
-      // In a real implementation, you would:
-      // 1. Read the file from storage (local filesystem, S3, etc.)
-      // 2. Set appropriate headers based on file type
-      // 3. Stream the file to the response
-      
-      if (action === 'download') {
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-      } else {
-        res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
-      }
-      
-      // Determine content type based on file extension
+      // Determine content type and disposition based on file extension
       const ext = filename.toLowerCase().split('.').pop();
       const contentTypes: { [key: string]: string } = {
         'pdf': 'application/pdf',
@@ -3415,15 +3403,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'jpeg': 'image/jpeg',
         'png': 'image/png',
         'gif': 'image/gif',
-        'avif': 'image/avif'
+        'avif': 'image/avif',
+        'webp': 'image/webp',
+        'svg': 'image/svg+xml'
       };
       
       const contentType = contentTypes[ext || ''] || 'application/octet-stream';
       res.setHeader('Content-Type', contentType);
       
-      // For demonstration, we'll return a message
-      // In production, replace this with actual file streaming
-      res.status(200).send(`Document access requested: ${filename} (${action}). File handling would be implemented here.`);
+      // Set appropriate headers based on action and file type
+      if (action === 'download') {
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      } else {
+        // For viewing - handle different file types appropriately
+        const isImage = ['jpg', 'jpeg', 'png', 'gif', 'avif', 'webp', 'svg'].includes(ext || '');
+        const isPDF = ext === 'pdf';
+        
+        if (isImage) {
+          // Images should display inline
+          res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+          res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache images for 1 year
+        } else if (isPDF) {
+          // PDFs should open in browser PDF viewer
+          res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+          res.setHeader('X-Content-Type-Options', 'nosniff');
+        } else {
+          // Other documents - try to display inline but may fallback to download
+          res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+        }
+      }
+      
+      // Since we don't have actual file storage implemented yet,
+      // we'll create a placeholder response that demonstrates the functionality
+      
+      if (ext === 'pdf') {
+        // For PDFs, return a minimal PDF that browsers can display
+        const pdfContent = `%PDF-1.4
+1 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+
+2 0 obj
+<<
+/Type /Pages
+/Kids [3 0 R]
+/Count 1
+>>
+endobj
+
+3 0 obj
+<<
+/Type /Page
+/Parent 2 0 R
+/MediaBox [0 0 612 792]
+/Contents 4 0 R
+/Resources <<
+/Font <<
+/F1 5 0 R
+>>
+>>
+>>
+endobj
+
+4 0 obj
+<<
+/Length 44
+>>
+stream
+BT
+/F1 12 Tf
+72 720 Td
+(Document: ${filename}) Tj
+ET
+endstream
+endobj
+
+5 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+endobj
+
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000279 00000 n 
+0000000373 00000 n 
+trailer
+<<
+/Size 6
+/Root 1 0 R
+>>
+startxref
+444
+%%EOF`;
+        res.send(pdfContent);
+      } else if (['jpg', 'jpeg', 'png', 'gif', 'avif', 'webp'].includes(ext || '')) {
+        // For images, create a simple SVG placeholder that displays properly
+        const svgContent = `<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#f0f0f0" stroke="#ccc" stroke-width="2"/>
+  <text x="50%" y="40%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#666">
+    Image: ${filename}
+  </text>
+  <text x="50%" y="60%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#999">
+    (File storage not implemented)
+  </text>
+</svg>`;
+        res.setHeader('Content-Type', 'image/svg+xml');
+        res.send(svgContent);
+      } else {
+        // For other file types, return the filename info
+        res.status(200).send(`Document: ${filename}\nAction: ${action}\nFile type: ${ext}\n\nFile storage system would serve actual file content here.`);
+      }
       
     } catch (error) {
       console.error("Error accessing document:", error);
