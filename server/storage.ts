@@ -19,6 +19,8 @@ import {
   salesPersonStoreHistory,
   storePerformance,
   salesPersonPerformance,
+  repairs,
+  repairActivityLog,
   type User,
   type UpsertUser,
   type InventoryItem,
@@ -59,6 +61,10 @@ import {
   type InsertLead,
   type LeadActivityLog,
   type InsertLeadActivityLog,
+  type Repair,
+  type InsertRepair,
+  type RepairActivityLog,
+  type InsertRepairActivityLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, ilike, or, gte, lt, inArray, not } from "drizzle-orm";
@@ -232,6 +238,28 @@ export interface IStorage {
   createLeadActivity(activity: InsertLeadActivityLog): Promise<LeadActivityLog>;
   deleteLead(leadId: number): Promise<void>;
   updateLead(leadId: number, updateData: Partial<InsertLead>): Promise<Lead>;
+
+  // Repair management operations
+  getRepairs(
+    page?: number,
+    limit?: number,
+    search?: string,
+    status?: string,
+    outcome?: string,
+    isOpen?: boolean
+  ): Promise<{ repairs: Repair[]; total: number }>;
+  createRepair(repair: InsertRepair): Promise<Repair>;
+  updateRepairStatus(
+    repairId: number,
+    status: string,
+    outcome?: string,
+    notes?: string
+  ): Promise<Repair>;
+  toggleRepairStatus(repairId: number, isOpen: boolean): Promise<Repair>;
+  getRepairActivities(repairId: number): Promise<RepairActivityLog[]>;
+  createRepairActivity(activity: InsertRepairActivityLog): Promise<RepairActivityLog>;
+  deleteRepair(repairId: number): Promise<void>;
+  updateRepair(repairId: number, updateData: Partial<InsertRepair>): Promise<Repair>;
 
   // Additional wishlist operations
   updateWishlistItemStatus(id: number, status: string): Promise<WishlistItem>;
@@ -2567,6 +2595,221 @@ export class DatabaseStorage implements IStorage {
         .where(eq(leads.id, leadId));
     } catch (error) {
       console.error('Error deleting lead:', error);
+      throw error;
+    }
+  }
+
+  // Repair Management Methods
+  async getRepairs(
+    page: number = 1,
+    limit: number = 10,
+    search?: string,
+    status?: string,
+    outcome?: string,
+    isOpen?: boolean
+  ): Promise<{ repairs: Repair[]; total: number }> {
+    try {
+      const offset = (page - 1) * limit;
+      
+      let whereConditions: any[] = [];
+
+      // Search functionality
+      if (search) {
+        whereConditions.push(
+          or(
+            ilike(repairs.customerName, `%${search}%`),
+            ilike(repairs.customerEmail, `%${search}%`),
+            ilike(repairs.itemBrand, `%${search}%`),
+            ilike(repairs.itemModel, `%${search}%`),
+            ilike(repairs.issueDescription, `%${search}%`),
+            ilike(repairs.notes, `%${search}%`)
+          )
+        );
+      }
+
+      // Status filter
+      if (status && status !== 'all') {
+        whereConditions.push(eq(repairs.repairStatus, status));
+      }
+
+      // Outcome filter
+      if (outcome && outcome !== 'all') {
+        whereConditions.push(eq(repairs.outcome, outcome));
+      }
+
+      // Open/Closed filter
+      if (isOpen !== undefined) {
+        whereConditions.push(eq(repairs.isOpen, isOpen));
+      }
+
+      const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+
+      const repairResults = await db
+        .select()
+        .from(repairs)
+        .where(whereClause)
+        .orderBy(desc(repairs.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      const totalResult = await db
+        .select({ count: sql`count(*)` })
+        .from(repairs)
+        .where(whereClause);
+
+      return {
+        repairs: repairResults,
+        total: Number(totalResult[0].count)
+      };
+    } catch (error) {
+      console.error('Error fetching repairs:', error);
+      throw error;
+    }
+  }
+
+  async createRepair(repairData: InsertRepair): Promise<Repair> {
+    try {
+      const [repair] = await db
+        .insert(repairs)
+        .values(repairData)
+        .returning();
+
+      // Create activity log entry
+      await this.createRepairActivity({
+        repairId: repair.id,
+        userId: repairData.createdBy,
+        action: 'created',
+        details: `Repair created for ${repairData.itemBrand} ${repairData.itemModel}`,
+        newValue: 'new_repair'
+      });
+
+      return repair;
+    } catch (error) {
+      console.error('Error creating repair:', error);
+      throw error;
+    }
+  }
+
+  async updateRepairStatus(
+    repairId: number,
+    status: string,
+    outcome?: string,
+    notes?: string
+  ): Promise<Repair> {
+    try {
+      const updateData: any = {
+        repairStatus: status,
+        updatedAt: new Date()
+      };
+
+      if (outcome) {
+        updateData.outcome = outcome;
+        updateData.isOpen = false; // Close repair when outcome is set
+      }
+
+      if (notes) {
+        updateData.notes = notes;
+      }
+
+      // Set appropriate timestamps based on status
+      if (status === 'quote_sent') {
+        updateData.quoteDate = new Date();
+      } else if (status === 'quote_accepted') {
+        updateData.acceptedDate = new Date();
+      } else if (status === 'outcome' && outcome === 'completed') {
+        updateData.completedDate = new Date();
+      }
+
+      const [repair] = await db
+        .update(repairs)
+        .set(updateData)
+        .where(eq(repairs.id, repairId))
+        .returning();
+
+      return repair;
+    } catch (error) {
+      console.error('Error updating repair status:', error);
+      throw error;
+    }
+  }
+
+  async toggleRepairStatus(repairId: number, isOpen: boolean): Promise<Repair> {
+    try {
+      const [repair] = await db
+        .update(repairs)
+        .set({ 
+          isOpen,
+          updatedAt: new Date()
+        })
+        .where(eq(repairs.id, repairId))
+        .returning();
+
+      return repair;
+    } catch (error) {
+      console.error('Error toggling repair status:', error);
+      throw error;
+    }
+  }
+
+  async getRepairActivities(repairId: number): Promise<RepairActivityLog[]> {
+    try {
+      const activities = await db
+        .select()
+        .from(repairActivityLog)
+        .where(eq(repairActivityLog.repairId, repairId))
+        .orderBy(desc(repairActivityLog.createdAt));
+
+      return activities;
+    } catch (error) {
+      console.error('Error fetching repair activities:', error);
+      throw error;
+    }
+  }
+
+  async createRepairActivity(activityData: InsertRepairActivityLog): Promise<RepairActivityLog> {
+    try {
+      const [activity] = await db
+        .insert(repairActivityLog)
+        .values(activityData)
+        .returning();
+      return activity;
+    } catch (error) {
+      console.error('Error creating repair activity:', error);
+      throw error;
+    }
+  }
+
+  async deleteRepair(repairId: number): Promise<void> {
+    try {
+      // First delete all activities for this repair
+      await db
+        .delete(repairActivityLog)
+        .where(eq(repairActivityLog.repairId, repairId));
+
+      // Then delete the repair
+      await db
+        .delete(repairs)
+        .where(eq(repairs.id, repairId));
+    } catch (error) {
+      console.error('Error deleting repair:', error);
+      throw error;
+    }
+  }
+
+  async updateRepair(repairId: number, updateData: Partial<InsertRepair>): Promise<Repair> {
+    try {
+      const [repair] = await db
+        .update(repairs)
+        .set({
+          ...updateData,
+          updatedAt: new Date()
+        })
+        .where(eq(repairs.id, repairId))
+        .returning();
+
+      return repair;
+    } catch (error) {
+      console.error('Error updating repair:', error);
       throw error;
     }
   }

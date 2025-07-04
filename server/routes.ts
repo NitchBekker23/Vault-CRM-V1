@@ -42,6 +42,8 @@ import {
   insertSalesTransactionSchema,
   insertLeadSchema,
   insertLeadActivityLogSchema,
+  insertRepairSchema,
+  insertRepairActivityLogSchema,
   inventoryItems,
 } from "@shared/schema";
 import { eq, desc, sql, and, ilike, or } from "drizzle-orm";
@@ -3118,6 +3120,206 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting lead:", error);
       res.status(500).json({ message: "Failed to delete lead" });
+    }
+  });
+
+  // Repair Management API Routes
+
+  // Get all repairs with filtering and pagination
+  app.get("/api/repairs", checkAuth, async (req: any, res) => {
+    try {
+      const page = req.query.page ? parseInt(req.query.page as string) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const search = req.query.search as string;
+      const status = req.query.status as string;
+      const outcome = req.query.outcome as string;
+      const isOpen = req.query.isOpen === 'true' ? true : req.query.isOpen === 'false' ? false : undefined;
+
+      const result = await storage.getRepairs(page, limit, search, status, outcome, isOpen);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching repairs:", error);
+      res.status(500).json({ message: "Failed to fetch repairs" });
+    }
+  });
+
+  // Create new repair
+  app.post("/api/repairs", checkAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUserId;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const validatedData = insertRepairSchema.parse({
+        ...req.body,
+        createdBy: userId,
+      });
+
+      const repair = await storage.createRepair(validatedData);
+
+      // Send notification to admins about new repair
+      await notificationService.notifyAllAdmins(
+        `New repair request for ${repair.itemBrand} ${repair.itemModel}`,
+        `Customer: ${repair.customerName}. Issue: ${repair.issueDescription.substring(0, 100)}...`,
+        "high",
+        `/repairs`,
+        "View Repair"
+      );
+
+      res.status(201).json(repair);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error creating repair:", error);
+      res.status(500).json({ message: "Failed to create repair" });
+    }
+  });
+
+  // Update repair status (main workflow progression)
+  app.patch("/api/repairs/:id/status", checkAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUserId;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const repairId = parseInt(req.params.id);
+      const { status, outcome, notes } = req.body;
+
+      // Get current repair to track status change
+      const currentRepairs = await storage.getRepairs(1, 1000);
+      const currentRepair = currentRepairs.repairs.find(r => r.id === repairId);
+
+      if (!currentRepair) {
+        return res.status(404).json({ message: "Repair not found" });
+      }
+
+      const previousStatus = currentRepair.repairStatus;
+      const updatedRepair = await storage.updateRepairStatus(repairId, status, outcome, notes);
+
+      // Create activity log entry
+      await storage.createRepairActivity({
+        repairId,
+        userId,
+        action: 'status_changed',
+        details: `Status changed from ${previousStatus} to ${status}`,
+        previousValue: previousStatus,
+        newValue: status
+      });
+
+      // Send notification if outcome is set
+      if (outcome) {
+        let message = '';
+        switch (outcome) {
+          case 'completed':
+            message = `Repair completed for ${updatedRepair.itemBrand} ${updatedRepair.itemModel}`;
+            break;
+          case 'customer_declined':
+            message = `Customer declined repair quote for ${updatedRepair.itemBrand} ${updatedRepair.itemModel}`;
+            break;
+          case 'unrepairable':
+            message = `Item marked as unrepairable: ${updatedRepair.itemBrand} ${updatedRepair.itemModel}`;
+            break;
+          case 'customer_no_response':
+            message = `No response from customer for ${updatedRepair.itemBrand} ${updatedRepair.itemModel}`;
+            break;
+        }
+
+        if (message) {
+          await notificationService.notifyAllAdmins(
+            message,
+            `Customer: ${updatedRepair.customerName}`,
+            "normal",
+            `/repairs`,
+            "View Repair"
+          );
+        }
+      }
+
+      res.json(updatedRepair);
+    } catch (error) {
+      console.error("Error updating repair status:", error);
+      res.status(500).json({ message: "Failed to update repair status" });
+    }
+  });
+
+  // Update repair details
+  app.put("/api/repairs/:id", checkAuth, async (req: any, res) => {
+    try {
+      const repairId = parseInt(req.params.id);
+      const validatedData = insertRepairSchema.partial().parse(req.body);
+
+      const repair = await storage.updateRepair(repairId, validatedData);
+      res.json(repair);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error updating repair:", error);
+      res.status(500).json({ message: "Failed to update repair" });
+    }
+  });
+
+  // Delete repair
+  app.delete("/api/repairs/:id", checkAuth, async (req: any, res) => {
+    try {
+      const repairId = parseInt(req.params.id);
+      const userId = req.currentUserId;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      await storage.deleteRepair(repairId);
+      res.status(200).json({ message: "Repair deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting repair:", error);
+      res.status(500).json({ message: "Failed to delete repair" });
+    }
+  });
+
+  // Close/Open repair
+  app.patch("/api/repairs/:id/toggle", checkAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUserId;
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const repairId = parseInt(req.params.id);
+      const { isOpen } = req.body;
+
+      const updatedRepair = await storage.updateRepair(repairId, { 
+        isOpen
+      });
+
+      // Create activity log entry
+      await storage.createRepairActivity({
+        repairId,
+        userId,
+        action: isOpen ? 'reopened' : 'closed',
+        details: isOpen ? 'Repair reopened' : 'Repair closed',
+        newValue: isOpen ? 'open' : 'closed'
+      });
+
+      res.json(updatedRepair);
+    } catch (error) {
+      console.error("Error toggling repair status:", error);
+      res.status(500).json({ message: "Failed to toggle repair status" });
+    }
+  });
+
+  // Get repair activity history
+  app.get("/api/repairs/:id/activity", checkAuth, async (req: any, res) => {
+    try {
+      const repairId = parseInt(req.params.id);
+      const activities = await storage.getRepairActivities(repairId);
+      res.json(activities);
+    } catch (error) {
+      console.error("Error fetching repair activities:", error);
+      res.status(500).json({ message: "Failed to fetch repair activities" });
     }
   });
 

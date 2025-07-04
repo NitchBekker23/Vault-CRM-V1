@@ -580,18 +580,61 @@ export const leadActivityLog = pgTable("lead_activity_log", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Repairs table - mirrors leads functionality for repair workflow
+export const repairs = pgTable("repairs", {
+  id: serial("id").primaryKey(),
+  customerName: varchar("customer_name").notNull(),
+  customerEmail: varchar("customer_email"),
+  customerPhone: varchar("customer_phone"),
+  customerAddress: text("customer_address"),
+  itemBrand: varchar("item_brand").notNull(),
+  itemModel: varchar("item_model").notNull(),
+  itemSerial: varchar("item_serial"),
+  issueDescription: text("issue_description").notNull(),
+  repairStatus: varchar("repair_status", { 
+    enum: ["new_repair", "quote_sent", "quote_accepted", "repair_received_back", "outcome"] 
+  }).default("new_repair").notNull(),
+  outcome: varchar("outcome", { 
+    enum: ["completed", "customer_declined", "unrepairable", "customer_no_response"] 
+  }),
+  quotedPrice: decimal("quoted_price", { precision: 10, scale: 2 }),
+  finalPrice: decimal("final_price", { precision: 10, scale: 2 }),
+  store: varchar("store"),
+  notes: text("notes"),
+  isOpen: boolean("is_open").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  quoteDate: timestamp("quote_date"),
+  acceptedDate: timestamp("accepted_date"),
+  completedDate: timestamp("completed_date"),
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  createdBy: varchar("created_by").references(() => users.id).notNull(),
+});
+
+// Repair activity log for tracking all activities
+export const repairActivityLog = pgTable("repair_activity_log", {
+  id: serial("id").primaryKey(),
+  repairId: integer("repair_id").notNull().references(() => repairs.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  action: varchar("action").notNull(), // 'created', 'status_changed', 'note_added', 'quote_sent', etc.
+  details: text("details"),
+  previousValue: text("previous_value"),
+  newValue: text("new_value"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Notifications table
 export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull().references(() => users.id),
-  type: varchar("type").notNull(), // 'inventory', 'wishlist', 'sale', 'system', 'approval'
+  type: varchar("type").notNull(), // 'inventory', 'wishlist', 'sale', 'system', 'approval', 'repair'
   title: varchar("title").notNull(),
   message: text("message").notNull(),
   actionUrl: varchar("action_url"),
   actionLabel: varchar("action_label"),
   isRead: boolean("is_read").default(false),
   priority: varchar("priority").default("normal"), // 'low', 'normal', 'high', 'urgent'
-  entityType: varchar("entity_type"), // 'inventory_item', 'wishlist_item', 'sale', 'user'
+  entityType: varchar("entity_type"), // 'inventory_item', 'wishlist_item', 'sale', 'user', 'repair'
   entityId: varchar("entity_id"),
   createdAt: timestamp("created_at").defaultNow(),
   readAt: timestamp("read_at"),
@@ -625,6 +668,30 @@ export const leadActivityLogRelations = relations(leadActivityLog, ({ one }) => 
   }),
   user: one(users, {
     fields: [leadActivityLog.userId],
+    references: [users.id],
+  }),
+}));
+
+// Repair relations
+export const repairsRelations = relations(repairs, ({ one, many }) => ({
+  assignee: one(users, {
+    fields: [repairs.assignedTo],
+    references: [users.id],
+  }),
+  creator: one(users, {
+    fields: [repairs.createdBy],
+    references: [users.id],
+  }),
+  activities: many(repairActivityLog),
+}));
+
+export const repairActivityLogRelations = relations(repairActivityLog, ({ one }) => ({
+  repair: one(repairs, {
+    fields: [repairActivityLog.repairId],
+    references: [repairs.id],
+  }),
+  user: one(users, {
+    fields: [repairActivityLog.userId],
     references: [users.id],
   }),
 }));
@@ -776,6 +843,28 @@ export const insertLeadActivityLogSchema = createInsertSchema(leadActivityLog).o
 });
 export type InsertLeadActivityLog = z.infer<typeof insertLeadActivityLogSchema>;
 export type LeadActivityLog = typeof leadActivityLog.$inferSelect;
+
+// Repair schema types
+export const insertRepairSchema = createInsertSchema(repairs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  quoteDate: z.string().nullable().optional().transform(val => val ? new Date(val) : null),
+  acceptedDate: z.string().nullable().optional().transform(val => val ? new Date(val) : null),
+  completedDate: z.string().nullable().optional().transform(val => val ? new Date(val) : null),
+  quotedPrice: z.string().nullable().optional(),
+  finalPrice: z.string().nullable().optional(),
+});
+export type InsertRepair = z.infer<typeof insertRepairSchema>;
+export type Repair = typeof repairs.$inferSelect;
+
+export const insertRepairActivityLogSchema = createInsertSchema(repairActivityLog).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertRepairActivityLog = z.infer<typeof insertRepairActivityLogSchema>;
+export type RepairActivityLog = typeof repairActivityLog.$inferSelect;
 
 // Sales Transaction Types
 export const insertSalesTransactionSchema = createInsertSchema(salesTransactions).omit({

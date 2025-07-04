@@ -10,6 +10,7 @@ const navigation = [
   { name: "Inventory", href: "/inventory", icon: "fas fa-boxes" },
   { name: "Wishlist", href: "/wishlist", icon: "fas fa-heart" },
   { name: "Leads", href: "/leads", icon: "fas fa-user-plus" },
+  { name: "Repairs", href: "/repairs", icon: "fas fa-wrench" },
   { name: "Clients", href: "/clients", icon: "fas fa-users" },
   { name: "Sales", href: "/sales", icon: "fas fa-dollar-sign" },
   { name: "Sales Team", href: "/sales-management", icon: "fas fa-user-tie" },
