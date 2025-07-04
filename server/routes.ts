@@ -3378,7 +3378,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Document ${action} requested: ${filename} for repair ${repairId}`);
       
       // Get repair to verify it exists and user has access
-      const repair = await storage.getRepair(repairId);
+      const repairsResult = await storage.getRepairs(1, 1000);
+      const repair = repairsResult.repairs.find(r => r.id === repairId);
       if (!repair) {
         return res.status(404).json({ message: "Repair not found" });
       }
