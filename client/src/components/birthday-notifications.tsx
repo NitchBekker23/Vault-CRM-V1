@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Gift, Bell } from "lucide-react";
+import { Calendar, Gift, Bell, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -24,24 +24,7 @@ export function BirthdayNotifications() {
     staleTime: 60 * 1000, // 1 minute
   });
 
-  // Mutation to trigger birthday notifications
-  const createNotificationsMutation = useMutation({
-    mutationFn: () => apiRequest("/api/birthdays/check-and-notify", "POST"),
-    onSuccess: (data) => {
-      toast({
-        title: "Birthday Notifications Created",
-        description: data.message,
-      });
-      refetch();
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to Create Notifications",
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive",
-      });
-    },
-  });
+
 
   const formatBirthday = (birthday: string) => {
     const date = new Date(birthday);
@@ -59,20 +42,18 @@ export function BirthdayNotifications() {
             <Gift className="h-5 w-5 text-orange-500" />
             <CardTitle>Client Birthdays Today</CardTitle>
           </div>
-          <Button
-            onClick={() => createNotificationsMutation.mutate()}
-            disabled={createNotificationsMutation.isPending}
-            size="sm"
-            className="flex items-center space-x-2"
-          >
-            <Bell className="h-4 w-4" />
-            <span>
-              {createNotificationsMutation.isPending ? "Creating..." : "Notify All Users"}
-            </span>
-          </Button>
+          {birthdayClients.length > 0 && (
+            <div className="flex items-center space-x-2 text-green-600">
+              <CheckCircle className="h-4 w-4" />
+              <span className="text-sm font-medium">Auto-Notified</span>
+            </div>
+          )}
         </div>
         <CardDescription>
-          Check for client birthdays and send notifications to all team members
+          {birthdayClients.length > 0 
+            ? "All team members have been automatically notified about today's client birthdays"
+            : "System automatically checks for birthdays and notifies all team members"
+          }
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -122,13 +103,13 @@ export function BirthdayNotifications() {
               ))}
             </div>
 
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
               <div className="flex items-start space-x-2">
-                <Bell className="h-4 w-4 text-blue-600 mt-0.5" />
+                <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
                 <div className="text-sm">
-                  <p className="font-medium text-blue-900">Birthday Notification System</p>
-                  <p className="text-blue-700">
-                    Click "Notify All Users" to send birthday notifications to all team members. 
+                  <p className="font-medium text-green-900">Automatic Birthday Notifications</p>
+                  <p className="text-green-700">
+                    All team members have been automatically notified about today's client birthdays. 
                     Each user will receive a notification to reach out and wish the client well.
                   </p>
                 </div>

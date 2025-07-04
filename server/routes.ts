@@ -3839,6 +3839,18 @@ startxref
   app.get("/api/birthdays/today", checkAuth, async (req: any, res) => {
     try {
       const birthdayClients = await storage.getTodaysBirthdays();
+      
+      // Automatically create notifications for all users when birthdays are detected
+      if (birthdayClients.length > 0) {
+        try {
+          await storage.createBirthdayNotifications(birthdayClients);
+          console.log(`✅ Auto-created birthday notifications for ${birthdayClients.length} clients`);
+        } catch (notificationError) {
+          console.error("Error auto-creating birthday notifications:", notificationError);
+          // Don't fail the request if notification creation fails
+        }
+      }
+      
       res.json(birthdayClients);
     } catch (error) {
       console.error("Error fetching today's birthdays:", error);
