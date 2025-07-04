@@ -58,7 +58,9 @@ interface RepairActivity {
 
 const repairFormSchema = z.object({
   customerName: z.string().min(1, "Customer name is required"),
-  customerEmail: z.string().email().optional().or(z.literal("")),
+  customerEmail: z.string().optional().refine((val) => !val || z.string().email().safeParse(val).success, {
+    message: "Invalid email format"
+  }),
   customerPhone: z.string().optional(),
   customerAddress: z.string().optional(),
   itemBrand: z.string().min(1, "Item brand is required"),
@@ -651,7 +653,10 @@ export default function Repairs() {
           </DialogHeader>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(handleSubmit, (errors) => {
+              console.log("=== FORM VALIDATION ERRORS ===");
+              console.log("Validation errors:", errors);
+            })} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
