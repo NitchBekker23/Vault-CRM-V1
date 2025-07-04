@@ -46,6 +46,9 @@ export default function Sales() {
   const [searchQuery, setSearchQuery] = useState("");
   const [transactionTypeFilter, setTransactionTypeFilter] = useState("all");
   const [dateRangeFilter, setDateRangeFilter] = useState("all");
+  const [yearFilter, setYearFilter] = useState("all");
+  const [monthFilter, setMonthFilter] = useState("all");
+  const [storeFilter, setStoreFilter] = useState("all");
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -93,8 +96,15 @@ export default function Sales() {
 
   // Sales analytics query with real-time updates
   const { data: analytics, isLoading: analyticsLoading } = useQuery({
-    queryKey: ["/api/sales-analytics", dateRangeFilter],
-    queryFn: () => apiRequest(`/api/sales-analytics?dateRange=${dateRangeFilter}`),
+    queryKey: ["/api/sales-analytics", dateRangeFilter, yearFilter, monthFilter, storeFilter],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (dateRangeFilter !== "all") params.append("dateRange", dateRangeFilter);
+      if (yearFilter !== "all") params.append("year", yearFilter);
+      if (monthFilter !== "all") params.append("month", monthFilter);
+      if (storeFilter !== "all") params.append("store", storeFilter);
+      return apiRequest(`/api/sales-analytics?${params.toString()}`);
+    },
     staleTime: 30 * 1000, // 30 seconds fresh data
     refetchOnMount: true,
     refetchOnWindowFocus: true
@@ -102,8 +112,19 @@ export default function Sales() {
 
   // Sales transactions query with real-time updates
   const { data: transactionsData, isLoading: transactionsLoading } = useQuery({
-    queryKey: ["/api/sales-transactions", page, searchQuery, transactionTypeFilter, dateRangeFilter],
-    queryFn: () => apiRequest(`/api/sales-transactions?page=${page}&limit=20&search=${searchQuery}&transactionType=${transactionTypeFilter}&dateRange=${dateRangeFilter}`),
+    queryKey: ["/api/sales-transactions", page, searchQuery, transactionTypeFilter, dateRangeFilter, yearFilter, monthFilter, storeFilter],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      params.append("page", page.toString());
+      params.append("limit", "20");
+      if (searchQuery) params.append("search", searchQuery);
+      if (transactionTypeFilter !== "all") params.append("transactionType", transactionTypeFilter);
+      if (dateRangeFilter !== "all") params.append("dateRange", dateRangeFilter);
+      if (yearFilter !== "all") params.append("year", yearFilter);
+      if (monthFilter !== "all") params.append("month", monthFilter);
+      if (storeFilter !== "all") params.append("store", storeFilter);
+      return apiRequest(`/api/sales-transactions?${params.toString()}`);
+    },
     staleTime: 30 * 1000, // 30 seconds fresh data
     refetchOnMount: true,
     refetchOnWindowFocus: true
@@ -321,6 +342,188 @@ export default function Sales() {
           </Dialog>
         </div>
       </div>
+
+      {/* Filter Controls */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="space-y-2">
+              <Label>Year</Label>
+              <Select value={yearFilter} onValueChange={setYearFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Years" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Years</SelectItem>
+                  <SelectItem value="2025">2025</SelectItem>
+                  <SelectItem value="2024">2024</SelectItem>
+                  <SelectItem value="2023">2023</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Month</Label>
+              <Select value={monthFilter} onValueChange={setMonthFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Months" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Months</SelectItem>
+                  <SelectItem value="1">January</SelectItem>
+                  <SelectItem value="2">February</SelectItem>
+                  <SelectItem value="3">March</SelectItem>
+                  <SelectItem value="4">April</SelectItem>
+                  <SelectItem value="5">May</SelectItem>
+                  <SelectItem value="6">June</SelectItem>
+                  <SelectItem value="7">July</SelectItem>
+                  <SelectItem value="8">August</SelectItem>
+                  <SelectItem value="9">September</SelectItem>
+                  <SelectItem value="10">October</SelectItem>
+                  <SelectItem value="11">November</SelectItem>
+                  <SelectItem value="12">December</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Store</Label>
+              <Select value={storeFilter} onValueChange={setStoreFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Stores" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Stores</SelectItem>
+                  <SelectItem value="099">HQ</SelectItem>
+                  <SelectItem value="001">Melrose</SelectItem>
+                  <SelectItem value="003">Menlyn</SelectItem>
+                  <SelectItem value="006">Breitling V&A</SelectItem>
+                  <SelectItem value="002">Breitling Sandton</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Transaction Type</Label>
+              <Select value={transactionTypeFilter} onValueChange={setTransactionTypeFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="sale">Sale</SelectItem>
+                  <SelectItem value="credit">Credit</SelectItem>
+                  <SelectItem value="exchange">Exchange</SelectItem>
+                  <SelectItem value="warranty">Warranty</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Quick Date Range</Label>
+              <Select value={dateRangeFilter} onValueChange={setDateRangeFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Time" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Time</SelectItem>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="7days">Last 7 Days</SelectItem>
+                  <SelectItem value="30days">Last 30 Days</SelectItem>
+                  <SelectItem value="90days">Last 90 Days</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          {/* Active Filters Summary */}
+          {(yearFilter !== "all" || monthFilter !== "all" || storeFilter !== "all" || transactionTypeFilter !== "all" || dateRangeFilter !== "all") && (
+            <div className="mt-4 pt-4 border-t">
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-sm font-medium text-muted-foreground">Active Filters:</span>
+                {yearFilter !== "all" && (
+                  <Badge variant="secondary" className="gap-1">
+                    Year: {yearFilter}
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-auto p-0 ml-1"
+                      onClick={() => setYearFilter("all")}
+                    >
+                      ×
+                    </Button>
+                  </Badge>
+                )}
+                {monthFilter !== "all" && (
+                  <Badge variant="secondary" className="gap-1">
+                    Month: {new Date(2025, parseInt(monthFilter) - 1).toLocaleDateString('en', { month: 'long' })}
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-auto p-0 ml-1"
+                      onClick={() => setMonthFilter("all")}
+                    >
+                      ×
+                    </Button>
+                  </Badge>
+                )}
+                {storeFilter !== "all" && (
+                  <Badge variant="secondary" className="gap-1">
+                    Store: {storeFilter === "099" ? "HQ" : storeFilter === "001" ? "Melrose" : storeFilter === "003" ? "Menlyn" : storeFilter === "006" ? "Breitling V&A" : "Breitling Sandton"}
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-auto p-0 ml-1"
+                      onClick={() => setStoreFilter("all")}
+                    >
+                      ×
+                    </Button>
+                  </Badge>
+                )}
+                {transactionTypeFilter !== "all" && (
+                  <Badge variant="secondary" className="gap-1">
+                    Type: {transactionTypeFilter}
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-auto p-0 ml-1"
+                      onClick={() => setTransactionTypeFilter("all")}
+                    >
+                      ×
+                    </Button>
+                  </Badge>
+                )}
+                {dateRangeFilter !== "all" && (
+                  <Badge variant="secondary" className="gap-1">
+                    Range: {dateRangeFilter}
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-auto p-0 ml-1"
+                      onClick={() => setDateRangeFilter("all")}
+                    >
+                      ×
+                    </Button>
+                  </Badge>
+                )}
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    setYearFilter("all");
+                    setMonthFilter("all");
+                    setStoreFilter("all");
+                    setTransactionTypeFilter("all");
+                    setDateRangeFilter("all");
+                  }}
+                >
+                  Clear All
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">

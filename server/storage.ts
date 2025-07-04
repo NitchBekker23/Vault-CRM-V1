@@ -210,7 +210,7 @@ export interface IStorage {
     page?: number,
     limit?: number
   ): Promise<{ transactions: SalesTransaction[]; total: number }>;
-  getSalesAnalytics(dateRange?: string): Promise<{
+  getSalesAnalytics(dateRange?: string, year?: string, month?: string, store?: string): Promise<{
     totalSales: number;
     totalRevenue: number;
     totalProfit: number;
@@ -1241,7 +1241,10 @@ export class DatabaseStorage implements IStorage {
     limit: number = 10,
     search?: string,
     transactionType?: string,
-    dateRange?: string
+    dateRange?: string,
+    year?: string,
+    month?: string,
+    store?: string
   ): Promise<{ transactions: SalesTransaction[]; total: number }> {
     const offset = (page - 1) * limit;
     
@@ -1279,6 +1282,21 @@ export class DatabaseStorage implements IStorage {
           startDate = new Date(0);
       }
       whereConditions.push(gte(salesTransactions.saleDate, startDate));
+    }
+
+    // Year filter
+    if (year && year !== 'all') {
+      whereConditions.push(sql`EXTRACT(YEAR FROM ${salesTransactions.saleDate}) = ${parseInt(year)}`);
+    }
+
+    // Month filter
+    if (month && month !== 'all') {
+      whereConditions.push(sql`EXTRACT(MONTH FROM ${salesTransactions.saleDate}) = ${parseInt(month)}`);
+    }
+
+    // Store filter
+    if (store && store !== 'all') {
+      whereConditions.push(eq(salesTransactions.store, store));
     }
 
     const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
@@ -2344,7 +2362,7 @@ export class DatabaseStorage implements IStorage {
     return { validSalesPerson, validStore };
   }
 
-  async getSalesAnalytics(dateRange?: string): Promise<{
+  async getSalesAnalytics(dateRange?: string, year?: string, month?: string, store?: string): Promise<{
     totalSales: number;
     totalRevenue: number;
     totalProfit: number;
@@ -2375,7 +2393,7 @@ export class DatabaseStorage implements IStorage {
       }
 
       // If we have data, calculate real analytics
-      let dateCondition = undefined;
+      let whereConditions = [];
       
       if (dateRange && dateRange !== 'all') {
         const now = new Date();
@@ -2394,39 +2412,50 @@ export class DatabaseStorage implements IStorage {
           default:
             startDate = new Date(0);
         }
-        dateCondition = gte(salesTransactions.saleDate, startDate);
+        whereConditions.push(gte(salesTransactions.saleDate, startDate));
       }
 
+      // Year filter
+      if (year && year !== 'all') {
+        whereConditions.push(sql`EXTRACT(YEAR FROM ${salesTransactions.saleDate}) = ${parseInt(year)}`);
+      }
+
+      // Month filter
+      if (month && month !== 'all') {
+        whereConditions.push(sql`EXTRACT(MONTH FROM ${salesTransactions.saleDate}) = ${parseInt(month)}`);
+      }
+
+      // Store filter
+      if (store && store !== 'all') {
+        whereConditions.push(eq(salesTransactions.store, store));
+      }
+      
+      const baseConditions = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+
       // Get comprehensive sales statistics
+      const salesConditions = [eq(salesTransactions.transactionType, 'sale')];
+      if (baseConditions) salesConditions.push(baseConditions);
+
       const salesCount = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(salesTransactions)
-        .where(and(
-          eq(salesTransactions.transactionType, 'sale'),
-          dateCondition
-        ));
+        .where(and(...salesConditions));
 
       const revenueResult = await db
         .select({ 
           revenue: sql<number>`COALESCE(SUM(CAST(${salesTransactions.sellingPrice} AS DECIMAL)), 0)` 
         })
         .from(salesTransactions)
-        .where(and(
-          eq(salesTransactions.transactionType, 'sale'),
-          dateCondition
-        ));
+        .where(and(...salesConditions));
 
       // Calculate total profit from profit margins stored in transactions
+      const profitConditions = [...salesConditions, sql`${salesTransactions.profitMargin} IS NOT NULL`];
       const profitResult = await db
         .select({ 
           profit: sql<number>`COALESCE(SUM(CAST(${salesTransactions.profitMargin} AS DECIMAL)), 0)` 
         })
         .from(salesTransactions)
-        .where(and(
-          eq(salesTransactions.transactionType, 'sale'),
-          dateCondition,
-          sql`${salesTransactions.profitMargin} IS NOT NULL`
-        ));
+        .where(and(...profitConditions));
 
       // Get top clients with purchase data
       const topClientsQuery = await db
@@ -2436,10 +2465,7 @@ export class DatabaseStorage implements IStorage {
           transactionCount: sql<number>`COUNT(*)`
         })
         .from(salesTransactions)
-        .where(and(
-          eq(salesTransactions.transactionType, 'sale'),
-          dateCondition
-        ))
+        .where(and(...salesConditions))
         .groupBy(salesTransactions.clientId)
         .orderBy(sql`SUM(CAST(${salesTransactions.sellingPrice} AS DECIMAL)) DESC`)
         .limit(5);
@@ -2472,7 +2498,7 @@ export class DatabaseStorage implements IStorage {
         .from(salesTransactions)
         .leftJoin(clients, eq(salesTransactions.clientId, clients.id))
         .leftJoin(inventoryItems, eq(salesTransactions.inventoryItemId, inventoryItems.id))
-        .where(dateCondition)
+        .where(baseConditions)
         .orderBy(desc(salesTransactions.createdAt))
         .limit(10);
 

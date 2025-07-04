@@ -2521,8 +2521,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const search = req.query.search as string;
       const transactionType = req.query.transactionType as string;
       const dateRange = req.query.dateRange as string;
+      const year = req.query.year as string;
+      const month = req.query.month as string;
+      const store = req.query.store as string;
 
-      const result = await storage.getSalesTransactions(page, limit, search, transactionType, dateRange);
+      const result = await storage.getSalesTransactions(page, limit, search, transactionType, dateRange, year, month, store);
       res.json(result);
     } catch (error) {
       console.error("Error fetching sales transactions:", error);
@@ -2991,7 +2994,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/sales-analytics", checkAuth, async (req: any, res) => {
     try {
       const dateRange = req.query.dateRange as string;
-      const analytics = await storage.getSalesAnalytics(dateRange);
+      const year = req.query.year as string;
+      const month = req.query.month as string;
+      const store = req.query.store as string;
+      const analytics = await storage.getSalesAnalytics(dateRange, year, month, store);
       res.json(analytics);
     } catch (error) {
       console.error("Error fetching sales analytics:", error);
