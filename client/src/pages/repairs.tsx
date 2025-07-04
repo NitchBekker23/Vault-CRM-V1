@@ -160,11 +160,33 @@ export default function Repairs() {
     retry: false,
   });
 
+  // Separate repairs into open/closed from server response
+  const allRepairs = repairsData?.repairs || [];
+  const openRepairs = allRepairs.filter(r => r.isOpen);
+  const closedRepairs = allRepairs.filter(r => !r.isOpen);
+
   // Check for repair highlighting on page load
   useEffect(() => {
     const highlightRepairId = sessionStorage.getItem('highlightRepairId');
     if (highlightRepairId && repairsData?.repairs) {
       console.log('Checking for repair to highlight:', highlightRepairId);
+      
+      // Find the repair and determine which tab it's in
+      const targetRepair = allRepairs.find(r => r.id.toString() === highlightRepairId);
+      if (targetRepair) {
+        console.log('Found target repair:', targetRepair);
+        
+        // Switch to the correct tab first
+        const correctTab = targetRepair.isOpen ? 'open' : 'closed';
+        console.log(`Switching to ${correctTab} tab for repair ${highlightRepairId}`);
+        
+        // Find and click the correct tab
+        const tabButton = document.querySelector(`[data-value="${correctTab}"]`) as HTMLElement;
+        if (tabButton) {
+          tabButton.click();
+          console.log(`Clicked ${correctTab} tab`);
+        }
+      }
       
       const attemptHighlight = (attempts = 0) => {
         const maxAttempts = 15;
@@ -196,10 +218,10 @@ export default function Repairs() {
         }
       };
       
-      // Start highlighting attempts after repair data loads
-      setTimeout(() => attemptHighlight(), 500);
+      // Start highlighting attempts after tab switch
+      setTimeout(() => attemptHighlight(), 800);
     }
-  }, [repairsData?.repairs]); // Trigger when repairs data changes
+  }, [repairsData?.repairs, allRepairs]); // Trigger when repairs data changes
 
   const createMutation = useMutation({
     mutationFn: (data: RepairFormData) => {
@@ -482,18 +504,7 @@ export default function Repairs() {
     return <Badge variant="secondary">{repair.repairStatus}</Badge>;
   };
 
-  // Separate repairs into open/closed from server response
-  const allRepairs = repairsData?.repairs || [];
-  const openRepairs = allRepairs.filter(r => r.isOpen);
-  const closedRepairs = allRepairs.filter(r => !r.isOpen);
-  
-  console.log('Repairs data:', { 
-    total: allRepairs.length, 
-    open: openRepairs.length, 
-    closed: closedRepairs.length,
-    repairIds: allRepairs.map(r => r.id),
-    firstRepair: allRepairs[0]
-  });
+
 
   if (isLoading) {
     return (
