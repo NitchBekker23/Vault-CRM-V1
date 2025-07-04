@@ -3179,10 +3179,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(repair);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("Validation error creating repair:", error.errors);
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
-      console.error("Error creating repair:", error);
-      res.status(500).json({ message: "Failed to create repair" });
+      console.error("Error creating repair - Full error:", error);
+      console.error("Error message:", (error as any)?.message);
+      console.error("Error stack:", (error as any)?.stack);
+      res.status(500).json({ message: "Failed to create repair", error: (error as any)?.message });
     }
   });
 

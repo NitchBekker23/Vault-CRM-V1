@@ -2669,12 +2669,18 @@ export class DatabaseStorage implements IStorage {
 
   async createRepair(repairData: InsertRepair): Promise<Repair> {
     try {
+      console.log('=== STORAGE createRepair DEBUG ===');
+      console.log('Input data:', JSON.stringify(repairData, null, 2));
+      
       const [repair] = await db
         .insert(repairs)
         .values(repairData)
         .returning();
 
+      console.log('Successfully created repair:', JSON.stringify(repair, null, 2));
+
       // Create activity log entry
+      console.log('Creating activity log entry...');
       await this.createRepairActivity({
         repairId: repair.id,
         userId: repairData.createdBy,
@@ -2683,9 +2689,12 @@ export class DatabaseStorage implements IStorage {
         newValue: 'new_repair'
       });
 
+      console.log('Activity log created successfully');
       return repair;
     } catch (error) {
-      console.error('Error creating repair:', error);
+      console.error('Error in createRepair storage layer:', error);
+      console.error('Error message:', (error as any)?.message);
+      console.error('Error details:', error);
       throw error;
     }
   }
