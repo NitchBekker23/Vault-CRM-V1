@@ -127,6 +127,9 @@ REPLIT_DOMAINS=[development]
   - **DUPLICATE PREVENTION**: Fixed file upload system to prevent duplicate uploads by replacing files instead of appending
   - **FILE PREVIEW**: Added visual file selection preview showing selected filenames before upload
   - **STATE MANAGEMENT**: Proper clearing of pending files on form reset and cancellation
+  - **STREAMLINED FILTERING SYSTEM**: Replaced redundant top menu status filter with store filter (HQ, Melrose, Menlyn, Breitling V&A, Breitling Sandton)
+  - **CONSISTENT UX DESIGN**: Maintained Open/Closed tabs above repairs list for better UX consistency matching leads system
+  - **ENHANCED STORE FILTERING**: Users can now filter repairs by store location through top menu dropdown while preserving Open/Closed status tabs
 - July 4, 2025: **ENHANCED DOCUMENT MANAGEMENT WITH OPTIMIZED VIEWING**: Improved document viewing experience with proper browser compatibility and file handling
   - **OPTIMIZED FILE VIEWING**: Fixed document access errors by correcting storage method calls from getRepair to getRepairs
   - **BROWSER-COMPATIBLE VIEWING**: Enhanced PDF viewing with proper inline display and browser PDF viewer integration

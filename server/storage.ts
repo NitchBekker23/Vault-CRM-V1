@@ -2604,7 +2604,7 @@ export class DatabaseStorage implements IStorage {
     page: number = 1,
     limit: number = 10,
     search?: string,
-    status?: string,
+    store?: string,
     outcome?: string,
     isOpen?: boolean
   ): Promise<{ repairs: Repair[]; total: number }> {
@@ -2627,9 +2627,9 @@ export class DatabaseStorage implements IStorage {
         );
       }
 
-      // Status filter
-      if (status && status !== 'all') {
-        whereConditions.push(eq(repairs.repairStatus, status));
+      // Store filter
+      if (store && store !== 'all') {
+        whereConditions.push(eq(repairs.store, store));
       }
 
       // Outcome filter

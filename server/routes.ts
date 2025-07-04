@@ -3183,11 +3183,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const page = req.query.page ? parseInt(req.query.page as string) : 1;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
       const search = req.query.search as string;
-      const status = req.query.status as string;
+      const store = req.query.store as string;
       const outcome = req.query.outcome as string;
       const isOpen = req.query.isOpen === 'true' ? true : req.query.isOpen === 'false' ? false : undefined;
 
-      const result = await storage.getRepairs(page, limit, search, status, outcome, isOpen);
+      const result = await storage.getRepairs(page, limit, search, store, outcome, isOpen);
       res.json(result);
     } catch (error) {
       console.error("Error fetching repairs:", error);

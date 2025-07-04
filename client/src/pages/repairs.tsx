@@ -101,7 +101,7 @@ const outcomes = {
 
 export default function Repairs() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [storeFilter, setStoreFilter] = useState("all");
   const [outcomeFilter, setOutcomeFilter] = useState("all");
   const [openFilter, setOpenFilter] = useState("all");
   const [showNewRepairModal, setShowNewRepairModal] = useState(false);
@@ -141,7 +141,7 @@ export default function Repairs() {
   const buildQuery = () => {
     const params = new URLSearchParams();
     if (searchTerm) params.append('search', searchTerm);
-    if (statusFilter !== 'all') params.append('status', statusFilter);
+    if (storeFilter !== 'all') params.append('store', storeFilter);
     if (outcomeFilter !== 'all') params.append('outcome', outcomeFilter);
     if (openFilter !== 'all') params.append('isOpen', openFilter === 'open' ? 'true' : 'false');
     return params.toString() ? `?${params.toString()}` : '';
@@ -480,17 +480,17 @@ export default function Repairs() {
               </div>
             </div>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={storeFilter} onValueChange={setStoreFilter}>
               <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filter by status" />
+                <SelectValue placeholder="Filter by store" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="new_repair">New Repair</SelectItem>
-                <SelectItem value="quote_sent">Quote Sent</SelectItem>
-                <SelectItem value="quote_accepted">Quote Accepted</SelectItem>
-                <SelectItem value="repair_received_back">Repair Received Back</SelectItem>
-                <SelectItem value="outcome">Outcome</SelectItem>
+                <SelectItem value="all">All Stores</SelectItem>
+                <SelectItem value="099">HQ</SelectItem>
+                <SelectItem value="001">Melrose</SelectItem>
+                <SelectItem value="003">Menlyn</SelectItem>
+                <SelectItem value="006">Breitling V&A</SelectItem>
+                <SelectItem value="002">Breitling Sandton</SelectItem>
               </SelectContent>
             </Select>
 
@@ -518,13 +518,13 @@ export default function Repairs() {
               </SelectContent>
             </Select>
 
-            {(searchTerm || statusFilter !== "all" || outcomeFilter !== "all" || openFilter !== "all") && (
+            {(searchTerm || storeFilter !== "all" || outcomeFilter !== "all" || openFilter !== "all") && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => {
                   setSearchTerm("");
-                  setStatusFilter("all");
+                  setStoreFilter("all");
                   setOutcomeFilter("all");
                   setOpenFilter("all");
                 }}
