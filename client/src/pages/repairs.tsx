@@ -145,10 +145,7 @@ export default function Repairs() {
   const createMutation = useMutation({
     mutationFn: (data: RepairFormData) => {
       console.log("Creating repair with data:", data);
-      return apiRequest(`/api/repairs`, {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      return apiRequest("POST", `/api/repairs`, data);
     },
     onSuccess: (result) => {
       console.log("Repair creation successful:", result);
@@ -175,10 +172,7 @@ export default function Repairs() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<RepairFormData> }) =>
-      apiRequest(`/api/repairs/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(data),
-      }),
+      apiRequest("PUT", `/api/repairs/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/repairs"] });
       setEditingRepair(null);
@@ -198,10 +192,7 @@ export default function Repairs() {
 
   const statusUpdateMutation = useMutation({
     mutationFn: ({ id, status, outcome, notes }: { id: number; status: string; outcome?: string; notes?: string }) =>
-      apiRequest(`/api/repairs/${id}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ status, outcome, notes }),
-      }),
+      apiRequest("PATCH", `/api/repairs/${id}/status`, { status, outcome, notes }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/repairs"] });
       setStatusUpdate(null);
@@ -220,7 +211,7 @@ export default function Repairs() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest(`/api/repairs/${id}`, { method: "DELETE" }),
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/repairs/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/repairs"] });
       toast({
