@@ -3015,6 +3015,30 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+
+  async getClientsWithBirthdayToday(): Promise<Client[]> {
+    try {
+      const today = new Date();
+      const month = today.getMonth() + 1; // JavaScript months are 0-indexed
+      const day = today.getDate();
+
+      const clientsWithBirthdays = await db
+        .select()
+        .from(clients)
+        .where(
+          and(
+            sql`EXTRACT(MONTH FROM ${clients.birthday}) = ${month}`,
+            sql`EXTRACT(DAY FROM ${clients.birthday}) = ${day}`,
+            sql`${clients.birthday} IS NOT NULL`
+          )
+        );
+
+      return clientsWithBirthdays;
+    } catch (error) {
+      console.error('Error fetching clients with birthdays today:', error);
+      return [];
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();

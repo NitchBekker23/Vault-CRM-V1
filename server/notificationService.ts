@@ -175,6 +175,77 @@ export class NotificationService {
       console.error('Error notifying admins:', error);
     }
   }
+
+  async notifyAllUsers(
+    title: string,
+    message: string,
+    priority: 'low' | 'normal' | 'high' | 'urgent' = 'normal',
+    actionUrl?: string,
+    actionLabel?: string
+  ) {
+    try {
+      // Get all active users
+      const users = await storage.getAllUsers();
+      const activeUsers = users.filter(user => user.status === 'approved');
+
+      // Send notification to each active user
+      for (const user of activeUsers) {
+        await this.createSystemNotification(
+          user.id,
+          title,
+          message,
+          priority,
+          actionUrl,
+          actionLabel
+        );
+      }
+    } catch (error) {
+      console.error('Error notifying all users:', error);
+    }
+  }
+
+  async createBirthdayNotification(
+    clientName: string,
+    clientId: number,
+    birthday: Date
+  ) {
+    const today = new Date();
+    const birthdayThisYear = new Date(today.getFullYear(), birthday.getMonth(), birthday.getDate());
+    
+    // Calculate age
+    let age = today.getFullYear() - birthday.getFullYear();
+    if (today < birthdayThisYear) {
+      age--;
+    }
+
+    const title = `🎉 Client Birthday Today!`;
+    const message = `${clientName} is celebrating their ${age}${this.getOrdinalSuffix(age)} birthday today!`;
+    
+    await this.notifyAllUsers(
+      title,
+      message,
+      'normal',
+      `/clients/${clientId}`,
+      'View Client'
+    );
+
+    console.log(`Birthday notification sent for ${clientName} (${age} years old)`);
+  }
+
+  private getOrdinalSuffix(num: number): string {
+    const j = num % 10;
+    const k = num % 100;
+    if (j === 1 && k !== 11) {
+      return "st";
+    }
+    if (j === 2 && k !== 12) {
+      return "nd";
+    }
+    if (j === 3 && k !== 13) {
+      return "rd";
+    }
+    return "th";
+  }
 }
 
 export const notificationService = new NotificationService();

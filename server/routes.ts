@@ -20,6 +20,7 @@ import {
   sendPasswordResetEmail
 } from "./emailService";
 import { notificationService } from "./notificationService";
+import { birthdayScheduler } from "./birthdayScheduler";
 import { 
   requireAuth as requireAuthentication, 
   requireAdminRole, 
@@ -2857,6 +2858,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error refreshing client statistics:", error);
       res.status(500).json({ message: "Failed to refresh client statistics" });
+    }
+  });
+
+  // Manual birthday check endpoint (for testing)
+  app.post("/api/admin/check-birthdays", checkAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUserId;
+      const currentUser = await storage.getUser(userId);
+      
+      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'owner')) {
+        return res.status(403).json({ message: "Admin privileges required" });
+      }
+
+      console.log("Manual birthday check triggered by:", currentUser.email);
+      await birthdayScheduler.triggerBirthdayCheck();
+      
+      const clientsWithBirthdays = await storage.getClientsWithBirthdayToday();
+      
+      res.json({ 
+        message: "Birthday check completed",
+        clientsWithBirthdays: clientsWithBirthdays.length,
+        clients: clientsWithBirthdays.map(c => ({ 
+          id: c.id, 
+          name: c.fullName, 
+          birthday: c.birthday 
+        }))
+      });
+    } catch (error) {
+      console.error("Error in manual birthday check:", error);
+      res.status(500).json({ message: "Failed to check birthdays" });
     }
   });
 
