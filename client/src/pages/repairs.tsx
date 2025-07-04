@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Filter, X, MoreHorizontal, Edit, Trash2, Clock, CheckCircle, XCircle, AlertTriangle, Calendar, User, Phone, Mail, MapPin, Wrench, Info } from "lucide-react";
+import { Plus, Search, Filter, X, MoreHorizontal, Edit, Trash2, Clock, CheckCircle, XCircle, AlertTriangle, Calendar, User, Phone, Mail, MapPin, Wrench, Info, FileText, Upload, Download, Eye } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,6 +87,7 @@ const statusUpdates = {
   new_repair: { label: "New Repair", color: "bg-blue-500", icon: Wrench },
   quote_sent: { label: "Quote Sent", color: "bg-yellow-500", icon: Clock },
   quote_accepted: { label: "Quote Accepted", color: "bg-green-500", icon: CheckCircle },
+  quote_declined: { label: "Quote Declined", color: "bg-red-500", icon: XCircle },
   repair_received_back: { label: "Repair Received Back", color: "bg-purple-500", icon: Calendar },
   outcome: { label: "Outcome", color: "bg-gray-500", icon: Info },
 };
@@ -107,6 +108,7 @@ export default function Repairs() {
   const [editingRepair, setEditingRepair] = useState<Repair | null>(null);
   const [selectedRepair, setSelectedRepair] = useState<Repair | null>(null);
   const [statusUpdate, setStatusUpdate] = useState<{ repair: Repair; newStatus: string; outcome?: string } | null>(null);
+  const [showDocumentModal, setShowDocumentModal] = useState<Repair | null>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -235,6 +237,26 @@ export default function Repairs() {
       toast({
         title: "Error",
         description: error.message || "Failed to delete repair",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const documentUploadMutation = useMutation({
+    mutationFn: ({ id, documents, images }: { id: number; documents: string[]; images: string[] }) =>
+      apiRequest("PATCH", `/api/repairs/${id}`, { repairDocuments: documents, repairImages: images }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/repairs"] });
+      setShowDocumentModal(null);
+      toast({
+        title: "Success",
+        description: "Documents updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update documents",
         variant: "destructive",
       });
     },
@@ -516,6 +538,11 @@ export default function Repairs() {
                               Edit Details
                             </DropdownMenuItem>
                             
+                            <DropdownMenuItem onClick={() => setShowDocumentModal(repair)}>
+                              <FileText className="w-4 h-4 mr-2" />
+                              Manage Documents
+                            </DropdownMenuItem>
+                            
                             {repair.repairStatus === 'new_repair' && (
                               <DropdownMenuItem onClick={() => handleStatusUpdate(repair, 'quote_sent')}>
                                 <Clock className="w-4 h-4 mr-2" />
@@ -524,10 +551,16 @@ export default function Repairs() {
                             )}
                             
                             {repair.repairStatus === 'quote_sent' && (
-                              <DropdownMenuItem onClick={() => handleStatusUpdate(repair, 'quote_accepted')}>
-                                <CheckCircle className="w-4 h-4 mr-2" />
-                                Mark Quote Accepted
-                              </DropdownMenuItem>
+                              <>
+                                <DropdownMenuItem onClick={() => handleStatusUpdate(repair, 'quote_accepted')}>
+                                  <CheckCircle className="w-4 h-4 mr-2" />
+                                  Mark Quote Accepted
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleStatusUpdate(repair, 'quote_declined')}>
+                                  <XCircle className="w-4 h-4 mr-2" />
+                                  Mark Quote Declined
+                                </DropdownMenuItem>
+                              </>
                             )}
                             
                             {repair.repairStatus === 'quote_accepted' && (
@@ -1164,6 +1197,189 @@ export default function Repairs() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+      )}
+
+      {/* Document Management Modal */}
+      {showDocumentModal && (
+        <Dialog open={!!showDocumentModal} onOpenChange={() => setShowDocumentModal(null)}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Manage Documents - {showDocumentModal.customerName}</DialogTitle>
+              <DialogDescription>
+                Upload and manage documents and images for this repair
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-6">
+              {/* Current Documents */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Current Documents</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Documents</h4>
+                    {showDocumentModal.repairDocuments && showDocumentModal.repairDocuments.length > 0 ? (
+                      <div className="space-y-2">
+                        {showDocumentModal.repairDocuments.map((doc, index) => (
+                          <div key={index} className="flex items-center justify-between p-2 border rounded">
+                            <div className="flex items-center">
+                              <FileText className="w-4 h-4 mr-2" />
+                              <span className="text-sm">{doc}</span>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button variant="outline" size="sm">
+                                <Eye className="w-3 h-3" />
+                              </Button>
+                              <Button variant="outline" size="sm">
+                                <Download className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No documents uploaded</p>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Images</h4>
+                    {showDocumentModal.repairImages && showDocumentModal.repairImages.length > 0 ? (
+                      <div className="space-y-2">
+                        {showDocumentModal.repairImages.map((img, index) => (
+                          <div key={index} className="flex items-center justify-between p-2 border rounded">
+                            <div className="flex items-center">
+                              <Eye className="w-4 h-4 mr-2" />
+                              <span className="text-sm">{img}</span>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button variant="outline" size="sm">
+                                <Eye className="w-3 h-3" />
+                              </Button>
+                              <Button variant="outline" size="sm">
+                                <Download className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No images uploaded</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Upload New Documents */}
+              <div className="border-t pt-4">
+                <h3 className="text-lg font-semibold mb-3">Upload New Files</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Documents</label>
+                    <Input 
+                      type="file" 
+                      multiple
+                      accept=".pdf,.doc,.docx,.txt"
+                      className="mt-1"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        if (files.length > 0) {
+                          const fileNames = files.map(f => f.name);
+                          const currentDocs = showDocumentModal.repairDocuments || [];
+                          const updatedDocs = [...currentDocs, ...fileNames];
+                          documentUploadMutation.mutate({
+                            id: showDocumentModal.id,
+                            documents: updatedDocs,
+                            images: showDocumentModal.repairImages || []
+                          });
+                        }
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Upload repair documents (PDF, DOC, DOCX, TXT)
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium">Images</label>
+                    <Input 
+                      type="file" 
+                      multiple
+                      accept="image/*"
+                      className="mt-1"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        if (files.length > 0) {
+                          const fileNames = files.map(f => f.name);
+                          const currentImages = showDocumentModal.repairImages || [];
+                          const updatedImages = [...currentImages, ...fileNames];
+                          documentUploadMutation.mutate({
+                            id: showDocumentModal.id,
+                            documents: showDocumentModal.repairDocuments || [],
+                            images: updatedImages
+                          });
+                        }
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Upload repair images (JPG, PNG, etc.)
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Repair Stage Documents */}
+              <div className="border-t pt-4">
+                <h3 className="text-lg font-semibold mb-3">Stage-Specific Documents</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Quote Documents</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Button variant="outline" size="sm" className="w-full">
+                        <Upload className="w-3 h-3 mr-1" />
+                        Upload Quote
+                      </Button>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Work Order</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Button variant="outline" size="sm" className="w-full">
+                        <Upload className="w-3 h-3 mr-1" />
+                        Upload Work Order
+                      </Button>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Completion Certificate</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Button variant="outline" size="sm" className="w-full">
+                        <Upload className="w-3 h-3 mr-1" />
+                        Upload Certificate
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowDocumentModal(null)}
+              >
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

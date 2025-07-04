@@ -592,7 +592,7 @@ export const repairs = pgTable("repairs", {
   itemSerial: varchar("item_serial"),
   issueDescription: text("issue_description").notNull(),
   repairStatus: varchar("repair_status", { 
-    enum: ["new_repair", "quote_sent", "quote_accepted", "repair_received_back", "outcome"] 
+    enum: ["new_repair", "quote_sent", "quote_accepted", "quote_declined", "repair_received_back", "outcome"] 
   }).default("new_repair").notNull(),
   outcome: varchar("outcome", { 
     enum: ["completed", "customer_declined", "unrepairable", "customer_no_response"] 
