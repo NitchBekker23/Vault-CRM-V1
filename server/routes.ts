@@ -3192,6 +3192,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update repair status (main workflow progression)
   app.patch("/api/repairs/:id/status", checkAuth, async (req: any, res) => {
     try {
+      console.log("=== REPAIR STATUS UPDATE DEBUG ===");
+      console.log("Request params:", req.params);
+      console.log("Request body:", JSON.stringify(req.body, null, 2));
+      
       const userId = req.currentUserId;
       if (!userId) {
         return res.status(401).json({ message: "Authentication required" });
@@ -3199,6 +3203,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const repairId = parseInt(req.params.id);
       const { status, outcome, notes } = req.body;
+      
+      console.log("Parsed values:", { repairId, status, outcome, notes, userId });
 
       // Get current repair to track status change
       const currentRepairs = await storage.getRepairs(1, 1000);
@@ -3209,9 +3215,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const previousStatus = currentRepair.repairStatus;
+      console.log("Updating repair status in storage...");
       const updatedRepair = await storage.updateRepairStatus(repairId, status, outcome, notes);
+      console.log("Storage update successful:", JSON.stringify(updatedRepair, null, 2));
 
       // Create activity log entry
+      console.log("Creating activity log entry...");
       await storage.createRepairActivity({
         repairId,
         userId,
@@ -3220,9 +3229,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         previousValue: previousStatus,
         newValue: status
       });
+      console.log("Activity log created successfully");
 
       // Send notification if outcome is set
+      console.log("Checking for outcome notifications...");
       if (outcome) {
+        console.log("Processing outcome:", outcome);
         let message = '';
         switch (outcome) {
           case 'completed':
@@ -3240,13 +3252,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         if (message) {
-          await notificationService.notifyAllAdmins(
-            message,
-            `Customer: ${updatedRepair.customerName}`,
-            "normal",
-            `/repairs`,
-            "View Repair"
-          );
+          try {
+            console.log("Sending notification...");
+            await notificationService.notifyAllAdmins(
+              message,
+              `Customer: ${updatedRepair.customerName}`,
+              "normal",
+              `/repairs`,
+              "View Repair"
+            );
+            console.log("Notification sent successfully");
+          } catch (notificationError) {
+            console.error("Error sending notification (non-critical):", notificationError);
+            // Don't fail the entire request if notification fails
+          }
         }
       }
 
